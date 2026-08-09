@@ -75,8 +75,9 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
             HttpMethod.Post,
             _chatCompletionsUri);
 
-        httpRequest.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", ApiKey);
+        if (!string.IsNullOrEmpty(ApiKey))
+            httpRequest.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", ApiKey);
 
         var json = JsonSerializer.Serialize(wireRequest, JsonOptions);
 

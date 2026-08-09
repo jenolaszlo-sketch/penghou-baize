@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Penghou.Baize;
@@ -29,8 +29,11 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}
+
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":5,"completion_tokens":2,"total_tokens":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -82,7 +85,9 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -117,7 +122,9 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -146,7 +153,9 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -179,7 +188,9 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -211,7 +222,9 @@ public sealed class OpenAiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,

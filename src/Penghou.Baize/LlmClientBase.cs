@@ -224,9 +224,11 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Reads an SSE stream line by line, yielding each data payload together
-    /// with the most recently observed event type. Terminates on the
-    /// "[DONE]" sentinel and skips blank or non-data lines.
+    /// Reads an SSE stream line by line, buffering the <c>data:</c> fields of
+    /// each event until the blank line that terminates it, then yielding the
+    /// combined payload together with the most recently observed event type.
+    /// Accepts <c>data:</c> with or without a trailing space and terminates on
+    /// the "[DONE]" sentinel.
     /// </summary>
     /// <param name="stream">The response body stream.</param>
     /// <param name="cancellationToken">Propagates notification that streaming should be cancelled.</param>
@@ -237,32 +239,51 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
     {
         using var reader = new StreamReader(stream);
         string? eventType = null;
+        List<string>? dataLines = null;
 
         while (!cancellationToken.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(cancellationToken);
 
             if (line is null)
-                yield break;
+                break;
 
-            if (line.StartsWith("event: ", StringComparison.OrdinalIgnoreCase))
+            if (line.Length == 0)
             {
-                eventType = line["event: ".Length..].Trim();
+                if (dataLines is { Count: > 0 })
+                {
+                    var payload = string.Join('\n', dataLines);
+                    dataLines = null;
+
+                    if (payload == "[DONE]")
+                        yield break;
+
+                    if (!string.IsNullOrWhiteSpace(payload))
+                        yield return (eventType, payload);
+                }
+
                 continue;
             }
 
-            if (!line.StartsWith("data: ", StringComparison.OrdinalIgnoreCase))
+            if (line.StartsWith("event:", StringComparison.OrdinalIgnoreCase))
+            {
+                eventType = line["event:".Length..].Trim();
+                continue;
+            }
+
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var data = line["data: ".Length..];
+            dataLines ??= [];
+            dataLines.Add(line["data:".Length..].TrimStart());
+        }
 
-            if (data == "[DONE]")
-                yield break;
+        if (dataLines is { Count: > 0 })
+        {
+            var payload = string.Join('\n', dataLines);
 
-            if (string.IsNullOrWhiteSpace(data))
-                continue;
-
-            yield return (eventType, data);
+            if (payload != "[DONE]" && !string.IsNullOrWhiteSpace(payload))
+                yield return (eventType, payload);
         }
     }
 

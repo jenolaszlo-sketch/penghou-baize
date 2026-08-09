@@ -505,6 +505,61 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public async Task Router_SkipsIncompatibleCandidateAndFallsBackToNext()
+    {
+        var incompatibleClient = new ValidationThrowingClient(
+            new LlmRequestValidationException(
+                "The endpoint 'model-a' does not support native tool calling."));
+        var healthyClient = new StubClient("from healthy");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model-a"] = () => incompatibleClient,
+                ["model-b"] = () => healthyClient
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model-a", ApiStyle.Ollama)] = () => incompatibleClient,
+                [("model-b", ApiStyle.Ollama)] = () => healthyClient
+            });
+        var memory = new InMemoryLlmRouterMemory();
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>
+            {
+                [ModelStrategy.ToolCall] = ["model-a", "model-b"]
+            },
+            memory);
+
+        var response = await router.CompleteStreamingAsync(
+            ModelStrategy.ToolCall,
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Say hi")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("from healthy");
+
+        response.RouterDiagnostics.Should().NotBeNull();
+        response.RouterDiagnostics!.Attempts.Should().HaveCount(2);
+        response.RouterDiagnostics.Attempts[0].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Failed);
+        response.RouterDiagnostics.Attempts[0].EndpointModel.Should().Be("model-a");
+
+        // A capability mismatch is not an availability failure: it records no
+        // cooldown, so the incompatible candidate remains eligible.
+        var incompatibleStats = await memory.GetStatsAsync(
+            "model-a:Ollama",
+            TestContext.Current.CancellationToken);
+        incompatibleStats.AvailabilityFailures.Should().Be(0);
+
+        response.RouterDiagnostics.Attempts[1].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Succeeded);
+        response.RouterDiagnostics.Attempts[1].EndpointModel.Should().Be("model-b");
+    }
+
+    [Fact]
     public async Task Router_FallsBackOnlyOnAvailabilityFailure()
     {
         var badRequestClient = new ThrowingClient(
@@ -823,6 +878,57 @@ public sealed class LlmRouterTests
             "model-b:Ollama",
             TestContext.Current.CancellationToken);
         healthyStats.TotalCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Router_FailoverDiscardsBufferedUsageAndReasoningFromFailedEndpoint()
+    {
+        var reasoningThenUsageThenFail = new ReasoningThenUsageFailClient(
+            "thoughts from a",
+            usage: new LlmUsage(
+                PromptTokens: 5,
+                CompletionTokens: 2,
+                TotalTokens: 7));
+        var healthyClient = new StubClient("answer from b");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model-a"] = () => reasoningThenUsageThenFail,
+                ["model-b"] = () => healthyClient
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model-a", ApiStyle.Ollama)] = () => reasoningThenUsageThenFail,
+                [("model-b", ApiStyle.Ollama)] = () => healthyClient
+            });
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>
+            {
+                [ModelStrategy.Auto] = ["model-a", "model-b"]
+            },
+            new InMemoryLlmRouterMemory());
+
+        var response = await router.CompleteStreamingAsync(
+            ModelStrategy.Auto,
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Say hi")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Neither the failed endpoint's thoughts nor its usage may leak into
+        // the successful endpoint's answer.
+        response.Content.Should().Be("answer from b");
+        response.Usage.Should().BeNull();
+        response.Reasoning.Should().BeNull();
+
+        response.RouterDiagnostics.Should().NotBeNull();
+        response.RouterDiagnostics!.Attempts.Should().HaveCount(2);
+        response.RouterDiagnostics.Attempts[0].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Failed);
+        response.RouterDiagnostics.Attempts[1].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Succeeded);
     }
 
     [Fact]
@@ -1644,6 +1750,21 @@ public sealed class LlmRouterTests
         }
     }
 
+    private sealed class ValidationThrowingClient(Exception exception) : ILlmClient
+    {
+        public LlmEndpointCapabilities Capabilities { get; } =
+            new() { NativeToolCalling = true, ParallelToolCalls = true };
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield return new LlmStreamEvent();
+            throw exception;
+        }
+    }
+
     private sealed class ThrowingClient(Exception exception) : ILlmClient
     {
         public LlmEndpointCapabilities Capabilities { get; } =
@@ -1709,6 +1830,24 @@ public sealed class LlmRouterTests
                 yield return new LlmStreamEvent(Delta: content);
 
             throw exception;
+        }
+    }
+
+    private sealed class ReasoningThenUsageFailClient(
+        string reasoning,
+        LlmUsage usage) : ILlmClient
+    {
+        public LlmEndpointCapabilities Capabilities { get; } =
+            new() { NativeToolCalling = true, ParallelToolCalls = true };
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield return new LlmStreamEvent(ReasoningContent: reasoning);
+            yield return new LlmStreamEvent(Usage: usage);
+            throw new LlmClientException("a down", statusCode: 500);
         }
     }
 

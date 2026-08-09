@@ -2,7 +2,14 @@ namespace Penghou.Baize;
 
 /// <summary>
 /// Identifies the capability a routed call is targeting. The router uses the
-/// strategy to select endpoints and the prompt builder to shape the request.
+/// strategy to select a named fallback chain (see
+/// <c>LlmRoutingOptions.StrategyFallbacks</c>) and the prompt builder to shape
+/// the request. A strategy is a routing key, not a capability negotiation: it
+/// is the configuration's responsibility to point each strategy at models
+/// whose endpoints can handle the request. When a candidate endpoint declares
+/// capabilities that cannot express the built request, request validation
+/// raises <see cref="LlmRequestValidationException"/> before any output and
+/// the router advances to the next candidate rather than aborting the chain.
 /// </summary>
 public enum ModelStrategy
 {

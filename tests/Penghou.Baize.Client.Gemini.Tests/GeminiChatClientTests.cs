@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Penghou.Baize;
@@ -19,7 +19,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"Hello"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5,"totalTokenCount":15}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -54,7 +56,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"emit_files","args":{"files":[]}}}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":8,"totalTokenCount":20}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -110,6 +114,7 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[]},"finishReason":null}]}
+
             """);
         var client = CreateClient(
             handler,
@@ -139,7 +144,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -173,7 +180,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"internal reasoning","thought":true},{"text":"visible answer"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -204,7 +213,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"internal reasoning","thought":true,"thoughtSignature":"sig_abc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -235,7 +246,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(handler, "gemini-2.5-flash");
         var request = new LlmRequest(
@@ -299,7 +312,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -342,7 +357,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -367,7 +384,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -397,7 +416,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"fc_1","name":"emit_files","args":{"files":[]}},"thoughtSignature":"sig_fc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -427,7 +448,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"text":"answer"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -458,7 +481,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"functionCall":{"id":"fc_1","name":"emit_files","args":{}},"thoughtSignature":"sig_fc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -506,7 +531,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -558,7 +585,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -602,7 +631,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -632,7 +663,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -669,7 +702,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -706,7 +741,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -739,7 +776,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -768,7 +807,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -805,7 +846,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"result"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":8,"candidatesTokenCount":3,"totalTokenCount":11}}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -931,7 +974,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -953,7 +998,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -977,7 +1024,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -1002,7 +1051,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,
@@ -1034,7 +1085,9 @@ public sealed class GeminiChatClientTests
         var handler = new RecordingHandler(
             """
             data: {"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}
+
             data: [DONE]
+
             """);
         var client = CreateClient(
             handler,

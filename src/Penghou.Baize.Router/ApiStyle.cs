@@ -16,6 +16,6 @@ public enum ApiStyle
     /// <summary>The native Ollama /api/chat API.</summary>
     Ollama,
 
-    /// <summary>The Google Gemini generateStream API.</summary>
+    /// <summary>The Google Gemini streamGenerateContent API.</summary>
     Gemini
 }

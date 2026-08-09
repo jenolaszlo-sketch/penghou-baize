@@ -176,7 +176,7 @@ public class LlmRouter(
 
             var emittedOutput = false;
             var shouldFallBack = false;
-            List<LlmStreamEvent>? reasoningBuffer = null;
+            List<LlmStreamEvent>? pending = null;
 
             await using var enumerator =
                 client.StreamAsync(wireRequest, effective)
@@ -186,6 +186,7 @@ public class LlmRouter(
             {
                 LlmStreamEvent? evt = null;
                 Exception? failure = null;
+                Exception? incompatible = null;
                 DateTimeOffset? unavailableUntil = null;
 
                 try
@@ -197,10 +198,36 @@ public class LlmRouter(
                 }
                 catch (Exception ex) when (
                     !cancellationToken.IsCancellationRequested &&
-                    IsAvailabilityFailure(ex))
+                    (IsAvailabilityFailure(ex) || ex is LlmRequestValidationException))
                 {
-                    failure = ex;
-                    unavailableUntil = (ex as LlmClientException)?.RateLimit?.UnavailableUntil;
+                    if (ex is LlmRequestValidationException)
+                    {
+                        incompatible = ex;
+                    }
+                    else
+                    {
+                        failure = ex;
+                        unavailableUntil = (ex as LlmClientException)?.RateLimit?.UnavailableUntil;
+                    }
+                }
+
+                if (incompatible is not null)
+                {
+                    // The request cannot be expressed on this endpoint's
+                    // declared capabilities. Validation precedes any event, so
+                    // nothing was emitted; the next capable candidate gets the
+                    // request instead of the whole chain failing.
+                    attempts.Add(new LlmRouterAttempt(
+                        EndpointId: endpoint.EndpointId,
+                        EndpointModel: endpoint.Model,
+                        EndpointApiStyle: endpoint.ApiStyle.ToString(),
+                        Outcome: LlmRouterAttemptOutcome.Failed,
+                        Duration: Stopwatch.GetElapsedTime(started),
+                        Error: incompatible.Message));
+
+                    lastFailure = incompatible;
+                    shouldFallBack = true;
+                    break;
                 }
 
                 if (failure is not null)
@@ -224,10 +251,12 @@ public class LlmRouter(
 
                     // Never reissue after meaningful output has been streamed,
                     // and stop once the shared deadline has passed. Reasoning
-                    // alone does not block reissue: it is held in
-                    // reasoningBuffer and discarded on failover, so a failed
-                    // endpoint's thoughts are never mixed with the next
-                    // endpoint's answer.
+                    // alone does not block reissue: it is held in the pending
+                    // buffer and discarded on failover, so a failed endpoint's
+                    // thoughts are never mixed with the next endpoint's answer.
+                    // The same holds for events that precede any content
+                    // (usage, diagnostics, finish reasons): they are buffered
+                    // until a content or tool-call event commits the endpoint.
                     if (emittedOutput || effective.IsCancellationRequested)
                     {
                         yield return DiagnosticsEvent(attempts);
@@ -238,26 +267,30 @@ public class LlmRouter(
                     break;
                 }
 
-                if (evt!.ReasoningContent is not null)
+                // A content or tool-call delta is the moment the endpoint
+                // commits: everything buffered before it (reasoning, usage,
+                // diagnostics, finish reasons) is released in order, then the
+                // committing event itself. Buffering until this point means a
+                // mid-stream transport failure exposes none of the endpoint's
+                // output, so failover cannot mix it with the next endpoint.
+                var commit = evt!.Delta is not null || evt.ToolCallDelta is not null;
+
+                if (!commit)
                 {
-                    reasoningBuffer ??= [];
-                    reasoningBuffer.Add(evt);
+                    pending ??= [];
+                    pending.Add(evt);
                     continue;
                 }
 
-                // The endpoint produced a semantic event (content, a tool
-                // call, usage, a finish reason, ...); release any reasoning
-                // it streamed beforehand so it reads naturally before it.
-                if (reasoningBuffer is not null)
+                if (pending is not null)
                 {
-                    foreach (var buffered in reasoningBuffer)
+                    foreach (var buffered in pending)
                         yield return buffered;
 
-                    reasoningBuffer = null;
+                    pending = null;
                 }
 
-                if (evt.Delta is not null || evt.ToolCallDelta is not null)
-                    emittedOutput = true;
+                emittedOutput = true;
 
                 yield return evt;
             }
@@ -265,12 +298,13 @@ public class LlmRouter(
             if (shouldFallBack)
                 continue;
 
-            // The stream ended without a semantic event (for example a
-            // reasoning-only response); surface the buffered reasoning rather
-            // than dropping it.
-            if (reasoningBuffer is not null)
+            // The stream ended without a content or tool-call event (for
+            // example a reasoning-only response followed by its usage and
+            // finish reason): release the buffered events rather than dropping
+            // them, preserving their order.
+            if (pending is not null)
             {
-                foreach (var buffered in reasoningBuffer)
+                foreach (var buffered in pending)
                     yield return buffered;
             }
 
