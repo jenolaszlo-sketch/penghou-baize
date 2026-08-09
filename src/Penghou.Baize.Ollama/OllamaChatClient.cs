@@ -273,13 +273,15 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
         if (!receivedChunk)
         {
             throw new LlmClientException(
-                "Ollama chat response stream was empty.");
+                "Ollama chat response stream was empty.",
+                LlmClientFailureKind.Availability);
         }
 
         if (!receivedFinalChunk)
         {
             throw new LlmClientException(
-                "Ollama chat response stream ended before a final chunk was received.");
+                "Ollama chat response stream ended before a final chunk was received.",
+                LlmClientFailureKind.Availability);
         }
     }
 

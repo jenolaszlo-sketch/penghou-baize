@@ -197,10 +197,12 @@ public sealed class OllamaChatClientTests
                     TestContext.Current
                         .CancellationToken));
 
-        await action.Should()
+        var exception = await action.Should()
             .ThrowAsync<LlmClientException>()
             .WithMessage(
                 "*before a final chunk was received*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
     }
 
     [Fact]

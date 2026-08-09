@@ -99,7 +99,10 @@ public static class ServiceCollectionExtensions
                         "Give each endpoint a distinct Id.");
                 }
 
-                byStyle[(model.Name, endpoint.ApiStyle)] = factory;
+                // The (model, API style) accessor returns the first matching
+                // endpoint; later endpoints of the same style are reached by
+                // their id, mirroring the plain-name default.
+                byStyle.TryAdd((model.Name, endpoint.ApiStyle), factory);
                 styles.Add(endpoint.ApiStyle);
                 byEndpointId[id] = factory;
                 endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ApiStyle));
@@ -326,7 +329,7 @@ public static class ServiceCollectionExtensions
                 NativeStructuredOutput = false,
                 StructuredOutputViaTool = true,
                 Thinking = true,
-                ThinkingDisable = false,
+                ThinkingDisable = true,
                 StreamingToolCallArguments = true,
                 SupportedThinkingEfforts =
                     new HashSet<LlmThinkingEffort>
@@ -359,7 +362,7 @@ public static class ServiceCollectionExtensions
                 NativeStructuredOutput = true,
                 StructuredOutputViaTool = false,
                 Thinking = true,
-                ThinkingDisable = false,
+                ThinkingDisable = true,
                 StreamingToolCallArguments = true,
                 SupportedThinkingEfforts =
                     new HashSet<LlmThinkingEffort>

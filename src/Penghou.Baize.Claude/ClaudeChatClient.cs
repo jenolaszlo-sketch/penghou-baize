@@ -101,28 +101,43 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
     }
 
     /// <summary>
-    /// Emits the <c>thinking</c> block when thinking is enabled. Adaptive
+    /// Emits the <c>thinking</c> block for an explicit request. Adaptive
     /// models receive <c>{"type":"adaptive"}</c>; manual-thinking models
     /// receive <c>{"type":"enabled","budget_tokens":N}</c> where the budget
     /// comes from <see cref="LlmEndpointCapabilities.ThinkingBudget"/> or is
-    /// derived from the requested effort.
+    /// derived from the requested effort. Disabling is encoded as
+    /// <c>{"type":"disabled"}</c> so the capability is exercised faithfully.
     /// </summary>
     private ClaudeThinking? MapThinking(LlmThinkingConfig? config)
     {
-        if (config is null || config.Mode != LlmThinkingMode.Enabled)
+        if (config is null || config.Mode == LlmThinkingMode.ProviderDefault)
         {
             return null;
         }
 
-        return _thinkingStyle == ClaudeThinkingStyle.Manual
-            ? MapThinkingBudget(config.Effort) is { } budget
-                ? new ClaudeThinking
-                {
-                    Type = "enabled",
-                    BudgetTokens = budget
-                }
-                : null
-            : new ClaudeThinking { Type = "adaptive" };
+        if (config.Mode == LlmThinkingMode.Disabled)
+        {
+            return new ClaudeThinking { Type = "disabled" };
+        }
+
+        if (_thinkingStyle == ClaudeThinkingStyle.Adaptive)
+        {
+            return new ClaudeThinking { Type = "adaptive" };
+        }
+
+        // Manual thinking requires a concrete token budget. A missing effort
+        // with no configured budget cannot be expressed; reject rather than
+        // silently emitting no thinking block for an enabled request.
+        return MapThinkingBudget(config.Effort) is { } budget
+            ? new ClaudeThinking
+            {
+                Type = "enabled",
+                BudgetTokens = budget
+            }
+            : throw new LlmRequestValidationException(
+                $"Endpoint '{Model}' uses manual thinking, which requires a " +
+                "token budget (set Capabilities.ThinkingBudget or request a " +
+                "concrete effort instead of 'None').");
     }
 
     /// <summary>
@@ -395,6 +410,7 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
 
                         throw new LlmClientException(
                             $"Claude streaming error ({errorType}): {errorMessage}",
+                            ClassifyFailureKind(errorType),
                             statusCode: null,
                             rateLimit: retryAfterSeconds is { } seconds
                                 ? new LlmRateLimitInfo(
@@ -457,10 +473,15 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
     private static string? MapThinkingEffort(LlmThinkingEffort effort) =>
         effort switch
         {
+            LlmThinkingEffort.None => null,
             LlmThinkingEffort.Low => "low",
             LlmThinkingEffort.Medium => "medium",
             LlmThinkingEffort.High => "high",
-            LlmThinkingEffort.Max => "high", // Claude has no "max" tier; cap at "high".
+            // Claude has no "max" effort on the wire; reject rather than
+            // silently capping to "high".
+            LlmThinkingEffort.Max => throw new LlmRequestValidationException(
+                "Claude does not support a 'max' reasoning effort; it would " +
+                "be silently capped to 'high'."),
             _ => null
         };
 
@@ -488,6 +509,24 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
 
         return null;
     }
+
+    private static LlmClientFailureKind ClassifyFailureKind(
+        string errorType) =>
+        errorType switch
+        {
+            "authentication_error" or "permission_error" =>
+                LlmClientFailureKind.Authentication,
+            "rate_limit_error" =>
+                LlmClientFailureKind.RateLimit,
+            "invalid_request_error" or "not_found_error" or
+            "request_too_large_error" or "context_length_error" or
+            "unsupported_country_error" =>
+                LlmClientFailureKind.InvalidRequest,
+            "overloaded_error" or "api_error" or "timeout_error" or
+            "connection_error" =>
+                LlmClientFailureKind.Availability,
+            _ => LlmClientFailureKind.Protocol
+        };
 
     private static T? TryDeserialize<T>(string data)
     {

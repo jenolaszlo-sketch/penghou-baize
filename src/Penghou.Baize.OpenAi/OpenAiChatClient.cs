@@ -222,10 +222,15 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
     private static string? MapThinkingEffort(LlmThinkingEffort effort) =>
         effort switch
         {
+            LlmThinkingEffort.None => null,
             LlmThinkingEffort.Low => "low",
             LlmThinkingEffort.Medium => "medium",
             LlmThinkingEffort.High => "high",
-            LlmThinkingEffort.Max => "high", // OpenAI has no "max" tier; cap at "high".
+            // OpenAI has no "max" reasoning effort on the wire; reject rather
+            // than silently capping to "high".
+            LlmThinkingEffort.Max => throw new LlmRequestValidationException(
+                "OpenAI does not support a 'max' reasoning effort; it would " +
+                "be silently capped to 'high'."),
             _ => null
         };
 

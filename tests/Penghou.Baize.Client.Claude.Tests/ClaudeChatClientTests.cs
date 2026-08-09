@@ -350,6 +350,156 @@ public sealed class ClaudeChatClientTests
     }
 
     [Fact]
+    public async Task StreamAsync_ManualThinkingRequiresBudgetWhenNoEffortGiven()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test",
+            thinkingStyle: ClaudeThinkingStyle.Manual);
+
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Reason")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Enabled,
+                    effort: LlmThinkingEffort.None));
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    request,
+                    TestContext.Current.CancellationToken));
+
+        await action.Should()
+            .ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*requires a token budget*");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ManualThinkingUsesExplicitBudgetWhenNoEffortGiven()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test",
+            thinkingStyle: ClaudeThinkingStyle.Manual,
+            capabilities: DefaultCapabilities with
+            {
+                ThinkingBudget = 4096
+            });
+
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Reason")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Enabled,
+                    effort: LlmThinkingEffort.None));
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var requestDocument =
+            JsonDocument.Parse(handler.RequestBody!);
+        var thinking =
+            requestDocument.RootElement.GetProperty("thinking");
+        thinking.GetProperty("type").GetString().Should().Be("enabled");
+        thinking.GetProperty("budget_tokens").GetInt32().Should().Be(4096);
+    }
+
+    [Fact]
+    public async Task StreamAsync_EmitsDisabledThinkingBlockWhenAdvertised()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test",
+            capabilities: DefaultCapabilities with
+            {
+                ThinkingDisable = true
+            });
+
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Reason")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Disabled,
+                    effort: LlmThinkingEffort.Medium));
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var requestDocument =
+            JsonDocument.Parse(handler.RequestBody!);
+        requestDocument.RootElement
+            .GetProperty("thinking")
+            .GetProperty("type")
+            .GetString()
+            .Should().Be("disabled");
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsMaxEffortInsteadOfCapping()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test",
+            capabilities: DefaultCapabilities with
+            {
+                SupportedThinkingEfforts =
+                    new HashSet<LlmThinkingEffort>
+                    {
+                        LlmThinkingEffort.Low,
+                        LlmThinkingEffort.Medium,
+                        LlmThinkingEffort.High,
+                        LlmThinkingEffort.Max
+                    }
+            });
+
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Reason")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Enabled,
+                    effort: LlmThinkingEffort.Max));
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    request,
+                    TestContext.Current.CancellationToken));
+
+        await action.Should()
+            .ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*would be silently capped to 'high'*");
+    }
+
+    [Fact]
     public async Task StreamAsync_ThrowsForErrorEventAfterSuccessfulHeaders()
     {
         var handler = new RecordingHandler(
@@ -368,10 +518,13 @@ public sealed class ClaudeChatClientTests
                     CreateRequest(),
                     TestContext.Current.CancellationToken));
 
-        await action.Should()
+        var exception = await action.Should()
             .ThrowAsync<LlmClientException>()
             .WithMessage(
                 "*overloaded_error*Overloaded*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
+        exception.Which.CanFallback.Should().BeTrue();
     }
 
     [Fact]
@@ -813,6 +966,9 @@ public sealed class ClaudeChatClientTests
 
         var exception = await action.Should()
             .ThrowAsync<LlmClientException>();
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.RateLimit);
+        exception.Which.CanFallback.Should().BeTrue();
         exception.Which.RateLimit.Should().NotBeNull();
         exception.Which.RateLimit!.RetryAfter
             .Should().Be(TimeSpan.FromSeconds(3));

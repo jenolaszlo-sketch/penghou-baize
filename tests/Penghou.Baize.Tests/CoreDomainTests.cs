@@ -142,4 +142,69 @@ public sealed class LlmClientExceptionTests
         ex.Message.Should().Be("outer");
         ex.InnerException.Should().BeSameAs(inner);
     }
+
+    [Theory]
+    [InlineData(400, LlmClientFailureKind.InvalidRequest)]
+    [InlineData(401, LlmClientFailureKind.Authentication)]
+    [InlineData(403, LlmClientFailureKind.Authentication)]
+    [InlineData(404, LlmClientFailureKind.InvalidRequest)]
+    [InlineData(429, LlmClientFailureKind.RateLimit)]
+    [InlineData(500, LlmClientFailureKind.Availability)]
+    [InlineData(503, LlmClientFailureKind.Availability)]
+    [InlineData(null, LlmClientFailureKind.Protocol)]
+    public void FailureKind_IsDerivedFromStatusCode(
+        int? statusCode,
+        LlmClientFailureKind expected)
+    {
+        var ex = new LlmClientException("failure", statusCode);
+
+        ex.FailureKind.Should().Be(expected);
+    }
+
+    [Fact]
+    public void CanFallback_IsTrueForAvailabilityAndRateLimit()
+    {
+        new LlmClientException("nope", statusCode: 500).CanFallback.Should().BeTrue();
+        new LlmClientException("nope", statusCode: 429).CanFallback.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanFallback_IsFalseForDeterministicFailures()
+    {
+        new LlmClientException("nope", statusCode: 400).CanFallback.Should().BeFalse();
+        new LlmClientException("nope", statusCode: 401).CanFallback.Should().BeFalse();
+        new LlmClientException("nope", LlmClientFailureKind.InvalidRequest)
+            .CanFallback.Should().BeFalse();
+        new LlmClientException("nope", LlmClientFailureKind.Content)
+            .CanFallback.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FailureKind_IsSetExplicitlyWithoutStatusCode()
+    {
+        var ex = new LlmClientException(
+            "overloaded",
+            LlmClientFailureKind.Availability,
+            rateLimit:
+                new LlmRateLimitInfo(
+                    RetryAfter: TimeSpan.FromSeconds(30)));
+
+        ex.FailureKind.Should().Be(LlmClientFailureKind.Availability);
+        ex.StatusCode.Should().BeNull();
+        ex.RateLimit.Should().NotBeNull();
+        ex.RateLimit!.RetryAfter.Should().Be(TimeSpan.FromSeconds(30));
+        ex.CanFallback.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanFallback_CanBeOverridden()
+    {
+        var ex = new LlmClientException(
+            "cdn hiccup during parse",
+            LlmClientFailureKind.Protocol,
+            canFallback: true);
+
+        ex.FailureKind.Should().Be(LlmClientFailureKind.Protocol);
+        ex.CanFallback.Should().BeTrue();
+    }
 }

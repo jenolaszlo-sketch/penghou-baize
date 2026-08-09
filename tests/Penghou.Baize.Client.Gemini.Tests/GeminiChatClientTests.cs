@@ -125,10 +125,12 @@ public sealed class GeminiChatClientTests
                     TestContext.Current
                         .CancellationToken));
 
-        await action.Should()
+        var exception = await action.Should()
             .ThrowAsync<LlmClientException>()
             .WithMessage(
                 "*Gemini stream ended without a final chunk*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
     }
 
     [Fact]
@@ -595,7 +597,7 @@ public sealed class GeminiChatClientTests
     }
 
     [Fact]
-    public async Task StreamAsync_OmitsThinkingConfigForNoneEffort()
+    public async Task StreamAsync_RejectsNoneEffortWithoutThinkingBudget()
     {
         var handler = new RecordingHandler(
             """
@@ -612,6 +614,40 @@ public sealed class GeminiChatClientTests
                     mode: LlmThinkingMode.Enabled,
                     effort: LlmThinkingEffort.None));
 
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    request,
+                    TestContext.Current.CancellationToken));
+
+        await action.Should()
+            .ThrowAsync<LlmRequestValidationException>()
+            .WithMessage(
+                "*thinking token budget*instead of 'None'*");
+    }
+
+    [Fact]
+    public async Task StreamAsync_UsesExplicitBudgetWhenNoEffortGiven()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash",
+            DefaultCapabilities with
+            {
+                ThinkingBudget = 2048
+            });
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Say ok")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Enabled,
+                    effort: LlmThinkingEffort.None));
+
         await CollectAsync(
             client.StreamAsync(
                 request,
@@ -621,11 +657,10 @@ public sealed class GeminiChatClientTests
             JsonDocument.Parse(handler.RequestBody!);
         requestDocument.RootElement
             .GetProperty("generationConfig")
-            .TryGetProperty(
-                "thinkingConfig",
-                out _)
-            .Should()
-            .BeFalse();
+            .GetProperty("thinkingConfig")
+            .GetProperty("thinkingBudget")
+            .GetInt32()
+            .Should().Be(2048);
     }
 
     [Fact]
@@ -725,6 +760,43 @@ public sealed class GeminiChatClientTests
         await action.Should()
             .ThrowAsync<LlmRequestValidationException>()
             .WithMessage("*does not support disabling extended thinking*");
+    }
+
+    [Fact]
+    public async Task StreamAsync_EmitsZeroBudgetForExplicitlyDisabledThinking()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash",
+            DefaultCapabilities with
+            {
+                ThinkingDisable = true
+            });
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Say ok")],
+            thinkingConfig:
+                new LlmThinkingConfig(
+                    mode: LlmThinkingMode.Disabled,
+                    effort: LlmThinkingEffort.Medium));
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var requestDocument =
+            JsonDocument.Parse(handler.RequestBody!);
+        requestDocument.RootElement
+            .GetProperty("generationConfig")
+            .GetProperty("thinkingConfig")
+            .GetProperty("thinkingBudget")
+            .GetInt32()
+            .Should().Be(0);
     }
 
     [Fact]

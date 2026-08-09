@@ -236,14 +236,7 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                     responseSchema is null
                         ? null
                         : "application/json",
-                ThinkingConfig = request.ThinkingConfig is null || request.ThinkingConfig.Mode != LlmThinkingMode.Enabled
-                    ? null
-                    : MapThinkingBudget(request.ThinkingConfig.Effort) is { } budget
-                        ? new GeminiThinkingConfig
-                        {
-                            ThinkingBudget = budget
-                        }
-                        : null
+                ThinkingConfig = MapThinkingConfig(request.ThinkingConfig)
             },
             Tools = Capabilities.NativeToolCalling && request.Tools.Count > 0
                 ? request.Tools
@@ -253,6 +246,32 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
         };
 
         return wireRequest;
+    }
+
+    /// <summary>
+    /// Maps an explicit thinking request to the <c>thinkingConfig</c> block.
+    /// Enabling is expressed as a token budget; disabling as a zero budget.
+    /// A missing effort with no configured budget cannot be expressed, so it
+    /// is rejected rather than silently emitting no thinking configuration.
+    /// </summary>
+    private GeminiThinkingConfig? MapThinkingConfig(LlmThinkingConfig? config)
+    {
+        if (config is null || config.Mode == LlmThinkingMode.ProviderDefault)
+        {
+            return null;
+        }
+
+        if (config.Mode == LlmThinkingMode.Disabled)
+        {
+            return new GeminiThinkingConfig { ThinkingBudget = 0 };
+        }
+
+        return MapThinkingBudget(config.Effort) is { } budget
+            ? new GeminiThinkingConfig { ThinkingBudget = budget }
+            : throw new LlmRequestValidationException(
+                $"Endpoint '{Model}' needs a Gemini thinking token budget " +
+                "(set Capabilities.ThinkingBudget or request a concrete " +
+                "effort instead of 'None').");
     }
 
     private static bool LooksLikeApiVersion(string segment) =>
@@ -430,11 +449,13 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
 
         if (!receivedChunk)
             throw new LlmClientException(
-                "Gemini stream returned no chunks.");
+                "Gemini stream returned no chunks.",
+                LlmClientFailureKind.Availability);
 
         if (!receivedFinalChunk && contentLength == 0 && nativeToolCallCount == 0)
             throw new LlmClientException(
-                "Gemini stream ended without a final chunk.");
+                "Gemini stream ended without a final chunk.",
+                LlmClientFailureKind.Availability);
     }
 
     private static string MapFinishReason(string finishReason) =>

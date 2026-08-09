@@ -341,5 +341,5 @@ public class LlmRouter(
     private static bool IsAvailabilityFailure(Exception ex) =>
         ex is HttpRequestException
             or TaskCanceledException
-            or LlmClientException { StatusCode: 429 or >= 500 };
+            or LlmClientException { CanFallback: true };
 }

@@ -554,6 +554,121 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public async Task Router_FallsBackOnStatuslessAvailabilityFailure()
+    {
+        // Claude's in-stream overloaded_error, Ollama's premature stream end
+        // and Gemini's empty stream all surface without an HTTP status code;
+        // the explicit failure kind must still trigger fallback.
+        var overloadedClient = new ThrowingClient(
+            new LlmClientException(
+                "Claude streaming error (overloaded_error): Overloaded",
+                LlmClientFailureKind.Availability,
+                rateLimit:
+                    new LlmRateLimitInfo(
+                        RetryAfter: TimeSpan.FromSeconds(30))));
+        var healthyClient = new StubClient("from healthy");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model-a"] = () => overloadedClient,
+                ["model-b"] = () => healthyClient
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model-a", ApiStyle.Ollama)] = () => overloadedClient,
+                [("model-b", ApiStyle.Ollama)] = () => healthyClient
+            });
+        var memory = new InMemoryLlmRouterMemory();
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>
+            {
+                [ModelStrategy.Auto] = ["model-a", "model-b"]
+            },
+            memory);
+
+        var response = await router.CompleteStreamingAsync(
+            ModelStrategy.Auto,
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Say hi")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("from healthy");
+
+        var stats = await memory.GetStatsAsync(
+            "model-a:Ollama",
+            TestContext.Current.CancellationToken);
+        stats.AvailabilityFailures.Should().Be(1);
+        stats.UnavailableUntil.Should().NotBeNull();
+        stats.UnavailableUntil!.Value.Should().BeAfter(DateTimeOffset.UtcNow);
+
+        router.Resolve(ModelStrategy.Auto)
+            .Should().Be(new ResolvedEndpoint("model-b:Ollama", "model-b", ApiStyle.Ollama));
+
+        response.RouterDiagnostics.Should().NotBeNull();
+        response.RouterDiagnostics!.Attempts.Should().HaveCount(2);
+        response.RouterDiagnostics.Attempts[0].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Failed);
+        response.RouterDiagnostics.Attempts[0].UnavailableUntil.Should().NotBeNull();
+        response.RouterDiagnostics.Attempts[1].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Succeeded);
+    }
+
+    [Fact]
+    public async Task Router_DoesNotFallBackOnStatuslessNonFallbackableFailure()
+    {
+        var authenticationClient = new ThrowingClient(
+            new LlmClientException(
+                "Claude streaming error (authentication_error): bad key",
+                LlmClientFailureKind.Authentication));
+        var healthyClient = new StubClient("from healthy");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model-a"] = () => authenticationClient,
+                ["model-b"] = () => healthyClient
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model-a", ApiStyle.Ollama)] = () => authenticationClient,
+                [("model-b", ApiStyle.Ollama)] = () => healthyClient
+            });
+        var memory = new InMemoryLlmRouterMemory();
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>
+            {
+                [ModelStrategy.Auto] = ["model-a", "model-b"]
+            },
+            memory);
+
+        var action = async () =>
+            await router.CompleteStreamingAsync(
+                ModelStrategy.Auto,
+                new LlmPromptBuilder
+                {
+                    Messages = [new LlmMessage("user", "Say hi")]
+                },
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<LlmClientException>()
+            .Where(exception =>
+                exception.FailureKind == LlmClientFailureKind.Authentication);
+
+        var healthyStats = await memory.GetStatsAsync(
+            "model-b:Ollama",
+            TestContext.Current.CancellationToken);
+        healthyStats.TotalCalls.Should().Be(0);
+
+        var authenticationStats = await memory.GetStatsAsync(
+            "model-a:Ollama",
+            TestContext.Current.CancellationToken);
+        authenticationStats.AvailabilityFailures.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Router_EmitsAttemptDiagnosticsOnSuccessfulStream()
     {        var client = new StubClient("ok");
         var lookup = new LlmModelLookup(
@@ -989,6 +1104,72 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public void BuildLookup_SameStyleEndpoints_RegisterStyleAccessorFirstWins()
+    {
+        var sp = new StubServiceProvider(new Dictionary<Type, object>
+        {
+            [typeof(IHttpClientFactory)] = new TestHttpClientFactory(new HttpClient()),
+            [typeof(ISecretProvider)] = new RecordingSecretProvider(null)
+        });
+        var options = new LlmRoutingOptions
+        {
+            Profiles =
+                new Dictionary<string, LlmEndpointCapabilitiesOptions>
+                {
+                    ["first"] = new()
+                    {
+                        Thinking = true,
+                        ThinkingBudget = 1024
+                    },
+                    ["second"] = new()
+                    {
+                        Thinking = true,
+                        ThinkingBudget = 2048
+                    }
+                },
+            Models =
+            [
+                new LlmModelOptions
+                {
+                    Name = "m",
+                    Endpoints =
+                    [
+                        new LlmEndpointOptions
+                        {
+                            ApiStyle = ApiStyle.OpenAi,
+                            Id = "gw-1",
+                            Profile = "first"
+                        },
+                        new LlmEndpointOptions
+                        {
+                            ApiStyle = ApiStyle.OpenAi,
+                            Id = "gw-2",
+                            Profile = "second"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var lookup =
+            ServiceCollectionExtensions.BuildLookup(sp, options);
+
+        // The (model, API style) accessor must return the first registered
+        // endpoint of the style, mirroring the plain-name default, instead of
+        // silently pointing at the last registration.
+        lookup.GetClient("m", ApiStyle.OpenAi)
+            .Capabilities.ThinkingBudget.Should().Be(1024);
+        lookup.GetClient("m")
+            .Capabilities.ThinkingBudget.Should().Be(1024);
+
+        // Both endpoints remain individually reachable by their id.
+        lookup.GetClientByEndpointId("gw-1")
+            .Capabilities.ThinkingBudget.Should().Be(1024);
+        lookup.GetClientByEndpointId("gw-2")
+            .Capabilities.ThinkingBudget.Should().Be(2048);
+    }
+
+    [Fact]
     public void DefaultCapabilities_AreConservativeForOllama()
     {
         var capabilities =
@@ -1062,6 +1243,32 @@ public sealed class LlmRouterTests
             ServiceCollectionExtensions.DefaultCapabilities(
                 ApiStyle.Ollama);
         ollama.SupportedThinkingEfforts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DefaultCapabilities_AdvertiseThinkingDisableOnlyWhereEncodeable()
+    {
+        var openAi =
+            ServiceCollectionExtensions.DefaultCapabilities(
+                ApiStyle.OpenAi);
+        var claude =
+            ServiceCollectionExtensions.DefaultCapabilities(
+                ApiStyle.Claude);
+        var gemini =
+            ServiceCollectionExtensions.DefaultCapabilities(
+                ApiStyle.Gemini);
+        var ollama =
+            ServiceCollectionExtensions.DefaultCapabilities(
+                ApiStyle.Ollama);
+
+        // The adapters encode an explicit disabled thinking mode on the wire
+        // for Claude ({"type":"disabled"}) and Gemini ({"thinkingBudget":0}),
+        // so their defaults may advertise it; OpenAI's toggle is dialect
+        // specific (DeepSeek) and Ollama has no thinking at all.
+        claude.ThinkingDisable.Should().BeTrue();
+        gemini.ThinkingDisable.Should().BeTrue();
+        openAi.ThinkingDisable.Should().BeFalse();
+        ollama.ThinkingDisable.Should().BeFalse();
     }
 
     [Fact]

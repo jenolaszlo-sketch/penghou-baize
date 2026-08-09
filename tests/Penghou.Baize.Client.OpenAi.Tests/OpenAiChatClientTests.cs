@@ -300,6 +300,32 @@ public sealed class OpenAiChatClientTests
             .WithMessage("*does not support thinking effort 'Max'*");
     }
 
+    [Fact]
+    public void StreamAsync_RejectsMaxEffortWhenAdvertisedInsteadOfCapping()
+    {
+        // The endpoint advertises Max, so base validation passes; the adapter
+        // must still reject it because the wire has no "max" reasoning effort.
+        var client = CreateClient(
+            new RecordingHandler("data: [DONE]"),
+            "gpt-4o-mini",
+            DefaultCapabilities);
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    new LlmRequest(
+                        [new LlmMessage("user", "Reason hard")],
+                        thinkingConfig:
+                            new LlmThinkingConfig(
+                                mode: LlmThinkingMode.Enabled,
+                                effort: LlmThinkingEffort.Max)),
+                    TestContext.Current.CancellationToken));
+
+        action.Should()
+            .ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*would be silently capped to 'high'*");
+    }
+
     private static LlmEndpointCapabilities DefaultCapabilities =>
         new()
         {
