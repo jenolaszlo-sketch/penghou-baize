@@ -20,6 +20,14 @@ public sealed class ClaudeStreamDelta
     [JsonPropertyName("thinking")]
     public string? Thinking { get; init; }
 
+    /// <summary>
+    /// The thinking-block signature emitted for <c>signature_delta</c> deltas.
+    /// Anthropic requires this exact signature to be replayed with the thinking
+    /// text when thinking and tool use are combined.
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
+
     /// <summary>Partial JSON fragment emitted for <c>input_json_delta</c> deltas.</summary>
     [JsonPropertyName("partial_json")]
     public string? PartialJson { get; init; }

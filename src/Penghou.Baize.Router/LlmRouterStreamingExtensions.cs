@@ -45,6 +45,7 @@ public static class LlmRouterStreamingExtensions
         var content = new StringBuilder();
         var reasoning = new StringBuilder();
         LlmProviderContinuation? reasoningContinuation = null;
+        LlmProviderContinuation? contentContinuation = null;
         LlmUsage? usage = null;
         LlmProviderDiagnostics? diagnostics = null;
         LlmRouterDiagnostics? routerDiagnostics = null;
@@ -57,6 +58,9 @@ public static class LlmRouterStreamingExtensions
             {
                 content.Append(evt.Delta);
                 onDelta?.Invoke(evt.Delta);
+
+                if (evt.Continuation is not null)
+                    contentContinuation = evt.Continuation;
             }
 
             if (evt.ReasoningContent is not null)
@@ -65,6 +69,15 @@ public static class LlmRouterStreamingExtensions
 
                 if (evt.Continuation is not null)
                     reasoningContinuation = evt.Continuation;
+            }
+            else if (evt.Continuation is not null &&
+                     evt.Delta is null &&
+                     evt.ToolCallDelta is null)
+            {
+                // A bare continuation (for example Claude's signature_delta,
+                // which streams in its own event after the thinking text)
+                // still belongs to the reasoning block it follows.
+                reasoningContinuation = evt.Continuation;
             }
 
             if (evt.ToolCallDelta is { } toolDelta)
@@ -79,6 +92,11 @@ public static class LlmRouterStreamingExtensions
                 if (toolDelta.Name is not null) builder.Name = toolDelta.Name;
                 if (toolDelta.ArgumentsJsonFragment is not null)
                     builder.Arguments.Append(toolDelta.ArgumentsJsonFragment);
+
+                if (toolDelta.Continuation is not null)
+                    builder.Continuation = toolDelta.Continuation;
+                else if (evt.Continuation is not null)
+                    builder.Continuation = evt.Continuation;
             }
 
             if (evt.FinishReason is not null)
@@ -99,7 +117,8 @@ public static class LlmRouterStreamingExtensions
             .Select(b => new LlmToolCall(
                 Id: b.Id ?? Guid.NewGuid().ToString(),
                 Name: b.Name!,
-                ArgumentsJson: b.Arguments.ToString()))
+                ArgumentsJson: b.Arguments.ToString(),
+                Continuation: b.Continuation))
             .ToList();
 
         return new LlmResponse(
@@ -112,7 +131,8 @@ public static class LlmRouterStreamingExtensions
             ToolCalls: toolCalls,
             Diagnostics: diagnostics,
             RouterDiagnostics: routerDiagnostics,
-            ReasoningContinuation: reasoningContinuation);
+            ReasoningContinuation: reasoningContinuation,
+            ContentContinuation: contentContinuation);
     }
 
     private sealed class ToolCallBuilder
@@ -120,5 +140,6 @@ public static class LlmRouterStreamingExtensions
         public string? Id { get; set; }
         public string? Name { get; set; }
         public StringBuilder Arguments { get; } = new();
+        public LlmProviderContinuation? Continuation { get; set; }
     }
 }

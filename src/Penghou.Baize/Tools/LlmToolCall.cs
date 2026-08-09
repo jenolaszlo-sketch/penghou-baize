@@ -11,6 +11,10 @@
 /// calls: an undeclared tool or a missing arguments object is preserved with a
 /// status so callers can decide how to handle it.
 /// </param>
+/// <param name="Continuation">
+/// Provider continuation metadata for the call (for example Gemini's thought
+/// signature), required to replay it on a later turn.
+/// </param>
 public sealed record LlmToolCall(
     string Id,
     string Name,
@@ -18,7 +22,8 @@ public sealed record LlmToolCall(
     bool JsonWasRepaired = false,
     IReadOnlyList<LlmRepairAttempt>? JsonRepairAttempts = null,
     LlmToolCallNormalizationStatus NormalizationStatus =
-        LlmToolCallNormalizationStatus.Normalized);
+        LlmToolCallNormalizationStatus.Normalized,
+    LlmProviderContinuation? Continuation = null);
 
 /// <summary>How a native tool call was left by normalization.</summary>
 public enum LlmToolCallNormalizationStatus

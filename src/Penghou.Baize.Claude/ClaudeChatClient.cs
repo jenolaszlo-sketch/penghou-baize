@@ -164,25 +164,31 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
     {
         if (string.Equals(message.Role, "tool", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var result in message.Parts
+            var results = message.Parts
                 .OfType<LlmToolResultContent>()
-                .Select(part => part.Result))
+                .Select(part => part.Result)
+                .ToList();
+
+            if (results.Count == 0)
+                yield break;
+
+            // All results of one tool turn belong in a single immediately
+            // following user message, so parallel tool calls are preserved
+            // (separate messages can flush parallel behaviour or produce
+            // invalid history).
+            yield return new ClaudeMessage
             {
-                yield return new ClaudeMessage
-                {
-                    Role = "user",
-                    Content =
-                    [
-                        new ClaudeContentBlock
-                        {
-                            Type = "tool_result",
-                            ToolUseId = result.ToolCallId,
-                            Content = result.Content,
-                            IsError = !result.Succeeded
-                        }
-                    ]
-                };
-            }
+                Role = "user",
+                Content = results
+                    .Select(result => new ClaudeContentBlock
+                    {
+                        Type = "tool_result",
+                        ToolUseId = result.ToolCallId,
+                        Content = result.Content,
+                        IsError = !result.Succeeded
+                    })
+                    .ToList()
+            };
 
             yield break;
         }
@@ -201,6 +207,18 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                     });
                     break;
 
+                case LlmReasoningContent reasoning:
+                    // Replay signed thinking blocks so the model can continue
+                    // a conversation that combined extended thinking with tool
+                    // use; Anthropic requires the exact signature back.
+                    blocks.Add(new ClaudeContentBlock
+                    {
+                        Type = "thinking",
+                        Thinking = reasoning.Text,
+                        Signature = reasoning.Continuation?.GetValue("signature")
+                    });
+                    break;
+
                 case LlmToolCallContent toolCall:
                     blocks.Add(new ClaudeContentBlock
                     {
@@ -212,9 +230,6 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                             $"tool call '{toolCall.ToolCall.Name}' arguments")
                     });
                     break;
-
-                // Reasoning parts are dropped: Claude cannot accept thinking
-                // blocks back without the provider's exact signatures.
             }
         }
 
@@ -261,6 +276,24 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                         {
                             yield return new LlmStreamEvent(
                                 ReasoningContent: delta.Thinking);
+                        }
+
+                        // Claude sends the thinking block's signature in its own
+                        // delta, after the thinking text. Surface it as a bare
+                        // continuation so the collector ties it to the reasoning
+                        // that preceded it and can replay it with the text.
+                        if (delta?.Type == "signature_delta" &&
+                            !string.IsNullOrEmpty(delta.Signature))
+                        {
+                            yield return new LlmStreamEvent(
+                                Continuation:
+                                    new LlmProviderContinuation(
+                                        Provider: "Claude",
+                                        Values: new Dictionary<string, string>
+                                        {
+                                            ["signature"] =
+                                                delta.Signature
+                                        }));
                         }
 
                         if (delta?.Type == "input_json_delta" &&

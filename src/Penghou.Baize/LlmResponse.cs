@@ -15,6 +15,10 @@
 /// requires an opaque value (for example Gemini's thought signature) to be
 /// replayed on a later turn.
 /// </param>
+/// <param name="ContentContinuation">
+/// Provider continuation metadata for the generated content text, when the
+/// provider attaches signature-like values to a regular content part.
+/// </param>
 public sealed record LlmResponse(
     string Content,
     string? Reasoning = null,
@@ -25,4 +29,5 @@ public sealed record LlmResponse(
     LlmRouterDiagnostics? RouterDiagnostics = null,
     bool ContentWasRepaired = false,
     IReadOnlyList<LlmRepairAttempt>? ContentRepairAttempts = null,
-    LlmProviderContinuation? ReasoningContinuation = null);
+    LlmProviderContinuation? ReasoningContinuation = null,
+    LlmProviderContinuation? ContentContinuation = null);

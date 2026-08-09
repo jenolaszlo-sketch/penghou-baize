@@ -9,9 +9,17 @@ namespace Penghou.Baize.Gemini;
 /// </summary>
 public sealed class GeminiChatRequest
 {
-    /// <summary>The conversation contents.</summary>
+    /// <summary>The conversation contents (user, model and tool turns only).</summary>
     [JsonPropertyName("contents")]
     public required List<GeminiChatMessage> Contents { get; init; }
+
+    /// <summary>
+    /// The system instruction, collected from all system-role messages. Gemini
+    /// does not accept a <c>system</c> role inside <see cref="Contents"/>;
+    /// system prompts belong in this top-level property.
+    /// </summary>
+    [JsonPropertyName("systemInstruction")]
+    public GeminiSystemInstruction? SystemInstruction { get; init; }
 
     /// <summary>Generation configuration such as temperature and response schema.</summary>
     [JsonPropertyName("generationConfig")]
@@ -20,6 +28,16 @@ public sealed class GeminiChatRequest
     /// <summary>Function declarations made available to the model.</summary>
     [JsonPropertyName("tools")]
     public List<GeminiTool>? Tools { get; init; }
+}
+
+/// <summary>
+/// Wire model for the Gemini <c>systemInstruction</c> object.
+/// </summary>
+public sealed class GeminiSystemInstruction
+{
+    /// <summary>The instruction content parts (text parts carrying the system prompt).</summary>
+    [JsonPropertyName("parts")]
+    public required List<GeminiContentPart> Parts { get; init; }
 }
 
 /// <summary>

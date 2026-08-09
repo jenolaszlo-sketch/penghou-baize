@@ -17,6 +17,20 @@ public sealed class ClaudeContentBlock
     [JsonPropertyName("text")]
     public string? Text { get; init; }
 
+    /// <summary>
+    /// The thinking text for <c>thinking</c> blocks. Sent back to the API when
+    /// replaying a conversation that combined thinking and tool use.
+    /// </summary>
+    [JsonPropertyName("thinking")]
+    public string? Thinking { get; init; }
+
+    /// <summary>
+    /// The signature for <c>thinking</c> blocks. Anthropic requires the exact
+    /// signature received from the model to be returned with the thinking text.
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
+
     /// <summary>The tool call id for <c>tool_use</c> blocks.</summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }

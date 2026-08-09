@@ -292,6 +292,309 @@ public sealed class GeminiChatClientTests
     }
 
     [Fact]
+    public async Task StreamAsync_MovesSystemMessagesToSystemInstruction()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash");
+        var request = new LlmRequest(
+            [
+                new LlmMessage("system", "First system"),
+                new LlmMessage("system", "Second system"),
+                new LlmMessage("user", "hi")
+            ]);
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var requestDocument =
+            JsonDocument.Parse(handler.RequestBody!);
+        var root = requestDocument.RootElement;
+        root.TryGetProperty(
+            "systemInstruction",
+            out var systemInstruction)
+            .Should().BeTrue();
+        var instructionText = systemInstruction
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+        instructionText.Should().Contain("First system");
+        instructionText.Should().Contain("Second system");
+
+        var contents = root.GetProperty("contents");
+        contents.GetArrayLength().Should().Be(1);
+        contents[0].GetProperty("role")
+            .GetString().Should().Be("user");
+    }
+
+    [Fact]
+    public async Task StreamAsync_OmitsSystemInstructionWhenNoSystemMessages()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash");
+
+        await CollectAsync(
+            client.StreamAsync(
+                new LlmRequest(
+                    [new LlmMessage("user", "hi")]),
+                TestContext.Current.CancellationToken));
+
+        using var requestDocument =
+            JsonDocument.Parse(handler.RequestBody!);
+        requestDocument.RootElement
+            .TryGetProperty("systemInstruction", out _)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsNonTextSystemParts()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash");
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "system",
+                    [new LlmReasoningContent("reason")]),
+                new LlmMessage("user", "hi")
+            ]);
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    request,
+                    TestContext.Current.CancellationToken));
+
+        await action.Should()
+            .ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*only text in the system instruction*");
+    }
+
+    [Fact]
+    public async Task StreamAsync_CapturesContinuationOnFunctionCallPart()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"fc_1","name":"emit_files","args":{"files":[]}},"thoughtSignature":"sig_fc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.5-flash");
+
+        var events = await CollectAsync(
+            client.StreamAsync(
+                new LlmRequest(
+                    [new LlmMessage("user", "Generate files")]),
+                TestContext.Current.CancellationToken));
+
+        var toolDelta = events.Single(item =>
+            item.ToolCallDelta is not null).ToolCallDelta!;
+        toolDelta.Continuation.Should().NotBeNull();
+        toolDelta.Continuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_fc");
+        events.Single(item =>
+                item.ToolCallDelta is not null)
+            .Continuation!.GetValue("thoughtSignature")
+            .Should().Be("sig_fc");
+    }
+
+    [Fact]
+    public async Task StreamAsync_CapturesContinuationOnPlainTextPart()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"text":"answer"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.5-pro");
+
+        var events = await CollectAsync(
+            client.StreamAsync(
+                new LlmRequest(
+                    [new LlmMessage("user", "Solve")]),
+                TestContext.Current.CancellationToken));
+
+        var deltas = events
+            .Where(e => e.Delta is not null)
+            .ToList();
+        deltas.Should().HaveCount(2);
+        deltas[0].Delta.Should().Be("preface");
+        deltas[0].Continuation.Should().NotBeNull();
+        deltas[0].Continuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_txt");
+        deltas[1].Delta.Should().Be("answer");
+        deltas[1].Continuation.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CompleteStreamingAsync_PreservesContinuationAcrossContentAndToolCalls()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"functionCall":{"id":"fc_1","name":"emit_files","args":{}},"thoughtSignature":"sig_fc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.5-pro");
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>>
+                {
+                    ["gemini-native"] = () => client
+                },
+                new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+                {
+                    [("gemini-native", ApiStyle.Gemini)] = () => client
+                }),
+            new Dictionary<
+                ModelStrategy,
+                IReadOnlyList<string>>());
+
+        var response =
+            await router.CompleteStreamingAsync(
+                "gemini-native",
+                new LlmPromptBuilder
+                {
+                    Messages = [new LlmMessage("user", "Generate")]
+                },
+                cancellationToken:
+                    TestContext.Current
+                        .CancellationToken);
+
+        response.ContentContinuation.Should().NotBeNull();
+        response.ContentContinuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_txt");
+        response.ToolCalls.Should().HaveCount(1);
+        response.ToolCalls![0].Continuation
+            .Should().NotBeNull();
+        response.ToolCalls[0].Continuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_fc");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ReplaysFunctionCallSignatureOnNextTurn()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.5-pro");
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "assistant",
+                    [
+                        new LlmToolCallContent(
+                            new LlmToolCall(
+                                "call_1",
+                                "get_weather",
+                                """{"city":"Paris"}""",
+                                Continuation:
+                                    new LlmProviderContinuation(
+                                        "Gemini",
+                                        new Dictionary<string, string>
+                                        {
+                                            ["thoughtSignature"] =
+                                                "sig_replay"
+                                        })))
+                    ]),
+                LlmMessage.ToolResults(
+                    [new LlmToolResult("call_1", "get_weather", """{"temp":21}""")])
+            ]);
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var document =
+            JsonDocument.Parse(handler.RequestBody!);
+        var part =
+            document.RootElement
+                .GetProperty("contents")[0]
+                .GetProperty("parts")[0];
+        part.GetProperty("functionCall")
+            .GetProperty("id")
+            .GetString().Should().Be("call_1");
+        part.GetProperty("thoughtSignature")
+            .GetString().Should().Be("sig_replay");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ReplaysTextSignatureOnNextTurn()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}
+            data: [DONE]
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.5-pro");
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "assistant",
+                    [
+                        new LlmTextContent("preface")
+                        {
+                            Continuation =
+                                new LlmProviderContinuation(
+                                    "Gemini",
+                                    new Dictionary<string, string>
+                                    {
+                                        ["thoughtSignature"] =
+                                            "sig_txt"
+                                    })
+                        }
+                    ])
+            ]);
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var document =
+            JsonDocument.Parse(handler.RequestBody!);
+        document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("thoughtSignature")
+            .GetString().Should().Be("sig_txt");
+    }
+
+    [Fact]
     public async Task StreamAsync_OmitsThinkingConfigForNoneEffort()
     {
         var handler = new RecordingHandler(

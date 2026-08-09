@@ -89,9 +89,35 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
     {
         var contents =
             new List<GeminiChatMessage>();
+        var systemText =
+            new List<string>();
 
         foreach (var message in request.Messages)
         {
+            var isSystem =
+                string.Equals(
+                    message.Role,
+                    "system",
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (isSystem)
+            {
+                foreach (var part in message.Parts)
+                {
+                    if (part is not LlmTextContent text)
+                    {
+                        throw new LlmRequestValidationException(
+                            "Gemini accepts only text in the system " +
+                            "instruction; a system message carries a " +
+                            "non-text content part.");
+                    }
+
+                    systemText.Add(text.Text);
+                }
+
+                continue;
+            }
+
             var role =
                 string.Equals(message.Role, "tool", StringComparison.OrdinalIgnoreCase)
                     ? "user"
@@ -109,7 +135,10 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                         parts.Add(
                             new GeminiContentPart
                             {
-                                Text = text.Text
+                                Text = text.Text,
+                                ThoughtSignature =
+                                    text.Continuation?.GetValue(
+                                        "thoughtSignature")
                             });
                         break;
 
@@ -129,6 +158,10 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                         parts.Add(
                             new GeminiContentPart
                             {
+                                ThoughtSignature =
+                                    (toolCall.ToolCall.Continuation ??
+                                     toolCall.Continuation)?.GetValue(
+                                        "thoughtSignature"),
                                 FunctionCall =
                                     new GeminiFunctionCall
                                     {
@@ -169,6 +202,21 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                 });
         }
 
+        var systemInstruction = systemText.Count == 0
+            ? null
+            : new GeminiSystemInstruction
+            {
+                Parts =
+                [
+                    new GeminiContentPart
+                    {
+                        Text = string.Join(
+                            Environment.NewLine + Environment.NewLine,
+                            systemText)
+                    }
+                ]
+            };
+
         var responseSchema = request.ResponseFormat is null
             ? (JsonElement?)null
             : ParseJsonElement(
@@ -178,6 +226,7 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
         var wireRequest = new GeminiChatRequest
         {
             Contents = contents,
+            SystemInstruction = systemInstruction,
             GenerationConfig = new GeminiGenerationConfig
             {
                 Temperature = request.Temperature,
@@ -309,6 +358,16 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
 
             foreach (var part in content.Parts)
             {
+                var continuation = part.ThoughtSignature is null
+                    ? null
+                    : new LlmProviderContinuation(
+                        Provider: "Gemini",
+                        Values: new Dictionary<string, string>
+                        {
+                            ["thoughtSignature"] =
+                                part.ThoughtSignature
+                        });
+
                 if (part.Text is not null)
                 {
                     contentLength += part.Text.Length;
@@ -317,20 +376,13 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                     {
                         yield return new LlmStreamEvent(
                             ReasoningContent: part.Text,
-                            Continuation: part.ThoughtSignature is null
-                                ? null
-                                : new LlmProviderContinuation(
-                                    Provider: "Gemini",
-                                    Values: new Dictionary<string, string>
-                                    {
-                                        ["thoughtSignature"] =
-                                            part.ThoughtSignature
-                                    }));
+                            Continuation: continuation);
                     }
                     else
                     {
                         yield return new LlmStreamEvent(
-                            Delta: part.Text);
+                            Delta: part.Text,
+                            Continuation: continuation);
                     }
                 }
 
@@ -345,7 +397,9 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                                 Guid.NewGuid().ToString("N"),
                             Name: functionCall.Name,
                             ArgumentsJsonFragment:
-                                functionCall.Args.ToString()));
+                                functionCall.Args.ToString(),
+                            Continuation: continuation),
+                        Continuation: continuation);
 
                     nativeToolCallCount++;
                 }

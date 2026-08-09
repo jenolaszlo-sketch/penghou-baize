@@ -410,6 +410,104 @@ public sealed class ClaudeChatClientTests
     }
 
     [Fact]
+    public async Task StreamAsync_CapturesThinkingSignatureAsContinuation()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Let me think about it."}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig_123"}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"answer"}}
+
+            event: message_delta
+            data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}
+
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test");
+
+        var events = await CollectAsync(
+            client.StreamAsync(
+                CreateRequest(),
+                TestContext.Current.CancellationToken));
+
+        events.Single(item =>
+                item.ReasoningContent is not null)
+            .ReasoningContent.Should()
+            .Be("Let me think about it.");
+
+        var signatureEvent = events.Single(item =>
+            item.Continuation is not null &&
+            item.ReasoningContent is null &&
+            item.Delta is null);
+        signatureEvent.Continuation!
+            .Provider.Should().Be("Claude");
+        signatureEvent.Continuation!
+            .GetValue("signature")
+            .Should().Be("sig_123");
+    }
+
+    [Fact]
+    public async Task CompleteStreamingAsync_RetainsThinkingSignatureWithReasoning()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Let me think about it."}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig_123"}}
+
+            event: message_delta
+            data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}
+
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test");
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>>
+                {
+                    ["claude-native"] = () => client
+                },
+                new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+                {
+                    [("claude-native", ApiStyle.Claude)] = () => client
+                }),
+            new Dictionary<
+                ModelStrategy,
+                IReadOnlyList<string>>());
+
+        var response =
+            await router.CompleteStreamingAsync(
+                "claude-native",
+                new LlmPromptBuilder
+                {
+                    Messages = [new LlmMessage("user", "Reason")]
+                },
+                cancellationToken:
+                    TestContext.Current.CancellationToken);
+
+        response.Reasoning.Should()
+            .Be("Let me think about it.");
+        response.ReasoningContinuation.Should().NotBeNull();
+        response.ReasoningContinuation!
+            .GetValue("signature").Should().Be("sig_123");
+    }
+
+    [Fact]
     public async Task StreamAsync_DeliversStructuredOutputAsContentNotToolCall()
     {
         var handler = new RecordingHandler(
@@ -783,6 +881,125 @@ public sealed class ClaudeChatClientTests
 
         messages[2].GetProperty("role")
             .GetString().Should().Be("user");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ReplaysThinkingBlockWithSignatureBeforeToolUse()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(handler, "claude-test");
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "assistant",
+                    [
+                        new LlmReasoningContent("Let me think about it.")
+                        {
+                            Continuation =
+                                new LlmProviderContinuation(
+                                    "Claude",
+                                    new Dictionary<string, string>
+                                    {
+                                        ["signature"] = "sig_123"
+                                    })
+                        },
+                        new LlmToolCallContent(
+                            new LlmToolCall(
+                                "call_1",
+                                "get_weather",
+                                """{"city":"Paris"}"""))
+                    ]),
+                LlmMessage.ToolResults(
+                    [new LlmToolResult("call_1", "get_weather", """{"temp":21}""")])
+            ]);
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var document =
+            JsonDocument.Parse(handler.RequestBody!);
+        var assistantContent = document.RootElement
+            .GetProperty("messages")[0]
+            .GetProperty("content");
+        assistantContent.GetArrayLength().Should().Be(2);
+
+        var thinking = assistantContent[0];
+        thinking.GetProperty("type")
+            .GetString().Should().Be("thinking");
+        thinking.GetProperty("thinking")
+            .GetString().Should().Be("Let me think about it.");
+        thinking.GetProperty("signature")
+            .GetString().Should().Be("sig_123");
+
+        assistantContent[1].GetProperty("type")
+            .GetString().Should().Be("tool_use");
+        assistantContent[1].GetProperty("id")
+            .GetString().Should().Be("call_1");
+    }
+
+    [Fact]
+    public async Task StreamAsync_SendsParallelToolResultsInOneUserMessage()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(handler, "claude-test");
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "assistant",
+                    [
+                        new LlmToolCallContent(
+                            new LlmToolCall(
+                                "call_1",
+                                "get_weather",
+                                """{"city":"Paris"}""")),
+                        new LlmToolCallContent(
+                            new LlmToolCall(
+                                "call_2",
+                                "get_time",
+                                """{"tz":"UTC"}"""))
+                    ]),
+                LlmMessage.ToolResults(
+                    [
+                        new LlmToolResult("call_1", "get_weather", """{"temp":21}"""),
+                        new LlmToolResult("call_2", "get_time", """{"time":"10:00"}""")
+                    ])
+            ]);
+
+        await CollectAsync(
+            client.StreamAsync(
+                request,
+                TestContext.Current.CancellationToken));
+
+        using var document =
+            JsonDocument.Parse(handler.RequestBody!);
+        var messages = document.RootElement
+            .GetProperty("messages");
+        var toolMessage = messages[1];
+        toolMessage.GetProperty("role")
+            .GetString().Should().Be("user");
+
+        var results = toolMessage.GetProperty("content");
+        results.GetArrayLength().Should().Be(2);
+        results[0].GetProperty("type")
+            .GetString().Should().Be("tool_result");
+        results[0].GetProperty("tool_use_id")
+            .GetString().Should().Be("call_1");
+        results[1].GetProperty("type")
+            .GetString().Should().Be("tool_result");
+        results[1].GetProperty("tool_use_id")
+            .GetString().Should().Be("call_2");
     }
 
     private static LlmRequest CreateRequest() =>
