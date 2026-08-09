@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build Penghou.Baize.slnx --configuration Release
+
+      - name: Test and coverage (core)
+        run: >
+          dotnet test tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage/
+          /p:CoverletOutputFormat=cobertura
+          /p:Threshold=75
+          /p:ThresholdType=line
+
+      - name: Test and coverage (Claude)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.Claude.Tests/Penghou.Baize.Client.Claude.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-claude/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Test and coverage (Ollama)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.Ollama.Tests/Penghou.Baize.Client.Ollama.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-ollama/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Test and coverage (Gemini)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.Gemini.Tests/Penghou.Baize.Client.Gemini.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-gemini/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Test and coverage (Router)
+        run: >
+          dotnet test tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-router/
+          /p:CoverletOutputFormat=cobertura
+          /p:Threshold=80
+          /p:ThresholdType=line
+
+      - name: Test and coverage (Tools)
+        run: >
+          dotnet test tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-tools/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: |
+            coverage/
+            coverage-claude/
+            coverage-ollama/
+            coverage-gemini/
+            coverage-router/
+            coverage-tools/
+          if-no-files-found: error

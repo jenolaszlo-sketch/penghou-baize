@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Penghou.Baize/Penghou.Baize.csproj" />
+    <Project Path="src/Penghou.Baize.OpenAi/Penghou.Baize.OpenAi.csproj" />
+    <Project Path="src/Penghou.Baize.Claude/Penghou.Baize.Claude.csproj" />
+    <Project Path="src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj" />
+    <Project Path="src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj" />
+    <Project Path="src/Penghou.Baize.Router/Penghou.Baize.Router.csproj" />
+    <Project Path="src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.Claude.Tests/Penghou.Baize.Client.Claude.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.Ollama.Tests/Penghou.Baize.Client.Ollama.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.Gemini.Tests/Penghou.Baize.Client.Gemini.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.OpenAi.Tests/Penghou.Baize.Client.OpenAi.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj" />
+  </Folder>
+</Solution>

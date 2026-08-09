@@ -1,0 +1,48 @@
+using Penghou.Baize;
+
+namespace Penghou.Baize.Router.Configuration;
+
+/// <summary>
+/// Per-endpoint capability overrides. Each property is nullable: a null value
+/// falls back to the API style's default, an explicit value wins. Mirrors
+/// <see cref="LlmEndpointCapabilities"/> with nullable members so configuration
+/// can distinguish "unspecified" from "false".
+/// </summary>
+public sealed class LlmEndpointCapabilitiesOptions
+{
+    /// <summary>Whether the endpoint accepts native tool definitions.</summary>
+    public bool? NativeToolCalling { get; init; }
+
+    /// <summary>Whether the endpoint can return multiple tool calls per response.</summary>
+    public bool? ParallelToolCalls { get; init; }
+
+    /// <summary>Whether the endpoint natively constrains the output shape.</summary>
+    public bool? NativeStructuredOutput { get; init; }
+
+    /// <summary>Whether the endpoint emulates structured output through a synthetic tool.</summary>
+    public bool? StructuredOutputViaTool { get; init; }
+
+    /// <summary>Whether the endpoint can turn extended thinking on.</summary>
+    public bool? Thinking { get; init; }
+
+    /// <summary>Whether the endpoint can explicitly turn extended thinking off.</summary>
+    public bool? ThinkingDisable { get; init; }
+
+    /// <summary>Whether the endpoint streams tool-call arguments incrementally.</summary>
+    public bool? StreamingToolCallArguments { get; init; }
+
+    /// <summary>
+    /// The reasoning effort levels the endpoint accepts when extended thinking
+    /// is enabled; null keeps the style default.
+    /// </summary>
+    public IReadOnlyList<LlmThinkingEffort>? SupportedThinkingEfforts { get; init; }
+
+    /// <summary>
+    /// An explicit thinking token budget applied when extended thinking is
+    /// enabled; null lets the client derive a budget from the effort.
+    /// </summary>
+    public int? ThinkingBudget { get; init; }
+
+    /// <summary>The message content types the endpoint accepts; null keeps the style default.</summary>
+    public IReadOnlyList<LlmContentType>? ContentTypes { get; init; }
+}
