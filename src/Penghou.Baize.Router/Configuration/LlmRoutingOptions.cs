@@ -3,13 +3,20 @@
 /// <summary>The root <c>LlmRouting</c> configuration section.</summary>
 public sealed class LlmRoutingOptions
 {
+    /// <summary>
+    /// Optional provider modules loaded by assembly name from trusted
+    /// configuration. Explicit provider-package registration remains the
+    /// recommended default.
+    /// </summary>
+    public List<LlmProviderModuleOptions> ProviderModules { get; init; } = [];
+
     /// <summary>The registered models, each with one or more endpoints.</summary>
     public List<LlmModelOptions> Models { get; init; } = [];
 
     /// <summary>
     /// Named capability profiles. An endpoint references one by name through
     /// <see cref="LlmEndpointOptions.Profile"/> to opt in to capabilities the
-    /// API style's conservative defaults do not claim (for example a local
+    /// provider's conservative defaults do not claim (for example a local
     /// Ollama model that does support native tool calling).
     /// </summary>
     public Dictionary<string, LlmEndpointCapabilitiesOptions> Profiles { get; init; } = [];

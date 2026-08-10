@@ -34,6 +34,26 @@ public interface ILlmModelLookup
     /// <returns><c>true</c> when the endpoint is registered; otherwise <c>false</c>.</returns>
     bool TryGetClient(string model, ApiStyle apiStyle, out ILlmClient client);
 
+    /// <summary>Returns the client for a specific extensible provider.</summary>
+    ILlmClient GetClient(string model, LlmProviderKey provider)
+    {
+        if (provider.TryGetApiStyle(out var apiStyle))
+            return GetClient(model, apiStyle);
+
+        throw new KeyNotFoundException(
+            $"No client is registered for model '{model}' and provider '{provider}'.");
+    }
+
+    /// <summary>Tries to return the client for a specific extensible provider.</summary>
+    bool TryGetClient(string model, LlmProviderKey provider, out ILlmClient client)
+    {
+        if (provider.TryGetApiStyle(out var apiStyle))
+            return TryGetClient(model, apiStyle, out client);
+
+        client = null!;
+        return false;
+    }
+
     /// <summary>Returns the client for a specific endpoint id.</summary>
     /// <param name="endpointId">The endpoint's stable id.</param>
     /// <returns>The matching client.</returns>
@@ -53,6 +73,10 @@ public interface ILlmModelLookup
     /// <param name="model">The model's registration name.</param>
     /// <returns>The model's API styles in registration order.</returns>
     IReadOnlyList<ApiStyle> GetApiStyles(string model);
+
+    /// <summary>The provider keys a model can be reached through.</summary>
+    IReadOnlyList<LlmProviderKey> GetProviders(string model) =>
+        GetApiStyles(model).Select(style => style.ToProviderKey()).ToArray();
 
     /// <summary>
     /// The endpoints a model can be reached through, in registration order.

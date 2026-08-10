@@ -5,9 +5,9 @@
 
     <PackageId>Penghou.Baize.Router</PackageId>
     <Title>Penghou Baize Router</Title>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Penghou.Baize contributors</Authors>
-    <Description>Configuration-driven model routing and capability fallback over Penghou.Baize clients.</Description>
+    <Description>Provider-neutral, configuration-driven model routing and capability fallback over Penghou.Baize clients.</Description>
     <PackageTags>llm;chat;router;model-routing;capability;ai</PackageTags>
     <RepositoryUrl>https://github.com/jenolaszlo-sketch/penghou-baize</RepositoryUrl>
     <PackageProjectUrl>https://github.com/jenolaszlo-sketch/penghou-baize</PackageProjectUrl>
@@ -35,10 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Penghou.Baize.Claude\Penghou.Baize.Claude.csproj" />
-    <ProjectReference Include="..\Penghou.Baize.Gemini\Penghou.Baize.Gemini.csproj" />
-    <ProjectReference Include="..\Penghou.Baize.Ollama\Penghou.Baize.Ollama.csproj" />
-    <ProjectReference Include="..\Penghou.Baize.OpenAi\Penghou.Baize.OpenAi.csproj" />
     <ProjectReference Include="..\Penghou.Baize\Penghou.Baize.csproj" />
   </ItemGroup>
 

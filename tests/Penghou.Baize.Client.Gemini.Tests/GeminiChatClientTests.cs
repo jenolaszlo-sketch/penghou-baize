@@ -928,6 +928,7 @@ public sealed class GeminiChatClientTests
                 .Build();
         var services = new ServiceCollection();
         services.AddHttpClient("llm");
+        services.AddGeminiLlmProvider();
         services.AddLlmRouting(configuration);
 
         using var provider =

@@ -220,7 +220,7 @@ public class LlmRouter(
                     attempts.Add(new LlmRouterAttempt(
                         EndpointId: endpoint.EndpointId,
                         EndpointModel: endpoint.Model,
-                        EndpointApiStyle: endpoint.ApiStyle.ToString(),
+                        EndpointApiStyle: endpoint.Provider.ToString(),
                         Outcome: LlmRouterAttemptOutcome.Failed,
                         Duration: Stopwatch.GetElapsedTime(started),
                         Error: incompatible.Message));
@@ -241,7 +241,7 @@ public class LlmRouter(
                     attempts.Add(new LlmRouterAttempt(
                         EndpointId: endpoint.EndpointId,
                         EndpointModel: endpoint.Model,
-                        EndpointApiStyle: endpoint.ApiStyle.ToString(),
+                        EndpointApiStyle: endpoint.Provider.ToString(),
                         Outcome: LlmRouterAttemptOutcome.Failed,
                         Duration: Stopwatch.GetElapsedTime(started),
                         Error: failure.Message,
@@ -311,7 +311,7 @@ public class LlmRouter(
             attempts.Add(new LlmRouterAttempt(
                 EndpointId: endpoint.EndpointId,
                 EndpointModel: endpoint.Model,
-                EndpointApiStyle: endpoint.ApiStyle.ToString(),
+                EndpointApiStyle: endpoint.Provider.ToString(),
                 Outcome: LlmRouterAttemptOutcome.Succeeded,
                 Duration: Stopwatch.GetElapsedTime(started)));
 

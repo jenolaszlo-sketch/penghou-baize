@@ -341,6 +341,7 @@ public sealed class OllamaChatClientTests
                 .Build();
         var services = new ServiceCollection();
         services.AddHttpClient("llm");
+        services.AddOllamaLlmProvider();
         services.AddLlmRouting(configuration);
 
         using var provider =

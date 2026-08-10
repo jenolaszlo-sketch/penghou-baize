@@ -2,9 +2,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Penghou.Baize;
+using Penghou.Baize.Claude;
+using Penghou.Baize.Gemini;
+using Penghou.Baize.Ollama;
+using Penghou.Baize.OpenAi;
 using Penghou.Baize.Router;
 using Penghou.Baize.Router.Configuration;
 using Penghou.Baize.Router.Extensions;
+using ServiceCollectionExtensions = Penghou.Baize.Router.Extensions.ServiceCollectionExtensions;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -1379,8 +1384,7 @@ public sealed class LlmRouterTests
     public void DefaultCapabilities_AreConservativeForOllama()
     {
         var capabilities =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Ollama);
+            Provider(ApiStyle.Ollama).DefaultCapabilities;
 
         capabilities.NativeToolCalling.Should().BeFalse();
         capabilities.ParallelToolCalls.Should().BeFalse();
@@ -1395,8 +1399,7 @@ public sealed class LlmRouterTests
     public void DefaultCapabilities_AreConservativeForOpenAi()
     {
         var capabilities =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.OpenAi);
+            Provider(ApiStyle.OpenAi).DefaultCapabilities;
 
         capabilities.NativeToolCalling.Should().BeTrue();
         capabilities.ParallelToolCalls.Should().BeFalse();
@@ -1409,8 +1412,7 @@ public sealed class LlmRouterTests
     public void DefaultCapabilities_ClaimWireLevelThinkingEfforts()
     {
         var openAi =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.OpenAi);
+            Provider(ApiStyle.OpenAi).DefaultCapabilities;
         openAi.SupportedThinkingEfforts.Should()
             .BeEquivalentTo(
                 new[]
@@ -1421,8 +1423,7 @@ public sealed class LlmRouterTests
                 });
 
         var claude =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Claude);
+            Provider(ApiStyle.Claude).DefaultCapabilities;
         claude.SupportedThinkingEfforts.Should()
             .BeEquivalentTo(
                 new[]
@@ -1433,8 +1434,7 @@ public sealed class LlmRouterTests
                 });
 
         var gemini =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Gemini);
+            Provider(ApiStyle.Gemini).DefaultCapabilities;
         gemini.SupportedThinkingEfforts.Should()
             .BeEquivalentTo(
                 new[]
@@ -1446,8 +1446,7 @@ public sealed class LlmRouterTests
                 });
 
         var ollama =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Ollama);
+            Provider(ApiStyle.Ollama).DefaultCapabilities;
         ollama.SupportedThinkingEfforts.Should().BeEmpty();
     }
 
@@ -1455,17 +1454,13 @@ public sealed class LlmRouterTests
     public void DefaultCapabilities_AdvertiseThinkingDisableOnlyWhereEncodeable()
     {
         var openAi =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.OpenAi);
+            Provider(ApiStyle.OpenAi).DefaultCapabilities;
         var claude =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Claude);
+            Provider(ApiStyle.Claude).DefaultCapabilities;
         var gemini =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Gemini);
+            Provider(ApiStyle.Gemini).DefaultCapabilities;
         var ollama =
-            ServiceCollectionExtensions.DefaultCapabilities(
-                ApiStyle.Ollama);
+            Provider(ApiStyle.Ollama).DefaultCapabilities;
 
         // The adapters encode an explicit disabled thinking mode on the wire
         // for Claude ({"type":"disabled"}) and Gemini ({"thinkingBudget":0}),
@@ -1504,7 +1499,8 @@ public sealed class LlmRouterTests
         var capabilities =
             ServiceCollectionExtensions.ResolveCapabilities(
                 endpoint,
-                profiles);
+                profiles,
+                Provider(ApiStyle.Ollama));
 
         capabilities.NativeToolCalling.Should().BeTrue();
         capabilities.ParallelToolCalls.Should().BeTrue();
@@ -1536,7 +1532,8 @@ public sealed class LlmRouterTests
         var capabilities =
             ServiceCollectionExtensions.ResolveCapabilities(
                 endpoint,
-                profiles);
+                profiles,
+                Provider(ApiStyle.Ollama));
 
         capabilities.NativeToolCalling.Should().BeFalse();
     }
@@ -1553,7 +1550,8 @@ public sealed class LlmRouterTests
         var action = () =>
             ServiceCollectionExtensions.ResolveCapabilities(
                 endpoint,
-                new Dictionary<string, LlmEndpointCapabilitiesOptions>());
+                new Dictionary<string, LlmEndpointCapabilitiesOptions>(),
+                Provider(ApiStyle.Ollama));
 
         action.Should()
             .Throw<InvalidOperationException>()
@@ -2005,8 +2003,27 @@ public sealed class LlmRouterTests
     private sealed class StubServiceProvider(Dictionary<Type, object> services) : IServiceProvider
     {
         public object? GetService(Type serviceType)
-            => services.TryGetValue(serviceType, out var value) ? value : null;
+        {
+            if (services.TryGetValue(serviceType, out var value))
+                return value;
+
+            return serviceType == typeof(ILlmClientProviderRegistry)
+                ? BuiltInProviderRegistry
+                : null;
+        }
     }
+
+    private static readonly ILlmClientProviderRegistry BuiltInProviderRegistry =
+        new LlmClientProviderRegistry(
+        [
+            new OpenAiClientProvider(),
+            new ClaudeClientProvider(),
+            new GeminiClientProvider(),
+            new OllamaClientProvider()
+        ]);
+
+    private static ILlmClientProvider Provider(ApiStyle apiStyle) =>
+        BuiltInProviderRegistry.GetRequiredProvider(apiStyle.ToProviderKey());
 
     private sealed class TestHttpClientFactory(HttpClient client) : IHttpClientFactory
     {

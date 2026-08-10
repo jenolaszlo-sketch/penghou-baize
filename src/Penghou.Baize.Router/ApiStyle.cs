@@ -19,3 +19,26 @@ public enum ApiStyle
     /// <summary>The Google Gemini streamGenerateContent API.</summary>
     Gemini
 }
+
+/// <summary>Compatibility helpers for built-in API styles.</summary>
+public static class ApiStyleExtensions
+{
+    /// <summary>Converts a built-in API style to its extensible provider key.</summary>
+    public static LlmProviderKey ToProviderKey(this ApiStyle apiStyle) =>
+        new(apiStyle.ToString());
+
+    /// <summary>Attempts to interpret a provider key as a built-in API style.</summary>
+    public static bool TryGetApiStyle(
+        this LlmProviderKey provider,
+        out ApiStyle apiStyle)
+    {
+        if (Enum.TryParse(provider.Value, ignoreCase: true, out apiStyle) &&
+            Enum.IsDefined(apiStyle))
+        {
+            return true;
+        }
+
+        apiStyle = default;
+        return false;
+    }
+}

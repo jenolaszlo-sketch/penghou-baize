@@ -867,6 +867,7 @@ public sealed class ClaudeChatClientTests
         services.AddHttpClient("llm")
             .ConfigurePrimaryHttpMessageHandler(
                 () => handler);
+        services.AddClaudeLlmProvider();
         services.AddLlmRouting(configuration);
 
         await using var provider =
@@ -917,6 +918,7 @@ public sealed class ClaudeChatClientTests
         services.AddHttpClient("llm")
             .ConfigurePrimaryHttpMessageHandler(
                 () => handler);
+        services.AddClaudeLlmProvider();
         services.AddLlmRouting(configuration);
 
         await using var provider =

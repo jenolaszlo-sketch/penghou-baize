@@ -20,7 +20,7 @@ into your application.
 | `Penghou.Baize.Claude` | Anthropic Claude chat client |
 | `Penghou.Baize.Ollama` | Ollama chat client |
 | `Penghou.Baize.Gemini` | Google Gemini chat client |
-| `Penghou.Baize.Router` | Configuration-driven model routing and capability fallback |
+| `Penghou.Baize.Router` | Provider-neutral, configuration-driven model routing and capability fallback |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
 
 The core, provider clients, and router target `net8.0` and `net10.0`.
@@ -139,13 +139,22 @@ JSON.
 
 `Penghou.Baize.Router` resolves a model name (or a `ModelStrategy`, with
 fallback chains) to a concrete client from the `LlmRouting` configuration
-section. Every model declares one or more endpoints; each endpoint pairs an
-API style with its provider-specific settings, so one logical model can be
-reached through several wire protocols:
+section. The router package depends only on `Penghou.Baize`; it does not pull
+OpenAI, Claude, Gemini, or Ollama into an application that does not use them.
+
+Install the provider packages you need, then either register their adapters
+explicitly or list their trusted assembly names under `ProviderModules`. The
+configured module form lets the router discover a third-party
+`ILlmClientProvider` without a Baize release or a growing provider enum:
 
 ```json
 {
   "LlmRouting": {
+    "ProviderModules": [
+      { "Assembly": "Penghou.Baize.OpenAi" },
+      { "Assembly": "Penghou.Baize.Claude" },
+      { "Assembly": "Penghou.Baize.Ollama" }
+    ],
     "Profiles": {
       "qwen-tools": {
         "NativeToolCalling": true,
@@ -158,14 +167,14 @@ reached through several wire protocols:
         "Name": "deepseek",
         "Endpoints": [
           {
-            "ApiStyle": "OpenAi",
+            "Provider": "OpenAi",
             "ProviderModel": "deepseek-chat",
             "BaseUrl": "https://api.deepseek.com/v1",
             "ApiKeyEnvVar": "DEEPSEEK_API_KEY",
             "Dialect": "DeepSeek"
           },
           {
-            "ApiStyle": "Claude",
+            "Provider": "Claude",
             "ProviderModel": "claude-sonnet-4-5",
             "ApiKeyEnvVar": "ANTHROPIC_API_KEY"
           }
@@ -175,7 +184,7 @@ reached through several wire protocols:
         "Name": "qwen",
         "Endpoints": [
           {
-            "ApiStyle": "Ollama",
+            "Provider": "Ollama",
             "ProviderModel": "qwen2.5-coder:7b",
             "BaseUrl": "http://localhost:11434",
             "Profile": "qwen-tools"
@@ -190,17 +199,38 @@ reached through several wire protocols:
 }
 ```
 
-Every model needs a unique `Name` and at least one endpoint. `ApiStyle`
-selects the wire protocol (`OpenAi`, `Claude`, `Ollama`, or `Gemini`);
-`BaseUrl` and `ApiKeyEnvVar` override the provider defaults. OpenAI-compatible
-endpoints can declare a `Dialect` (`Standard` or `DeepSeek`) that controls
-whether the explicit `thinking` toggle is sent; it defaults to `Standard` and
-is never inferred from the model name.
+Every model needs a unique `Name` and at least one endpoint. `Provider` is a
+case-insensitive adapter key; built-in keys are `OpenAi`, `Claude`, `Ollama`,
+and `Gemini`, while packages can define their own. The older `ApiStyle`
+property remains accepted for built-in providers. `BaseUrl` and
+`ApiKeyEnvVar` override provider defaults. Provider-specific settings can be
+placed in an endpoint's `Settings` object. For compatibility, OpenAI's
+top-level `Dialect` (`Standard` or `DeepSeek`) and Claude's `ThinkingStyle`
+are also forwarded as provider settings.
+
+Assembly discovery accepts assembly identities, never file paths. The package
+must be referenced by the application so it is present in the output and its
+dependencies appear in the application's dependency manifest. Configuration
+is a trust boundary: only list provider assemblies you intend to execute. If
+an application is trimmed or compiled with Native AOT, prefer explicit
+registration because reflection-based discovery cannot guarantee that
+provider constructors are retained:
+
+```csharp
+services.AddOpenAiLlmProvider();
+services.AddClaudeLlmProvider();
+services.AddLlmRouting(configuration);
+```
+
+A third-party package implements `ILlmClientProvider`, exposes a public
+DI-constructible implementation, and chooses a unique `LlmProviderKey`. A
+module entry can set `Type` to its fully-qualified type name; when omitted,
+Baize registers every public concrete provider in that assembly.
 
 The router resolves each endpoint's capabilities in three layers, from the
 most conservative to the most specific:
 
-1. **API-style defaults** — only what the wire protocol guarantees. The
+1. **Provider defaults** — only what the provider adapter guarantees. The
    OpenAI-compatible defaults claim tool definitions and streaming tool-call
    arguments but *not* parallel tool calls, native structured output, or
    extended thinking, because a generic "OpenAI-compatible" server does not
@@ -210,11 +240,11 @@ most conservative to the most specific:
    protocol.
 2. **A named profile** (optional) — declared in the `Profiles` section and
    referenced from an endpoint through `Profile`. Profiles opt specific models
-   into capabilities the conservative style defaults do not claim, without
+   into capabilities the conservative provider defaults do not claim, without
    duplicating them on every endpoint.
-3. **Per-endpoint `Capabilities`** — override both the style defaults and any
+3. **Per-endpoint `Capabilities`** — override both the provider defaults and any
    referenced profile; an omitted capability inherits from the profile or the
-   style default.
+   provider default.
 
 Capabilities describe native tool calling, parallel tool calls, native or
 tool-emulated structured output, extended thinking (and explicitly disabling
@@ -229,7 +259,8 @@ Gemini 2.5 Pro) instead of relying on a hard-coded ceiling. When a request
 asks for something the endpoint's capabilities do not allow, the client throws
 a `LlmRequestValidationException` before transmitting instead of silently
 dropping the feature. Clients are looked up either by name alone (the first
-endpoint wins) or by the `(name, ApiStyle)` pair:
+endpoint wins), by the extensible `(name, LlmProviderKey)` pair, or through
+the legacy `(name, ApiStyle)` overload for built-in providers:
 
 ```csharp
 var services = new ServiceCollection();
@@ -241,6 +272,7 @@ var lookup = provider.GetRequiredService<ILlmModelLookup>();
 
 ILlmClient byName = lookup.GetClient("deepseek");
 ILlmClient byNameAndStyle = lookup.GetClient("deepseek", ApiStyle.Claude);
+ILlmClient byProvider = lookup.GetClient("deepseek", new LlmProviderKey("Claude"));
 
 var router = provider.GetRequiredService<ILlmRouter>();
 
@@ -300,7 +332,7 @@ await memory.RecordFailureAsync(
 ```
 
 `Resolve` returns the `ResolvedEndpoint` the router would currently pick - its
-stable `EndpointId`, the logical model name, and the API style - so applications
+stable `EndpointId`, the logical model name, and provider key - so applications
 know where a stream is going and can attribute quality events correctly.
 Routing memory and cooldowns are keyed by endpoint id, so two endpoints of the
 same logical model keep separate stats (give them distinct `Id` values in

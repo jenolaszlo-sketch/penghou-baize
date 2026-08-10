@@ -4,7 +4,7 @@ namespace Penghou.Baize.Router.Configuration;
 
 /// <summary>
 /// Per-endpoint capability overrides. Each property is nullable: a null value
-/// falls back to the API style's default, an explicit value wins. Mirrors
+/// falls back to the provider's default, an explicit value wins. Mirrors
 /// <see cref="LlmEndpointCapabilities"/> with nullable members so configuration
 /// can distinguish "unspecified" from "false".
 /// </summary>

@@ -15,6 +15,7 @@
     <Project Path="tests/Penghou.Baize.Client.Gemini.Tests/Penghou.Baize.Client.Gemini.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Client.OpenAi.Tests/Penghou.Baize.Client.OpenAi.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.TestProvider/Penghou.Baize.TestProvider.csproj" />
     <Project Path="tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj" />
   </Folder>
 </Solution>

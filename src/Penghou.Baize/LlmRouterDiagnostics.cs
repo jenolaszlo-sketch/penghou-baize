@@ -15,7 +15,10 @@ public sealed record LlmRouterDiagnostics(
 /// </summary>
 /// <param name="EndpointId">The endpoint's stable id.</param>
 /// <param name="EndpointModel">The registration name of the endpoint's logical model.</param>
-/// <param name="EndpointApiStyle">The name of the endpoint's API style (wire protocol).</param>
+/// <param name="EndpointApiStyle">
+/// The provider key. The historical property name is retained for source and
+/// binary compatibility.
+/// </param>
 /// <param name="Outcome">Whether the attempt served the stream or failed.</param>
 /// <param name="Duration">The elapsed time of the attempt.</param>
 /// <param name="Error">The failure message, when the attempt failed.</param>
@@ -30,7 +33,11 @@ public sealed record LlmRouterAttempt(
     LlmRouterAttemptOutcome Outcome,
     TimeSpan Duration,
     string? Error = null,
-    DateTimeOffset? UnavailableUntil = null);
+    DateTimeOffset? UnavailableUntil = null)
+{
+    /// <summary>The extensible provider key for the attempted endpoint.</summary>
+    public string EndpointProvider => EndpointApiStyle;
+}
 
 /// <summary>How an endpoint attempt for a routed stream ended.</summary>
 public enum LlmRouterAttemptOutcome

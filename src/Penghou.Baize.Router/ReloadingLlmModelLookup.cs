@@ -61,6 +61,17 @@ public sealed class ReloadingLlmModelLookup : ILlmModelLookup, IDisposable
     public bool TryGetClient(string model, ApiStyle apiStyle, out ILlmClient client) =>
         _inner.TryGetClient(model, apiStyle, out client);
 
+    /// <inheritdoc />
+    public ILlmClient GetClient(string model, LlmProviderKey provider) =>
+        _inner.GetClient(model, provider);
+
+    /// <inheritdoc />
+    public bool TryGetClient(
+        string model,
+        LlmProviderKey provider,
+        out ILlmClient client) =>
+        _inner.TryGetClient(model, provider, out client);
+
     /// <summary>Returns the client for a specific endpoint id.</summary>
     /// <param name="endpointId">The endpoint's stable id.</param>
     /// <returns>The matching client.</returns>
@@ -82,6 +93,10 @@ public sealed class ReloadingLlmModelLookup : ILlmModelLookup, IDisposable
     /// <param name="model">The model's registration name.</param>
     /// <returns>The model's API styles in registration order.</returns>
     public IReadOnlyList<ApiStyle> GetApiStyles(string model) => _inner.GetApiStyles(model);
+
+    /// <inheritdoc />
+    public IReadOnlyList<LlmProviderKey> GetProviders(string model) =>
+        _inner.GetProviders(model);
 
     /// <summary>
     /// The endpoints a model can be reached through, in registration order.

@@ -3,10 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Penghou.Baize;
-using Penghou.Baize.Claude;
-using Penghou.Baize.Gemini;
-using Penghou.Baize.Ollama;
-using Penghou.Baize.OpenAi;
 using Penghou.Baize.Router.Configuration;
 
 namespace Penghou.Baize.Router.Extensions;
@@ -45,8 +41,11 @@ public static class ServiceCollectionExtensions
 
         ValidateConfiguration(options);
 
+        ProviderModuleLoader.Register(services, options.ProviderModules);
+
         services.TryAddSingleton<ISecretProvider, EnvironmentSecretProvider>();
         services.TryAddSingleton<ILlmRouterMemory, InMemoryLlmRouterMemory>();
+        services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
         services.AddSingleton<ILlmModelLookup>(sp =>
             new ReloadingLlmModelLookup(ResolveOptionsMonitor(sp, section), sp));
@@ -74,23 +73,35 @@ public static class ServiceCollectionExtensions
     {
         var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
         var secrets = sp.GetRequiredService<ISecretProvider>();
+        var providers = sp.GetService<ILlmClientProviderRegistry>()
+            ?? new LlmClientProviderRegistry(
+                sp.GetService<IEnumerable<ILlmClientProvider>>() ?? []);
         var defaults = new Dictionary<string, Func<ILlmClient>>(StringComparer.Ordinal);
-        var byStyle = new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>();
-        var stylesByModel = new Dictionary<string, List<ApiStyle>>(StringComparer.Ordinal);
+        var byProvider =
+            new Dictionary<(string Model, LlmProviderKey Provider), Func<ILlmClient>>();
+        var providersByModel =
+            new Dictionary<string, List<LlmProviderKey>>(StringComparer.Ordinal);
         var byEndpointId = new Dictionary<string, Func<ILlmClient>>(StringComparer.Ordinal);
         var endpointsByModel =
             new Dictionary<string, List<ResolvedEndpoint>>(StringComparer.Ordinal);
 
         foreach (var model in options.Models)
         {
-            var styles = new List<ApiStyle>();
+            var providerKeys = new List<LlmProviderKey>();
             var endpoints = new List<ResolvedEndpoint>();
             var usedIds = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var endpoint in model.Endpoints)
             {
-                var factory = CreateClientFactory(httpClientFactory, secrets, model.Name, endpoint, options.Profiles);
-                var id = endpoint.Id ?? $"{model.Name}:{endpoint.ApiStyle}";
+                var provider = providers.GetRequiredProvider(endpoint.ProviderKey);
+                var factory = CreateClientFactory(
+                    httpClientFactory,
+                    secrets,
+                    provider,
+                    model.Name,
+                    endpoint,
+                    options.Profiles);
+                var id = endpoint.Id ?? $"{model.Name}:{endpoint.ProviderKey}";
 
                 if (!usedIds.Add(id))
                 {
@@ -99,29 +110,29 @@ public static class ServiceCollectionExtensions
                         "Give each endpoint a distinct Id.");
                 }
 
-                // The (model, API style) accessor returns the first matching
-                // endpoint; later endpoints of the same style are reached by
+                // The (model, provider) accessor returns the first matching
+                // endpoint; later endpoints of the same provider are reached by
                 // their id, mirroring the plain-name default.
-                byStyle.TryAdd((model.Name, endpoint.ApiStyle), factory);
-                styles.Add(endpoint.ApiStyle);
+                byProvider.TryAdd((model.Name, endpoint.ProviderKey), factory);
+                providerKeys.Add(endpoint.ProviderKey);
                 byEndpointId[id] = factory;
-                endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ApiStyle));
+                endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ProviderKey));
 
                 // The first endpoint registered for a name wins as the
                 // plain-name default.
                 defaults.TryAdd(model.Name, factory);
             }
 
-            stylesByModel[model.Name] = styles;
+            providersByModel[model.Name] = providerKeys;
             endpointsByModel[model.Name] = endpoints;
         }
 
         return new LlmModelLookup(
             defaults,
-            byStyle,
-            stylesByModel.ToDictionary(
+            byProvider,
+            providersByModel.ToDictionary(
                 kv => kv.Key,
-                kv => (IReadOnlyList<ApiStyle>)kv.Value),
+                kv => (IReadOnlyList<LlmProviderKey>)kv.Value),
             byEndpointId,
             endpointsByModel.ToDictionary(
                 kv => kv.Key,
@@ -149,47 +160,35 @@ public static class ServiceCollectionExtensions
     private static Func<ILlmClient> CreateClientFactory(
         IHttpClientFactory httpClientFactory,
         ISecretProvider secrets,
+        ILlmClientProvider provider,
         string modelName,
         LlmEndpointOptions endpoint,
         IReadOnlyDictionary<string, LlmEndpointCapabilitiesOptions> profiles)
     {
         var apiKey = ResolveApiKeyAsync(modelName, endpoint, secrets).GetAwaiter().GetResult();
         var providerModel = endpoint.ProviderModel ?? modelName;
-        var baseUrl = endpoint.BaseUrl ?? DefaultBaseUrl(endpoint.ApiStyle);
-        var capabilities = ResolveCapabilities(endpoint, profiles);
+        var baseUrl = endpoint.BaseUrl ?? provider.DefaultBaseUrl;
+        var capabilities = ResolveCapabilities(endpoint, profiles, provider);
+        var settings = ResolveProviderSettings(endpoint);
 
-        return endpoint.ApiStyle switch
-        {
-            ApiStyle.OpenAi => () => new OpenAiChatClient(
+        return () => provider.CreateClient(
+            new LlmClientProviderContext(
                 providerModel,
                 httpClientFactory,
                 apiKey,
                 baseUrl,
                 capabilities,
-                endpoint.Dialect ?? OpenAiDialect.Standard),
-            ApiStyle.Claude => () => new ClaudeChatClient(
-                httpClientFactory,
-                providerModel,
-                apiKey,
-                baseUrl,
-                capabilities,
-                endpoint.ThinkingStyle ?? ClaudeThinkingStyle.Adaptive),
-            ApiStyle.Ollama => () => new OllamaChatClient(
-                providerModel, httpClientFactory, apiKey, baseUrl, capabilities),
-            ApiStyle.Gemini => () => new GeminiChatClient(
-                providerModel, httpClientFactory, apiKey, baseUrl, capabilities),
-            _ => throw new InvalidOperationException(
-                $"Unknown API style '{endpoint.ApiStyle}' for model '{modelName}'")
-        };
+                settings));
     }
 
     /// <summary>
-    /// Resolves an endpoint's effective capabilities. The API style's
+    /// Resolves an endpoint's effective capabilities. The provider's
     /// conservative defaults are overlaid first with the named profile
     /// (when one is referenced), then with any per-endpoint overrides.
     /// </summary>
     /// <param name="endpoint">The endpoint to resolve capabilities for.</param>
     /// <param name="profiles">The named capability profiles.</param>
+    /// <param name="provider">The provider supplying conservative defaults.</param>
     /// <returns>The effective capabilities.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when <paramref name="endpoint"/> references a profile name that
@@ -197,9 +196,10 @@ public static class ServiceCollectionExtensions
     /// </exception>
     internal static LlmEndpointCapabilities ResolveCapabilities(
         LlmEndpointOptions endpoint,
-        IReadOnlyDictionary<string, LlmEndpointCapabilitiesOptions> profiles)
+        IReadOnlyDictionary<string, LlmEndpointCapabilitiesOptions> profiles,
+        ILlmClientProvider provider)
     {
-        var defaults = DefaultCapabilities(endpoint.ApiStyle);
+        var defaults = provider.DefaultCapabilities;
         LlmEndpointCapabilitiesOptions? overrides = endpoint.Capabilities;
 
         if (endpoint.Profile is not null)
@@ -207,7 +207,7 @@ public static class ServiceCollectionExtensions
             if (!profiles.TryGetValue(endpoint.Profile, out var profile))
             {
                 throw new InvalidOperationException(
-                    $"Endpoint for style '{endpoint.ApiStyle}' references unknown " +
+                    $"Endpoint for provider '{endpoint.ProviderKey}' references unknown " +
                     $"capability profile '{endpoint.Profile}'.");
             }
 
@@ -287,105 +287,21 @@ public static class ServiceCollectionExtensions
         };
     }
 
-    /// <summary>
-    /// Returns the conservative default capabilities for an API style: only
-    /// what the wire protocol guarantees, not what a particular model might
-    /// support. Known models can opt in to more via named profiles (see
-    /// <see cref="LlmRoutingOptions.Profiles"/>).
-    /// </summary>
-    /// <param name="apiStyle">The API style.</param>
-    /// <returns>The style's conservative default capabilities.</returns>
-    internal static LlmEndpointCapabilities DefaultCapabilities(
-        ApiStyle apiStyle) =>
-        apiStyle switch
-        {
-            // The OpenAI-compatible wire protocol guarantees tool definitions
-            // and streaming tool-call arguments, but does not guarantee the
-            // response_format parameter, reasoning effort, parallel tool
-            // calls, or a thinking toggle (those are model/dialect specific).
-            // The reasoning_effort tiers low/medium/high are claimed; "max" is
-            // not, because it would be silently capped to "high".
-            ApiStyle.OpenAi => new LlmEndpointCapabilities
-            {
-                NativeToolCalling = true,
-                ParallelToolCalls = false,
-                NativeStructuredOutput = false,
-                StructuredOutputViaTool = false,
-                Thinking = false,
-                ThinkingDisable = false,
-                StreamingToolCallArguments = true,
-                SupportedThinkingEfforts =
-                    new HashSet<LlmThinkingEffort>
-                    {
-                        LlmThinkingEffort.Low,
-                        LlmThinkingEffort.Medium,
-                        LlmThinkingEffort.High
-                    }
-            },
-            ApiStyle.Claude => new LlmEndpointCapabilities
-            {
-                NativeToolCalling = true,
-                ParallelToolCalls = true,
-                NativeStructuredOutput = false,
-                StructuredOutputViaTool = true,
-                Thinking = true,
-                ThinkingDisable = true,
-                StreamingToolCallArguments = true,
-                SupportedThinkingEfforts =
-                    new HashSet<LlmThinkingEffort>
-                    {
-                        LlmThinkingEffort.Low,
-                        LlmThinkingEffort.Medium,
-                        LlmThinkingEffort.High
-                    }
-            },
-            // Ollama is a local model runner: tool support and structured
-            // output depend on the model, not the protocol, so the defaults
-            // claim nothing beyond plain text streaming. Opt models in via a
-            // profile when they support tools or JSON mode.
-            ApiStyle.Ollama => new LlmEndpointCapabilities
-            {
-                NativeToolCalling = false,
-                ParallelToolCalls = false,
-                NativeStructuredOutput = false,
-                StructuredOutputViaTool = false,
-                Thinking = false,
-                ThinkingDisable = false,
-                StreamingToolCallArguments = false,
-                SupportedThinkingEfforts =
-                    new HashSet<LlmThinkingEffort>()
-            },
-            ApiStyle.Gemini => new LlmEndpointCapabilities
-            {
-                NativeToolCalling = true,
-                ParallelToolCalls = true,
-                NativeStructuredOutput = true,
-                StructuredOutputViaTool = false,
-                Thinking = true,
-                ThinkingDisable = true,
-                StreamingToolCallArguments = true,
-                SupportedThinkingEfforts =
-                    new HashSet<LlmThinkingEffort>
-                    {
-                        LlmThinkingEffort.Low,
-                        LlmThinkingEffort.Medium,
-                        LlmThinkingEffort.High,
-                        LlmThinkingEffort.Max
-                    }
-            },
-            _ => throw new InvalidOperationException(
-                $"Unknown API style '{apiStyle}'")
-        };
+    private static IReadOnlyDictionary<string, string> ResolveProviderSettings(
+        LlmEndpointOptions endpoint)
+    {
+        var settings = new Dictionary<string, string>(
+            endpoint.Settings,
+            StringComparer.OrdinalIgnoreCase);
 
-    private static string DefaultBaseUrl(ApiStyle apiStyle) =>
-        apiStyle switch
-        {
-            ApiStyle.OpenAi => "https://api.openai.com/v1",
-            ApiStyle.Claude => "https://api.anthropic.com",
-            ApiStyle.Ollama => "http://localhost:11434",
-            ApiStyle.Gemini => "https://generativelanguage.googleapis.com",
-            _ => throw new InvalidOperationException($"Unknown API style '{apiStyle}'")
-        };
+        if (endpoint.Dialect is not null)
+            settings.TryAdd("Dialect", endpoint.Dialect);
+
+        if (endpoint.ThinkingStyle is not null)
+            settings.TryAdd("ThinkingStyle", endpoint.ThinkingStyle);
+
+        return settings;
+    }
 
     private static async Task<string> ResolveApiKeyAsync(
         string modelName,
@@ -413,6 +329,23 @@ public static class ServiceCollectionExtensions
         var allModelNames = new HashSet<string>(StringComparer.Ordinal);
         var seenEndpointIds = new HashSet<string>(StringComparer.Ordinal);
 
+        foreach (var module in options.ProviderModules)
+        {
+            if (string.IsNullOrWhiteSpace(module.Assembly))
+            {
+                error = "ProviderModules contains an entry without an assembly name.";
+                return false;
+            }
+
+            if (module.Assembly.IndexOfAny(
+                    [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0)
+            {
+                error =
+                    $"Provider module '{module.Assembly}' must be an assembly name, not a path.";
+                return false;
+            }
+        }
+
         foreach (var model in options.Models)
         {
             if (!allModelNames.Add(model.Name))
@@ -429,7 +362,18 @@ public static class ServiceCollectionExtensions
 
             foreach (var endpoint in model.Endpoints)
             {
-                var id = endpoint.Id ?? $"{model.Name}:{endpoint.ApiStyle}";
+                LlmProviderKey provider;
+                try
+                {
+                    provider = endpoint.ProviderKey;
+                }
+                catch (ArgumentException exception)
+                {
+                    error = $"Model '{model.Name}' has an invalid provider: {exception.Message}";
+                    return false;
+                }
+
+                var id = endpoint.Id ?? $"{model.Name}:{provider}";
 
                 if (!seenEndpointIds.Add(id))
                 {
@@ -441,7 +385,7 @@ public static class ServiceCollectionExtensions
                     !options.Profiles.ContainsKey(endpoint.Profile))
                 {
                     error =
-                        $"Endpoint '{model.Name}' with API style '{endpoint.ApiStyle}' " +
+                        $"Endpoint '{model.Name}' with provider '{provider}' " +
                         $"references unknown capability profile '{endpoint.Profile}'.";
                     return false;
                 }

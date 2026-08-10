@@ -1,41 +1,51 @@
-using Penghou.Baize.Claude;
-using Penghou.Baize.OpenAi;
-
 namespace Penghou.Baize.Router.Configuration;
 
-/// <summary>A single reachable endpoint: an API style plus provider settings.</summary>
+/// <summary>A single reachable endpoint and its provider settings.</summary>
 public sealed class LlmEndpointOptions
 {
     /// <summary>
     /// An explicit, stable identifier for the endpoint. When omitted, the
-    /// router derives one from the model name, API style, and registration
-    /// order. Give two endpoints of the same logical model distinct ids (for
+    /// router derives one from the model name and provider key. Give two
+    /// endpoints of the same logical model and provider distinct ids (for
     /// example "primary-gateway" and "backup-gateway") so routing memory and
     /// cooldowns are tracked separately.
     /// </summary>
     public string? Id { get; init; }
 
-    /// <summary>The wire protocol used to reach the provider.</summary>
+    /// <summary>
+    /// Extensible provider key. When omitted, the legacy <see cref="ApiStyle"/>
+    /// value is used.
+    /// </summary>
+    public string? Provider { get; init; }
+
+    /// <summary>
+    /// Legacy built-in provider selector. New integrations should use
+    /// <see cref="Provider"/> so third-party adapters do not require enum changes.
+    /// </summary>
     public ApiStyle ApiStyle { get; init; }
 
     /// <summary>
-    /// The OpenAI-compatible wire dialect; only meaningful for
-    /// <see cref="ApiStyle.OpenAi"/> endpoints, defaults to
-    /// <see cref="OpenAiDialect.Standard"/>.
+    /// Legacy convenience setting for OpenAI-compatible providers. Prefer
+    /// <c>Settings:Dialect</c> for new configuration.
     /// </summary>
-    public OpenAiDialect? Dialect { get; init; }
+    public string? Dialect { get; init; }
 
     /// <summary>
-    /// The Claude extended-thinking contract; only meaningful for
-    /// <see cref="ApiStyle.Claude"/> endpoints, defaults to
-    /// <see cref="ClaudeThinkingStyle.Adaptive"/>.
+    /// Legacy convenience setting for Claude providers. Prefer
+    /// <c>Settings:ThinkingStyle</c> for new configuration.
     /// </summary>
-    public ClaudeThinkingStyle? ThinkingStyle { get; init; }
+    public string? ThinkingStyle { get; init; }
+
+    /// <summary>
+    /// Provider-specific settings. Keys are interpreted by the selected
+    /// provider adapter and compared case-insensitively.
+    /// </summary>
+    public Dictionary<string, string> Settings { get; init; } = [];
 
     /// <summary>The provider-specific model identifier; defaults to the model name.</summary>
     public string? ProviderModel { get; init; }
 
-    /// <summary>The provider base URL; defaults to the API style's default.</summary>
+    /// <summary>The provider base URL; defaults to the provider adapter's URL.</summary>
     public string? BaseUrl { get; init; }
 
     /// <summary>
@@ -53,9 +63,13 @@ public sealed class LlmEndpointOptions
     /// <summary>
     /// The name of a capability profile declared in
     /// <see cref="LlmRoutingOptions.Profiles"/>. A referenced profile is
-    /// overlaid on the API style's conservative defaults before
-    /// <see cref="Capabilities"/> is applied. Null keeps the style defaults
+    /// overlaid on the provider's conservative defaults before
+    /// <see cref="Capabilities"/> is applied. Null keeps the provider defaults
     /// (and any <see cref="Capabilities"/> overrides).
     /// </summary>
     public string? Profile { get; init; }
+
+    /// <summary>The effective extensible provider key for this endpoint.</summary>
+    public LlmProviderKey ProviderKey =>
+        new(Provider ?? ApiStyle.ToString());
 }

@@ -5,7 +5,7 @@
 
     <PackageId>Penghou.Baize.Tools</PackageId>
     <Title>Penghou Baize Tools</Title>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Penghou.Baize contributors</Authors>
     <Description>Tool-call normalization, content extraction, and result parsing for Penghou.Baize chat completions, with schema-aware JSON repair.</Description>
     <PackageTags>llm;tool-calling;function-calling;normalization;parsing;json;ai</PackageTags>
