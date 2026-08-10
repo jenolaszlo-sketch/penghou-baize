@@ -130,11 +130,11 @@ public sealed class ContentToolCallExtractor(
                      *   }
                      * }
                      */
-                        if (TryCreateToolCall(
-                            element,
-                            toolsByName,
-                            repairResult,
-                            out var call))
+                    if (TryCreateToolCall(
+                        element,
+                        toolsByName,
+                        repairResult,
+                        out var call))
                     {
                         calls.Add(call);
                         return;

@@ -276,19 +276,19 @@ public sealed class OllamaChatClientTests
         var client = CreateClient(
             handler,
             "granite4.1:3b");
-         var router = new LlmRouter(
-             new LlmModelLookup(
-                 new Dictionary<string, Func<ILlmClient>>
-                 {
-                     ["granite-native"] = () => client
-                 },
-                 new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
-                 {
-                     [("granite-native", ApiStyle.Ollama)] = () => client
-                 }),
-             new Dictionary<
-                 ModelStrategy,
-                 IReadOnlyList<string>>());
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>>
+                {
+                    ["granite-native"] = () => client
+                },
+                new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+                {
+                    [("granite-native", ApiStyle.Ollama)] = () => client
+                }),
+            new Dictionary<
+                ModelStrategy,
+                IReadOnlyList<string>>());
 
         var response =
             await router.CompleteStreamingAsync(
