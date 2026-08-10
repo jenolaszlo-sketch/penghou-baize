@@ -6,7 +6,7 @@ namespace Penghou.Baize.Gemini;
 /// <summary>
 /// Wire model for a function call requested by the Gemini model.
 /// </summary>
-public sealed class GeminiFunctionCall
+internal sealed class GeminiFunctionCall
 {
     /// <summary>The call id, when supplied by the provider.</summary>
     [JsonPropertyName("id")]

@@ -1289,6 +1289,41 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public void BuildLookup_ExposesNativeBatchClientByEndpointId()
+    {
+        var sp = new StubServiceProvider(new Dictionary<Type, object>
+        {
+            [typeof(IHttpClientFactory)] = new TestHttpClientFactory(new HttpClient()),
+            [typeof(ISecretProvider)] = new RecordingSecretProvider(null)
+        });
+        var options = new LlmRoutingOptions
+        {
+            Models =
+            [
+                new LlmModelOptions
+                {
+                    Name = "gpt-4o-mini",
+                    Endpoints =
+                    [
+                        new LlmEndpointOptions
+                        {
+                            Id = "openai-batch",
+                            ApiStyle = ApiStyle.OpenAi
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var lookup = ServiceCollectionExtensions.BuildLookup(sp, options);
+
+        lookup.GetBatchClientByEndpointId("openai-batch")
+            .ProviderId.Should().Be("OpenAi");
+        lookup.TryGetBatchClientByEndpointId("missing", out _)
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public void BuildLookup_ThrowsWhenRegisteredSecretIsMissing()
     {
         var sp = new StubServiceProvider(new Dictionary<Type, object>

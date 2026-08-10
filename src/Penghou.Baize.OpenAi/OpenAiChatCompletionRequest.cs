@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for an OpenAI Chat Completions request.
 /// </summary>
-public sealed class OpenAiChatCompletionRequest
+internal sealed class OpenAiChatCompletionRequest
 {
     /// <summary>The model identifier.</summary>
     [JsonPropertyName("model")]

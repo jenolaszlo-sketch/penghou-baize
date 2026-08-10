@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for a non-streaming OpenAI Chat Completions response.
 /// </summary>
-public sealed class OpenAiChatCompletionResponse
+internal sealed class OpenAiChatCompletionResponse
 {
     /// <summary>The generated choices.</summary>
     [JsonPropertyName("choices")]

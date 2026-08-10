@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for a streaming OpenAI Chat Completions choice.
 /// </summary>
-public sealed class OpenAiStreamingChoice
+internal sealed class OpenAiStreamingChoice
 {
     /// <summary>The incremental delta for this chunk.</summary>
     [JsonPropertyName("delta")]

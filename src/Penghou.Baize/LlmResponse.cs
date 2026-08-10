@@ -43,4 +43,7 @@ public sealed record LlmResponse(
     /// Gets the raw ordered content parts yielded by the provider stream.
     /// </summary>
     public IReadOnlyList<LlmContentPart>? Parts { get; init; }
+
+    /// <summary>Detailed diagnostics from content JSON repair.</summary>
+    public LlmJsonRepairDiagnostics? ContentRepairDiagnostics { get; init; }
 }

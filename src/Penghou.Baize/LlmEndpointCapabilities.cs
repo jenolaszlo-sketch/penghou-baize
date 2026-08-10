@@ -67,4 +67,19 @@ public sealed record LlmEndpointCapabilities
     /// <summary>The message content types the endpoint accepts.</summary>
     public IReadOnlySet<LlmContentType> ContentTypes { get; init; } =
         new HashSet<LlmContentType> { LlmContentType.Text };
+
+    /// <summary>
+    /// Accepted transports for each non-text content type. A media type must
+    /// appear in <see cref="ContentTypes"/> and declare the transport used by
+    /// the request. Text needs no transport entry.
+    /// </summary>
+    public IReadOnlyDictionary<LlmContentType, LlmContentTransport> ContentTransports
+    { get; init; } = new Dictionary<LlmContentType, LlmContentTransport>();
+
+    /// <summary>
+    /// The asynchronous batch operations the endpoint supports. A conservative
+    /// default of <see cref="BatchCapabilities.None"/> claims no batch support;
+    /// providers that ship a batch adapter advertise it here.
+    /// </summary>
+    public BatchCapabilities Batch { get; init; } = BatchCapabilities.None;
 }

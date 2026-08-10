@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Claude;
 /// Wire model for a Claude Messages streaming <c>content_block_delta</c>
 /// event's <c>delta</c> object.
 /// </summary>
-public sealed class ClaudeStreamDelta
+internal sealed class ClaudeStreamDelta
 {
     /// <summary>The delta type (for example <c>text_delta</c>, <c>thinking_delta</c>, <c>input_json_delta</c>).</summary>
     [JsonPropertyName("type")]

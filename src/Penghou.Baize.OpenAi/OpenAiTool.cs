@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for a tool declared to the OpenAI API.
 /// </summary>
-public sealed class OpenAiTool
+internal sealed class OpenAiTool
 {
     /// <summary>The tool type; always <c>function</c>.</summary>
     [JsonPropertyName("type")]

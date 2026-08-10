@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
 /// <summary>
 /// Wire model for a single Claude Messages conversation message.
 /// </summary>
-public sealed class ClaudeMessage
+internal sealed class ClaudeMessage
 {
     /// <summary>The message role (for example <c>user</c> or <c>assistant</c>).</summary>
     [JsonPropertyName("role")]

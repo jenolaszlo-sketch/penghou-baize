@@ -66,6 +66,14 @@ public interface ILlmModelLookup
     /// <returns><c>true</c> when the endpoint is registered; otherwise <c>false</c>.</returns>
     bool TryGetClientByEndpointId(string endpointId, out ILlmClient client);
 
+    /// <summary>Returns the native batch client for a specific endpoint id.</summary>
+    IBaizeBatchClient GetBatchClientByEndpointId(string endpointId);
+
+    /// <summary>Tries to return the native batch client for a specific endpoint id.</summary>
+    bool TryGetBatchClientByEndpointId(
+        string endpointId,
+        out IBaizeBatchClient client);
+
     /// <summary>
     /// The API styles a model can be reached through, in registration order.
     /// Returns an empty list for unknown models.

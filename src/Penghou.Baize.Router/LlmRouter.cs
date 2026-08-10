@@ -24,17 +24,21 @@ namespace Penghou.Baize.Router;
 /// cancelled and recorded as an availability failure. Null (the default)
 /// means no bound.
 /// </param>
+/// <param name="selectionPolicy">Ranks endpoints after capability filtering.</param>
 public class LlmRouter(
     ILlmModelLookup modelLookup,
     IReadOnlyDictionary<ModelStrategy, IReadOnlyList<string>> strategyLookup,
     ILlmRouterMemory? memory = null,
     int maxPendingRequests = 0,
-    TimeSpan? requestTimeout = null) : ILlmRouter
+    TimeSpan? requestTimeout = null,
+    ILlmEndpointSelectionPolicy? selectionPolicy = null) : ILlmRouter
 {
     private readonly ILlmRouterMemory _memory = memory ?? new InMemoryLlmRouterMemory();
     private readonly SemaphoreSlim? _gate =
         maxPendingRequests > 0 ? new SemaphoreSlim(maxPendingRequests) : null;
     private readonly TimeSpan? _requestTimeout = requestTimeout;
+    private readonly ILlmEndpointSelectionPolicy _selectionPolicy =
+        selectionPolicy ?? new ReliabilityEndpointSelectionPolicy();
 
     /// <summary>
     /// Streams a completion for a model, using the endpoint the router would
@@ -56,9 +60,10 @@ public class LlmRouter(
 
         try
         {
-            var candidates = await ResolveOrderedAsync(model, cancellationToken);
+            var request = builder.Build(ModelStrategy.Auto);
+            var candidates = await ResolveOrderedAsync(model, request, cancellationToken);
 
-            await foreach (var evt in StreamThroughAsync(candidates, ModelStrategy.Auto, builder, cancellationToken))
+            await foreach (var evt in StreamThroughAsync(candidates, request, cancellationToken))
                 yield return evt;
         }
         finally
@@ -88,9 +93,10 @@ public class LlmRouter(
 
         try
         {
-            var candidates = await ResolveOrderedAsync(strategy, cancellationToken);
+            var request = builder.Build(strategy);
+            var candidates = await ResolveOrderedAsync(strategy, request, cancellationToken);
 
-            await foreach (var evt in StreamThroughAsync(candidates, strategy, builder, cancellationToken))
+            await foreach (var evt in StreamThroughAsync(candidates, request, cancellationToken))
                 yield return evt;
         }
         finally
@@ -107,7 +113,7 @@ public class LlmRouter(
     /// <returns>The resolved endpoint.</returns>
     /// <exception cref="KeyNotFoundException">Thrown when the model has no registered endpoints.</exception>
     public ResolvedEndpoint Resolve(string model)
-        => ResolveOrderedAsync(model, CancellationToken.None).GetAwaiter().GetResult().First();
+        => ResolveOrderedAsync(model, null, CancellationToken.None).GetAwaiter().GetResult().First();
 
     /// <summary>
     /// The endpoint the router would currently use for a strategy, chosen
@@ -120,10 +126,11 @@ public class LlmRouter(
     /// are registered.
     /// </exception>
     public ResolvedEndpoint Resolve(ModelStrategy strategy)
-        => ResolveOrderedAsync(strategy, CancellationToken.None).GetAwaiter().GetResult().First();
+        => ResolveOrderedAsync(strategy, null, CancellationToken.None).GetAwaiter().GetResult().First();
 
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         string model,
+        LlmRequest? request,
         CancellationToken cancellationToken)
     {
         var candidates = ExpandCandidates([model]);
@@ -131,11 +138,16 @@ public class LlmRouter(
         if (candidates.Count == 0)
             throw new KeyNotFoundException($"No client registered for model '{model}'.");
 
-        return await OrderCandidatesAsync(candidates, cancellationToken);
+        return await OrderCandidatesAsync(
+            FilterCompatible(candidates, request),
+            request,
+            ModelStrategy.Auto,
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         ModelStrategy strategy,
+        LlmRequest? request,
         CancellationToken cancellationToken)
     {
         if (!strategyLookup.TryGetValue(strategy, out var chain) || chain.Count == 0)
@@ -148,13 +160,16 @@ public class LlmRouter(
                 $"No model configured for strategy '{strategy}' is registered. " +
                 $"Tried: {string.Join(", ", chain)}.");
 
-        return await OrderCandidatesAsync(candidates, cancellationToken);
+        return await OrderCandidatesAsync(
+            FilterCompatible(candidates, request),
+            request,
+            strategy,
+            cancellationToken);
     }
 
     private async IAsyncEnumerable<LlmStreamEvent> StreamThroughAsync(
         IReadOnlyList<ResolvedEndpoint> candidates,
-        ModelStrategy strategy,
-        ILlmPromptBuilder builder,
+        LlmRequest wireRequest,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var timeoutCts = _requestTimeout is { } timeout
@@ -163,7 +178,6 @@ public class LlmRouter(
         timeoutCts?.CancelAfter(_requestTimeout!.Value);
         var effective = timeoutCts?.Token ?? cancellationToken;
 
-        var wireRequest = builder.Build(strategy);
         var attempts = new List<LlmRouterAttempt>();
         Exception? lastFailure = null;
 
@@ -171,6 +185,12 @@ public class LlmRouter(
         {
             var client = modelLookup.GetClientByEndpointId(endpoint.EndpointId);
             var started = Stopwatch.GetTimestamp();
+            using var attemptActivity = BaizeTelemetry.Activities.StartActivity(
+                "llm.router.attempt",
+                ActivityKind.Client);
+            attemptActivity?.SetTag("gen_ai.request.model", endpoint.Model);
+            attemptActivity?.SetTag("baize.endpoint.id", endpoint.EndpointId);
+            attemptActivity?.SetTag("gen_ai.provider.name", endpoint.Provider.ToString());
 
             await _memory.RecordCallAsync(endpoint.EndpointId, cancellationToken);
 
@@ -213,6 +233,8 @@ public class LlmRouter(
 
                 if (incompatible is not null)
                 {
+                    attemptActivity?.SetStatus(ActivityStatusCode.Error, incompatible.Message);
+                    attemptActivity?.SetTag("error.type", incompatible.GetType().FullName);
                     // The request cannot be expressed on this endpoint's
                     // declared capabilities. Validation precedes any event, so
                     // nothing was emitted; the next capable candidate gets the
@@ -232,6 +254,8 @@ public class LlmRouter(
 
                 if (failure is not null)
                 {
+                    attemptActivity?.SetStatus(ActivityStatusCode.Error, failure.Message);
+                    attemptActivity?.SetTag("error.type", failure.GetType().FullName);
                     await _memory.RecordFailureAsync(
                         endpoint.EndpointId,
                         LlmFailureCategory.Availability,
@@ -314,6 +338,7 @@ public class LlmRouter(
                 EndpointApiStyle: endpoint.Provider.ToString(),
                 Outcome: LlmRouterAttemptOutcome.Succeeded,
                 Duration: Stopwatch.GetElapsedTime(started)));
+            attemptActivity?.SetStatus(ActivityStatusCode.Ok);
 
             yield return DiagnosticsEvent(attempts);
             yield break;
@@ -333,41 +358,49 @@ public class LlmRouter(
         return candidates;
     }
 
-    private async Task<IReadOnlyList<ResolvedEndpoint>> OrderCandidatesAsync(
+    private IReadOnlyList<ResolvedEndpoint> FilterCompatible(
         IReadOnlyList<ResolvedEndpoint> candidates,
-        CancellationToken cancellationToken)
+        LlmRequest? request)
     {
-        var now = DateTimeOffset.UtcNow;
-        var ranked = new List<(ResolvedEndpoint Endpoint, LlmEndpointStats Stats)>();
+        if (request is null)
+            return candidates;
+
+        var requirements = LlmRequestRequirements.From(request);
+        var compatible = new List<ResolvedEndpoint>();
+        var failures = new List<string>();
 
         foreach (var endpoint in candidates)
         {
-            var stats = await _memory.GetStatsAsync(endpoint.EndpointId, cancellationToken);
-            ranked.Add((endpoint, stats));
+            var capabilities = modelLookup
+                .GetClientByEndpointId(endpoint.EndpointId)
+                .Capabilities;
+            if (requirements.IsSatisfiedBy(capabilities, out var reason))
+                compatible.Add(endpoint);
+            else
+                failures.Add($"{endpoint.EndpointId}: {reason}");
         }
 
-        var available = ranked
-            .Where(c => c.Stats.UnavailableUntil is null ||
-                        c.Stats.UnavailableUntil <= now)
-            .ToList();
+        if (compatible.Count == 0)
+        {
+            throw new LlmRequestValidationException(
+                "No configured endpoint satisfies the request capabilities. " +
+                string.Join("; ", failures));
+        }
 
-        // If every candidate is cooled down, fall back to the least-failing
-        // one rather than failing outright.
-        var pool = available.Count > 0 ? available : ranked;
-
-        // OrderBy/ThenBy are stable, so ties resolve to registration order.
-        return pool
-            .OrderBy(c => c.Stats.AvailabilityFailures)
-            .ThenBy(c => QualityFailureRate(c.Stats))
-            .Select(c => c.Endpoint)
-            .ToList();
+        return compatible;
     }
 
-    private static double QualityFailureRate(LlmEndpointStats stats) =>
-        stats.TotalCalls == 0
-            ? 0
-            : (stats.ToolRepairFailures + stats.StructuredOutputFailures)
-              / (double)stats.TotalCalls;
+    private async Task<IReadOnlyList<ResolvedEndpoint>> OrderCandidatesAsync(
+        IReadOnlyList<ResolvedEndpoint> candidates,
+        LlmRequest? request,
+        ModelStrategy strategy,
+        CancellationToken cancellationToken)
+        => await _selectionPolicy.OrderAsync(
+            candidates,
+            request,
+            strategy,
+            _memory,
+            cancellationToken);
 
     private static LlmStreamEvent DiagnosticsEvent(IReadOnlyList<LlmRouterAttempt> attempts) =>
         new(RouterDiagnostics: new LlmRouterDiagnostics(attempts));

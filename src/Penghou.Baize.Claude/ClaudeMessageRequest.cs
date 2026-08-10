@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
 /// <summary>
 /// Wire model for a Claude Messages API request.
 /// </summary>
-public sealed class ClaudeMessageRequest
+internal sealed class ClaudeMessageRequest
 {
     /// <summary>The model identifier.</summary>
     [JsonPropertyName("model")]
@@ -54,7 +54,7 @@ public sealed class ClaudeMessageRequest
 /// models or <c>enabled</c> for manual-thinking models, in which case
 /// <see cref="BudgetTokens"/> is required.
 /// </summary>
-public sealed class ClaudeThinking
+internal sealed class ClaudeThinking
 {
     /// <summary>The thinking type (<c>adaptive</c> or <c>enabled</c>).</summary>
     [JsonPropertyName("type")]
@@ -72,7 +72,7 @@ public sealed class ClaudeThinking
 /// Wire model for the <c>output_config</c> object controlling Claude extended
 /// thinking effort.
 /// </summary>
-public sealed class ClaudeOutputConfig
+internal sealed class ClaudeOutputConfig
 {
     /// <summary>The reasoning effort tier (<c>low</c>, <c>medium</c> or <c>high</c>).</summary>
     [JsonPropertyName("effort")]

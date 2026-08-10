@@ -12,7 +12,7 @@ namespace Penghou.Baize.Ollama;
 /// content is forwarded as it arrives, while native tool calls and final
 /// usage data are mapped to the canonical ILlmClient event stream.
 /// </summary>
-public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
+public sealed class OllamaChatClient : LlmClientBase
 {
     private static readonly JsonSerializerOptions JsonOptions =
         new()
@@ -57,32 +57,33 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
     }
 
     /// <inheritdoc />
-    protected override HttpRequestMessage CreateHttpRequest(OllamaChatRequest wireRequest)
+    protected override HttpRequestMessage CreateHttpRequest(LlmRequest request)
     {
-        var request = new HttpRequestMessage(
+        var wireRequest = ToWireRequest(request);
+        var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             _chatUri);
 
         if (!string.IsNullOrWhiteSpace(ApiKey))
         {
-            request.Headers.Authorization =
+            httpRequest.Headers.Authorization =
                 new AuthenticationHeaderValue(
                     "Bearer",
                     ApiKey);
         }
 
-        request.Content = new StringContent(
+        httpRequest.Content = new StringContent(
             JsonSerializer.Serialize(
                 wireRequest,
                 JsonOptions),
             Encoding.UTF8,
             "application/json");
 
-        return request;
+        return httpRequest;
     }
 
     /// <inheritdoc />
-    protected override OllamaChatRequest ToWireRequest(LlmRequest request)
+    private OllamaChatRequest ToWireRequest(LlmRequest request)
     {
         var tools = !Capabilities.NativeToolCalling ||
                     request.Tools.Count == 0
@@ -159,14 +160,35 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
             .OfType<LlmToolCallContent>()
             .Select(part => part.ToolCall)
             .ToList();
+        var images = message.Parts
+            .OfType<LlmImageContent>()
+            .Select(image => image.Source switch
+            {
+                LlmInlineDataSource inline =>
+                    Convert.ToBase64String(inline.Data.Span),
+                _ => throw new LlmRequestValidationException(
+                    "Ollama supports image inputs only as inline data.")
+            })
+            .ToList();
 
-        if (toolCalls.Count == 0 && string.IsNullOrEmpty(text))
+        var unsupportedMedia = message.Parts
+            .OfType<LlmMediaContent>()
+            .FirstOrDefault(media => media is not LlmImageContent);
+        if (unsupportedMedia is not null)
+        {
+            throw new LlmRequestValidationException(
+                $"Ollama does not support content type " +
+                $"'{unsupportedMedia.GetType().Name}'.");
+        }
+
+        if (toolCalls.Count == 0 && images.Count == 0 && string.IsNullOrEmpty(text))
             yield break;
 
         yield return new OllamaMessage
         {
             Role = message.Role,
             Content = string.IsNullOrEmpty(text) ? null : text,
+            Images = images.Count == 0 ? null : images,
             ToolCalls = toolCalls.Count == 0
                 ? null
                 : toolCalls

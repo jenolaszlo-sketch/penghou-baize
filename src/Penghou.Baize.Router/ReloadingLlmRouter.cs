@@ -103,6 +103,7 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
             strategyLookup,
             _memory,
             maxPendingRequests: options.MaxPendingRequests,
-            requestTimeout: options.RequestTimeout);
+            requestTimeout: options.RequestTimeout,
+            selectionPolicy: _services.GetService<ILlmEndpointSelectionPolicy>());
     }
 }

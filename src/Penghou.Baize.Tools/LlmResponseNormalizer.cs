@@ -120,13 +120,16 @@ public sealed class LlmResponseNormalizer(
         var attempts = PrefixAttempts(
             RepairAttemptMapper.Combine(repairResult),
             "arguments");
+        var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
 
-        if (repairResult.Document is null)
+        if (repairResult.Document is null ||
+            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
         {
             return toolCall with
             {
                 JsonRepairAttempts =
-                    attempts
+                    attempts,
+                JsonRepairDiagnostics = diagnostics
             };
         }
 
@@ -137,7 +140,8 @@ public sealed class LlmResponseNormalizer(
             JsonWasRepaired =
                 repairResult.WasRepaired,
             JsonRepairAttempts =
-                attempts
+                attempts,
+            JsonRepairDiagnostics = diagnostics
         };
     }
 

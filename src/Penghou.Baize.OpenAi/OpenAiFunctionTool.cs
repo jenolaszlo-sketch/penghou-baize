@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
@@ -6,7 +6,7 @@ namespace Penghou.Baize.OpenAi;
 /// <summary>
 /// Wire model for the function definition of an OpenAI tool.
 /// </summary>
-public sealed class OpenAiFunctionTool
+internal sealed class OpenAiFunctionTool
 {
     /// <summary>The function name.</summary>
     [JsonPropertyName("name")]

@@ -7,7 +7,7 @@ namespace Penghou.Baize.Gemini;
 /// Wire model for the <c>tools</c> entry declaring function declarations to
 /// the Gemini API.
 /// </summary>
-public sealed class GeminiTool
+internal sealed class GeminiTool
 {
     /// <summary>The function declarations available to the model.</summary>
     [JsonPropertyName("functionDeclarations")]
@@ -17,7 +17,7 @@ public sealed class GeminiTool
 /// <summary>
 /// Wire model for a single Gemini function declaration.
 /// </summary>
-public sealed class GeminiFunctionDeclaration
+internal sealed class GeminiFunctionDeclaration
 {
     /// <summary>The function name.</summary>
     [JsonPropertyName("name")]

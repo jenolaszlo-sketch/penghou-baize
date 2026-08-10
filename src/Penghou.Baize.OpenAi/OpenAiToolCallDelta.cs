@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for an incremental native tool-call delta in an OpenAI stream.
 /// </summary>
-public sealed class OpenAiToolCallDelta
+internal sealed class OpenAiToolCallDelta
 {
     /// <summary>The zero-based index identifying which tool call this delta extends.</summary>
     [JsonPropertyName("index")]

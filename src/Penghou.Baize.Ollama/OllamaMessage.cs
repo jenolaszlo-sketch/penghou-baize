@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Ollama;
 
 /// <summary>
 /// Wire model for a single Ollama chat message.
 /// </summary>
-public sealed class OllamaMessage
+internal sealed class OllamaMessage
 {
     /// <summary>The message role (for example <c>user</c> or <c>assistant</c>).</summary>
     [JsonPropertyName("role")]
@@ -18,4 +18,8 @@ public sealed class OllamaMessage
     /// <summary>Native tool calls produced by the model.</summary>
     [JsonPropertyName("tool_calls")]
     public IReadOnlyList<OllamaToolCall>? ToolCalls { get; init; }
+
+    /// <summary>Base64-encoded image inputs for multimodal models.</summary>
+    [JsonPropertyName("images")]
+    public IReadOnlyList<string>? Images { get; init; }
 }

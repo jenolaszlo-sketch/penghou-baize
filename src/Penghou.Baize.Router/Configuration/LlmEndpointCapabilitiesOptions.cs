@@ -45,4 +45,15 @@ public sealed class LlmEndpointCapabilitiesOptions
 
     /// <summary>The message content types the endpoint accepts; null keeps the style default.</summary>
     public IReadOnlyList<LlmContentType>? ContentTypes { get; init; }
+
+    /// <summary>Accepted transports for each non-text content type.</summary>
+    public Dictionary<LlmContentType, LlmContentTransport>? ContentTransports
+    { get; init; }
+
+    /// <summary>
+    /// The asynchronous batch operations the endpoint supports; null keeps the
+    /// provider's conservative default. Configure this explicitly for endpoints
+    /// that do (or do not) expose a batch API regardless of their API style.
+    /// </summary>
+    public BatchCapabilities? Batch { get; init; }
 }

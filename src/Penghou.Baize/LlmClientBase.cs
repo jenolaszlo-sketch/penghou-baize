@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -9,8 +10,7 @@ namespace Penghou.Baize;
 /// Base class for provider clients. Handles the shared HTTP streaming flow and
 /// delegates provider-specific request shaping and event parsing to subclasses.
 /// </summary>
-/// <typeparam name="TWireRequest">The provider-specific wire request type.</typeparam>
-public abstract class LlmClientBase<TWireRequest> : ILlmClient
+public abstract class LlmClientBase : ILlmClient
 {
     /// <summary>The provider model identifier used on the wire.</summary>
     protected readonly string Model;
@@ -53,39 +53,121 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        ValidateRequest(request);
+        var started = Stopwatch.GetTimestamp();
+        using var activity = BaizeTelemetry.Activities.StartActivity(
+            "llm.stream",
+            ActivityKind.Client);
+        activity?.SetTag("gen_ai.request.model", Model);
+        activity?.SetTag("gen_ai.request.tool_count", request.Tools.Count);
+        BaizeTelemetry.Requests.Add(1, new KeyValuePair<string, object?>("model", Model));
 
-        var wireRequest = ToWireRequest(request);
-
-        using var httpRequest = CreateHttpRequest(wireRequest);
-
-        var httpClient = HttpClientFactory.CreateClient("llm");
-
-        using var response = await httpClient.SendAsync(
-            httpRequest,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            try
+            {
+                ValidateRequest(request);
+            }
+            catch (Exception exception)
+            {
+                RecordFailure(activity, exception);
+                throw;
+            }
 
-            throw new LlmClientException(
-                $"LLM streaming request failed with HTTP {(int)response.StatusCode}: {responseBody}",
-                (int)response.StatusCode,
-                ReadRateLimitInfo(response));
+            HttpRequestMessage httpRequest;
+            try
+            {
+                httpRequest = CreateHttpRequest(request);
+            }
+            catch (Exception exception)
+            {
+                RecordFailure(activity, exception);
+                throw;
+            }
+            using var httpRequestScope = httpRequest;
+
+            var httpClient = HttpClientFactory.CreateClient("llm");
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await httpClient.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                RecordFailure(activity, exception);
+                throw;
+            }
+            using var responseScope = response;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                var exception = new LlmClientException(
+                    $"LLM streaming request failed with HTTP {(int)response.StatusCode}: {responseBody}",
+                    (int)response.StatusCode,
+                    ReadRateLimitInfo(response));
+                RecordFailure(activity, exception);
+                throw exception;
+            }
+
+            var rateLimit = ReadRateLimitInfo(response);
+
+            await using var stream =
+                await response.Content.ReadAsStreamAsync(cancellationToken);
+
+            await using var events = ProcessStreamAsync(stream, cancellationToken)
+                .GetAsyncEnumerator(cancellationToken);
+            while (true)
+            {
+                LlmStreamEvent evt;
+                try
+                {
+                    if (!await events.MoveNextAsync())
+                        break;
+                    evt = events.Current;
+                }
+                catch (Exception exception)
+                {
+                    RecordFailure(activity, exception);
+                    throw;
+                }
+
+                if (evt.Usage is { } usage)
+                {
+                    if (usage.PromptTokens is { } input)
+                        BaizeTelemetry.InputTokens.Add(input);
+                    if (usage.CompletionTokens is { } output)
+                        BaizeTelemetry.OutputTokens.Add(output);
+                }
+
+                yield return evt;
+            }
+
+            if (rateLimit is not null)
+                yield return new LlmStreamEvent(RateLimit: rateLimit);
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
+        finally
+        {
+            BaizeTelemetry.Duration.Record(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                new KeyValuePair<string, object?>("model", Model));
+        }
+    }
 
-        var rateLimit = ReadRateLimitInfo(response);
-
-        await using var stream =
-            await response.Content.ReadAsStreamAsync(cancellationToken);
-
-        await foreach (var evt in ProcessStreamAsync(stream, cancellationToken))
-            yield return evt;
-
-        if (rateLimit is not null)
-            yield return new LlmStreamEvent(RateLimit: rateLimit);
+    private void RecordFailure(Activity? activity, Exception exception)
+    {
+        activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+        activity?.SetTag("error.type", exception.GetType().FullName);
+        BaizeTelemetry.Failures.Add(
+            1,
+            new KeyValuePair<string, object?>("model", Model),
+            new KeyValuePair<string, object?>("error.type", exception.GetType().Name));
     }
 
     /// <summary>
@@ -96,99 +178,8 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
     /// provider-specific rules; call the base implementation first.
     /// </summary>
     /// <param name="request">The request to validate.</param>
-    protected virtual void ValidateRequest(LlmRequest request)
-    {
-        if (request.Tools.Count > 0 && !Capabilities.NativeToolCalling)
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support native tool calling, " +
-                $"but the request declares {request.Tools.Count} tool(s).");
-        }
-
-        var toolCallParts = request.Messages
-            .SelectMany(message => message.Parts)
-            .OfType<LlmToolCallContent>()
-            .ToList();
-        var toolResultParts = request.Messages
-            .SelectMany(message => message.Parts)
-            .OfType<LlmToolResultContent>()
-            .ToList();
-
-        if ((toolCallParts.Count > 0 || toolResultParts.Count > 0) &&
-            !Capabilities.NativeToolCalling)
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support native tool calling, " +
-                "but the request replays assistant tool calls and/or tool results.");
-        }
-
-        if (!Capabilities.ParallelToolCalls)
-        {
-            var messageWithParallelCalls = request.Messages
-                .Select(message => message.Parts
-                    .OfType<LlmToolCallContent>()
-                    .ToList())
-                .FirstOrDefault(parts => parts.Count > 1);
-
-            if (messageWithParallelCalls is not null)
-            {
-                throw new LlmRequestValidationException(
-                    $"Endpoint '{Model}' does not support parallel tool calls, " +
-                    $"but an assistant message replays {messageWithParallelCalls.Count} tool calls.");
-            }
-        }
-
-        if (request.ResponseFormat is not null &&
-            !Capabilities.NativeStructuredOutput &&
-            !Capabilities.StructuredOutputViaTool)
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support structured output, " +
-                "but the request specifies a response format.");
-        }
-
-        if (request.ThinkingConfig is { Mode: LlmThinkingMode.Enabled } &&
-            !Capabilities.Thinking)
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support extended thinking, " +
-                "but the request enables it.");
-        }
-
-        if (request.ThinkingConfig is { Mode: LlmThinkingMode.Disabled } &&
-            !Capabilities.ThinkingDisable)
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support disabling extended " +
-                "thinking, but the request disables it.");
-        }
-
-        if (request.ThinkingConfig is
-            {
-                Mode: LlmThinkingMode.Enabled,
-                Effort: not LlmThinkingEffort.None
-            } thinking &&
-            !Capabilities.SupportedThinkingEfforts.Contains(thinking.Effort))
-        {
-            throw new LlmRequestValidationException(
-                $"Endpoint '{Model}' does not support thinking effort " +
-                $"'{thinking.Effort}', but the request requests it.");
-        }
-
-        foreach (var part in request.Messages
-            .SelectMany(message => message.Parts))
-        {
-            var contentType = ContentTypeOf(part);
-
-            if (contentType is { } type &&
-                !Capabilities.ContentTypes.Contains(type))
-            {
-                throw new LlmRequestValidationException(
-                    $"Endpoint '{Model}' does not support content type " +
-                    $"'{type}', but the request includes it.");
-            }
-        }
-    }
+    protected virtual void ValidateRequest(LlmRequest request) =>
+        LlmRequestValidator.Validate(Model, Capabilities, request, ContentTypeOf);
 
     /// <summary>
     /// Maps a content part to the <see cref="LlmContentType"/> it carries,
@@ -202,18 +193,17 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
         {
             LlmTextContent => LlmContentType.Text,
             LlmReasoningContent => LlmContentType.Text,
+            LlmImageContent => LlmContentType.Image,
+            LlmAudioContent => LlmContentType.Audio,
+            LlmVideoContent => LlmContentType.Video,
+            LlmFileContent => LlmContentType.File,
             _ => null
         };
 
-    /// <summary>Converts a canonical request into the provider wire request.</summary>
+    /// <summary>Maps a canonical request and creates its provider HTTP request.</summary>
     /// <param name="request">The canonical request.</param>
-    /// <returns>The provider wire request.</returns>
-    protected abstract TWireRequest ToWireRequest(LlmRequest request);
-
-    /// <summary>Creates the HTTP request message for a provider wire request.</summary>
-    /// <param name="wireRequest">The provider wire request.</param>
     /// <returns>The HTTP request message to send.</returns>
-    protected abstract HttpRequestMessage CreateHttpRequest(TWireRequest wireRequest);
+    protected abstract HttpRequestMessage CreateHttpRequest(LlmRequest request);
 
     /// <summary>Parses the provider response stream into canonical events.</summary>
     /// <param name="stream">The response body stream.</param>

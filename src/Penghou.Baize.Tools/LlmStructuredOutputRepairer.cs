@@ -39,12 +39,15 @@ public sealed class LlmStructuredOutputRepairer(
         var attempts = PrefixAttempts(
             RepairAttemptMapper.Combine(repairResult),
             "content");
+        var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
 
-        if (repairResult.Document is null)
+        if (repairResult.Document is null ||
+            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
         {
             return response with
             {
-                ContentRepairAttempts = attempts
+                ContentRepairAttempts = attempts,
+                ContentRepairDiagnostics = diagnostics
             };
         }
 
@@ -54,7 +57,8 @@ public sealed class LlmStructuredOutputRepairer(
                 repairResult.Document.RootElement.GetRawText(),
             ContentWasRepaired =
                 repairResult.WasRepaired,
-            ContentRepairAttempts = attempts
+            ContentRepairAttempts = attempts,
+            ContentRepairDiagnostics = diagnostics
         };
     }
 

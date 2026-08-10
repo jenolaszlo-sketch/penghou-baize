@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Claude;
 /// <summary>
 /// Wire model for a single Claude Messages content block.
 /// </summary>
-public sealed class ClaudeContentBlock
+internal sealed class ClaudeContentBlock
 {
     /// <summary>The block type, for example <c>text</c>, <c>tool_use</c> or <c>tool_result</c>.</summary>
     [JsonPropertyName("type")]
@@ -57,4 +57,32 @@ public sealed class ClaudeContentBlock
     /// <summary>Whether a <c>tool_result</c> block reports an error.</summary>
     [JsonPropertyName("is_error")]
     public bool? IsError { get; init; }
+
+    /// <summary>The source for an image or document block.</summary>
+    [JsonPropertyName("source")]
+    public ClaudeContentSource? Source { get; init; }
+}
+
+/// <summary>An Anthropic image or document source.</summary>
+internal sealed class ClaudeContentSource
+{
+    /// <summary>The source type: base64, URL, or provider file.</summary>
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }
+
+    /// <summary>The MIME type for base64 content.</summary>
+    [JsonPropertyName("media_type")]
+    public string? MediaType { get; init; }
+
+    /// <summary>The base64-encoded data.</summary>
+    [JsonPropertyName("data")]
+    public string? Data { get; init; }
+
+    /// <summary>The externally reachable URL.</summary>
+    [JsonPropertyName("url")]
+    public string? Url { get; init; }
+
+    /// <summary>The Anthropic file identifier.</summary>
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; init; }
 }

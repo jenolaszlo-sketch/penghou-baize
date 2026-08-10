@@ -26,6 +26,9 @@ jobs:
       - name: Build
         run: dotnet build Penghou.Baize.slnx --configuration Release
 
+      - name: Verify formatting
+        run: dotnet format Penghou.Baize.slnx --verify-no-changes --no-restore
+
       - name: Test and coverage (core)
         run: >
           dotnet test tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj
@@ -85,6 +88,15 @@ jobs:
           /p:Threshold=80
           /p:ThresholdType=line
 
+      - name: Test and coverage (Batch)
+        run: >
+          dotnet test tests/Penghou.Baize.Batch.Tests/Penghou.Baize.Batch.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-batch/
+          /p:CoverletOutputFormat=cobertura
+
       - name: Test and coverage (Tools)
         run: >
           dotnet test tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj
@@ -93,6 +105,18 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-tools/
           /p:CoverletOutputFormat=cobertura
+
+      - name: Test and coverage (Extensions.AI)
+        run: >
+          dotnet test tests/Penghou.Baize.Extensions.AI.Tests/Penghou.Baize.Extensions.AI.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-extensions-ai/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Validate packages
+        run: dotnet pack Penghou.Baize.slnx --configuration Release --no-build --output artifacts
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v6
@@ -105,5 +129,7 @@ jobs:
             coverage-ollama/
             coverage-gemini/
             coverage-router/
+            coverage-batch/
             coverage-tools/
+            coverage-extensions-ai/
           if-no-files-found: error

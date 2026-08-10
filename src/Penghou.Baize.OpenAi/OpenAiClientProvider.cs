@@ -25,11 +25,45 @@ public sealed class OpenAiClientProvider : ILlmClientProvider
                 LlmThinkingEffort.Low,
                 LlmThinkingEffort.Medium,
                 LlmThinkingEffort.High
-            }
+            },
+        Batch =
+            BatchCapabilities.NativeBatch |
+            BatchCapabilities.Polling |
+            BatchCapabilities.Cancellation
     };
 
     /// <inheritdoc />
     public ILlmClient CreateClient(LlmClientProviderContext context)
+    {
+        var dialect = ResolveDialect(context);
+
+        return new OpenAiChatClient(
+            context.Model,
+            context.HttpClientFactory,
+            context.ApiKey,
+            context.BaseUrl,
+            context.Capabilities,
+            dialect);
+    }
+
+    /// <inheritdoc />
+    public IBaizeBatchClient? CreateBatchClient(LlmClientProviderContext context)
+    {
+        if (!context.Capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch))
+            return null;
+
+        var dialect = ResolveDialect(context);
+
+        return new OpenAiBatchClient(
+            context.Model,
+            context.HttpClientFactory,
+            context.ApiKey,
+            context.BaseUrl,
+            context.Capabilities,
+            dialect);
+    }
+
+    private static OpenAiDialect ResolveDialect(LlmClientProviderContext context)
     {
         var dialect = OpenAiDialect.Standard;
 
@@ -40,12 +74,6 @@ public sealed class OpenAiClientProvider : ILlmClientProvider
                 $"Unknown OpenAI dialect '{configured}' for model '{context.Model}'.");
         }
 
-        return new OpenAiChatClient(
-            context.Model,
-            context.HttpClientFactory,
-            context.ApiKey,
-            context.BaseUrl,
-            context.Capabilities,
-            dialect);
+        return dialect;
     }
 }

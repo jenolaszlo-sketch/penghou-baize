@@ -7,12 +7,23 @@
 /// tool-call conversation — assistant tool calls, tool results, and reasoning
 /// — can be represented and replayed to a provider.
 /// </summary>
-/// <param name="Role">The message role (for example "system", "user", "assistant", or "tool").</param>
-/// <param name="Parts">The content blocks making up the message.</param>
-public sealed record LlmMessage(
-    string Role,
-    IReadOnlyList<LlmContentPart> Parts)
+public sealed record LlmMessage
 {
+    /// <summary>Initializes a message from an immutable snapshot of its parts.</summary>
+    public LlmMessage(string role, IReadOnlyList<LlmContentPart> parts)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        ArgumentNullException.ThrowIfNull(parts);
+        Role = role;
+        Parts = parts.ToArray();
+    }
+
+    /// <summary>The message role.</summary>
+    public string Role { get; }
+
+    /// <summary>The immutable ordered content blocks.</summary>
+    public IReadOnlyList<LlmContentPart> Parts { get; }
+
     /// <summary>
     /// Creates a text-only message. Equivalent to
     /// <c>new LlmMessage(role, [new LlmTextContent(content)])</c>.

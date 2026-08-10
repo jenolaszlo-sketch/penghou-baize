@@ -13,7 +13,7 @@ namespace Penghou.Baize.OpenAi;
 /// <c>reasoning_content</c> and tool-call deltas to the canonical event
 /// stream, and forwards usage from the streamed usage chunk.
 /// </summary>
-public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest>
+public sealed class OpenAiChatClient : LlmClientBase
 {
     private readonly Uri _chatCompletionsUri;
     private readonly OpenAiDialect _dialect;
@@ -69,8 +69,9 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
             : capabilities with { ThinkingDisable = false };
 
     /// <inheritdoc />
-    protected override HttpRequestMessage CreateHttpRequest(OpenAiChatCompletionRequest wireRequest)
+    protected override HttpRequestMessage CreateHttpRequest(LlmRequest request)
     {
+        var wireRequest = ToWireRequest(request);
         var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             _chatCompletionsUri);
@@ -90,155 +91,13 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
     }
 
     /// <inheritdoc />
-    protected override OpenAiChatCompletionRequest ToWireRequest(LlmRequest request)
-    {
-        return new OpenAiChatCompletionRequest
-        {
-            Model = Model,
-            Messages = request.Messages
-                .SelectMany(ToWireMessages)
-                .ToList(),
-            Temperature = request.Temperature,
-            MaxTokens = request.MaxTokens,
-            Stream = true,
-            StreamOptions = new OpenAiStreamOptions { IncludeUsage = true },
-            Tools = !Capabilities.NativeToolCalling
-                ? null
-                : request.Tools?.Select(t => new OpenAiTool
-                {
-                    Function = new OpenAiFunctionTool
-                    {
-                        Name = t.Name,
-                        Description = t.Description,
-                        Parameters = ParseJsonElement(
-                            t.InputSchemaJson,
-                            $"tool schema '{t.Name}'")
-                    }
-                }).ToList(),
-            ResponseFormat = request.ResponseFormat is null
-                ? null
-                : new
-                {
-                    type = "json_schema",
-                    json_schema = new
-                    {
-                        name = "response",
-                        schema = ParseJsonElement(
-                            request.ResponseFormat.Schema,
-                            "response format schema"),
-                        strict = true
-                    }
-                },
-            ReasoningEffort = request.ThinkingConfig is null || request.ThinkingConfig.Mode != LlmThinkingMode.Enabled
-                ? null
-                : MapThinkingEffort(request.ThinkingConfig.Effort),
-            Thinking = MapThinkingToggle(request.ThinkingConfig)
-        };
-    }
-
-    private object? MapThinkingToggle(LlmThinkingConfig? config)
-    {
-        if (config is null || config.Mode == LlmThinkingMode.ProviderDefault)
-        {
-            return null;
-        }
-
-        if (_dialect != OpenAiDialect.DeepSeek)
-        {
-            return null;
-        }
-
-        return new
-        {
-            type = config.Mode == LlmThinkingMode.Enabled
-                ? "enabled"
-                : "disabled"
-        };
-    }
-
-    private IEnumerable<OpenAiChatMessage> ToWireMessages(LlmMessage message)
-    {
-        var text = string.Concat(
-            message.Parts
-                .OfType<LlmTextContent>()
-                .Select(part => part.Text));
-        var reasoning = _dialect == OpenAiDialect.DeepSeek
-            ? string.Concat(
-                message.Parts
-                    .OfType<LlmReasoningContent>()
-                    .Where(part =>
-                        part.Continuation is null ||
-                        part.Continuation.IsFor("OpenAi"))
-                    .Select(part => part.Text))
-            : string.Empty;
-        var toolCalls = message.Parts
-            .OfType<LlmToolCallContent>()
-            .Select(part => part.ToolCall)
-            .ToList();
-
-        if (toolCalls.Count > 0)
-        {
-            yield return new OpenAiChatMessage
-            {
-                Role = message.Role,
-                Content = string.IsNullOrEmpty(text) ? null : text,
-                ReasoningContent = string.IsNullOrEmpty(reasoning) ? null : reasoning,
-                ToolCalls = toolCalls
-                    .Select(call => new OpenAiToolCall
-                    {
-                        Id = call.Id,
-                        Type = "function",
-                        Function = new OpenAiToolCallFunction
-                        {
-                            Name = call.Name,
-                            Arguments = call.ArgumentsJson
-                        }
-                    })
-                    .ToList()
-            };
-
-            yield break;
-        }
-
-        if (string.Equals(message.Role, "tool", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var result in message.Parts
-                .OfType<LlmToolResultContent>()
-                .Select(part => part.Result))
-            {
-                yield return new OpenAiChatMessage
-                {
-                    Role = "tool",
-                    ToolCallId = result.ToolCallId,
-                    Content = result.Content
-                };
-            }
-
-            yield break;
-        }
-
-        yield return new OpenAiChatMessage
-        {
-            Role = message.Role,
-            Content = string.IsNullOrEmpty(text) ? null : text,
-            ReasoningContent = string.IsNullOrEmpty(reasoning) ? null : reasoning
-        };
-    }
-
-    private static string? MapThinkingEffort(LlmThinkingEffort effort) =>
-        effort switch
-        {
-            LlmThinkingEffort.None => null,
-            LlmThinkingEffort.Low => "low",
-            LlmThinkingEffort.Medium => "medium",
-            LlmThinkingEffort.High => "high",
-            // OpenAI has no "max" reasoning effort on the wire; reject rather
-            // than silently capping to "high".
-            LlmThinkingEffort.Max => throw new LlmRequestValidationException(
-                "OpenAI does not support a 'max' reasoning effort; it would " +
-                "be silently capped to 'high'."),
-            _ => null
-        };
+    private OpenAiChatCompletionRequest ToWireRequest(LlmRequest request) =>
+        OpenAiChatCompletionRequestMapper.Build(
+            Model,
+            Capabilities,
+            _dialect,
+            request,
+            streaming: true);
 
     /// <inheritdoc />
     protected override async IAsyncEnumerable<LlmStreamEvent> ProcessStreamAsync(

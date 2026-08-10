@@ -25,11 +25,46 @@ public sealed class ClaudeClientProvider : ILlmClientProvider
                 LlmThinkingEffort.Low,
                 LlmThinkingEffort.Medium,
                 LlmThinkingEffort.High
-            }
+            },
+        Batch =
+            BatchCapabilities.NativeBatch |
+            BatchCapabilities.Polling |
+            BatchCapabilities.Cancellation
     };
 
     /// <inheritdoc />
     public ILlmClient CreateClient(LlmClientProviderContext context)
+    {
+        var thinkingStyle = ResolveThinkingStyle(context);
+
+        return new ClaudeChatClient(
+            context.HttpClientFactory,
+            context.Model,
+            context.ApiKey,
+            context.BaseUrl,
+            context.Capabilities,
+            thinkingStyle);
+    }
+
+    /// <inheritdoc />
+    public IBaizeBatchClient? CreateBatchClient(LlmClientProviderContext context)
+    {
+        if (!context.Capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch))
+            return null;
+
+        var thinkingStyle = ResolveThinkingStyle(context);
+
+        return new ClaudeBatchClient(
+            context.HttpClientFactory,
+            context.Model,
+            context.ApiKey,
+            context.BaseUrl,
+            context.Capabilities,
+            thinkingStyle);
+    }
+
+    private static ClaudeThinkingStyle ResolveThinkingStyle(
+        LlmClientProviderContext context)
     {
         var thinkingStyle = ClaudeThinkingStyle.Adaptive;
 
@@ -40,12 +75,6 @@ public sealed class ClaudeClientProvider : ILlmClientProvider
                 $"Unknown Claude thinking style '{configured}' for model '{context.Model}'.");
         }
 
-        return new ClaudeChatClient(
-            context.HttpClientFactory,
-            context.Model,
-            context.ApiKey,
-            context.BaseUrl,
-            context.Capabilities,
-            thinkingStyle);
+        return thinkingStyle;
     }
 }

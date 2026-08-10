@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
@@ -7,7 +7,7 @@ namespace Penghou.Baize.Claude;
 /// It carries only output tokens mid-stream; full usage including input
 /// tokens arrives on <c>message_start</c> and is handled separately.
 /// </summary>
-public sealed class ClaudeStreamUsage
+internal sealed class ClaudeStreamUsage
 {
     /// <summary>Output tokens generated so far.</summary>
     [JsonPropertyName("output_tokens")]

@@ -15,6 +15,21 @@ internal static class RepairAttemptMapper
             .Select(ToAttempt)
             .ToArray();
 
+    public static LlmJsonRepairDiagnostics ToDiagnostics(
+        JsonRepairResult result) =>
+        new(
+            MapShapeStatus(result.ShapeStatus),
+            result.ShapeErrors.ToArray(),
+            result.SucceededBy?.Name,
+            result.TolerantRecovery is null
+                ? null
+                : new LlmTolerantRecoveryDiagnostics(
+                    result.TolerantRecovery.Succeeded,
+                    result.TolerantRecovery.Outcome,
+                    result.TolerantRecovery.CorrectionCount,
+                    result.TolerantRecovery.SchemaGuidedStringCorrectionCount,
+                    result.TolerantRecovery.Corrections.ToArray()));
+
     private static LlmRepairAttempt ToAttempt(
         StrategyReport report) =>
         new(
@@ -35,5 +50,18 @@ internal static class RepairAttemptMapper
                 nameof(status),
                 status,
                 null)
+        };
+
+    private static LlmRepairShapeStatus MapShapeStatus(
+        JsonRepairShapeStatus status) =>
+        status switch
+        {
+            JsonRepairShapeStatus.NotEvaluated =>
+                LlmRepairShapeStatus.NotEvaluated,
+            JsonRepairShapeStatus.Matched =>
+                LlmRepairShapeStatus.Matched,
+            JsonRepairShapeStatus.Mismatched =>
+                LlmRepairShapeStatus.Mismatched,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
 }

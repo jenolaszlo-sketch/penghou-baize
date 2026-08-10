@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Claude;
 /// Wire model for a Claude Messages streaming <c>message_start</c> event,
 /// which carries the full input usage.
 /// </summary>
-public sealed class ClaudeMessageStart
+internal sealed class ClaudeMessageStart
 {
     /// <summary>The event type (<c>message_start</c>).</summary>
     [JsonPropertyName("type")]

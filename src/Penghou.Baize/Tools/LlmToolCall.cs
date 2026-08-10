@@ -23,7 +23,11 @@ public sealed record LlmToolCall(
     IReadOnlyList<LlmRepairAttempt>? JsonRepairAttempts = null,
     LlmToolCallNormalizationStatus NormalizationStatus =
         LlmToolCallNormalizationStatus.Normalized,
-    LlmProviderContinuation? Continuation = null);
+    LlmProviderContinuation? Continuation = null)
+{
+    /// <summary>Detailed diagnostics from arguments JSON repair.</summary>
+    public LlmJsonRepairDiagnostics? JsonRepairDiagnostics { get; init; }
+}
 
 /// <summary>How a native tool call was left by normalization.</summary>
 public enum LlmToolCallNormalizationStatus

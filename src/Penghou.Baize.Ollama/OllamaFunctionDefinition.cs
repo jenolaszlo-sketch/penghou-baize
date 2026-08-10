@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Ollama;
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Ollama;
 /// <summary>
 /// Wire model for the function definition of an Ollama tool.
 /// </summary>
-public sealed class OllamaFunctionDefinition
+internal sealed class OllamaFunctionDefinition
 {
     /// <summary>The function name.</summary>
     [JsonPropertyName("name")]

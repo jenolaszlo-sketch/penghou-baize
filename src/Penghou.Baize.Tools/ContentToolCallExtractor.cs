@@ -88,12 +88,15 @@ public sealed class ContentToolCallExtractor(
         var attempts = MergeAttempts(
             call.JsonRepairAttempts,
             RepairAttemptMapper.Combine(repairResult));
+        var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
 
-        if (repairResult.Document is null)
+        if (repairResult.Document is null ||
+            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
         {
             return call with
             {
-                JsonRepairAttempts = attempts
+                JsonRepairAttempts = attempts,
+                JsonRepairDiagnostics = diagnostics
             };
         }
 
@@ -104,7 +107,8 @@ public sealed class ContentToolCallExtractor(
             JsonWasRepaired =
                 call.JsonWasRepaired ||
                 repairResult.WasRepaired,
-            JsonRepairAttempts = attempts
+            JsonRepairAttempts = attempts,
+            JsonRepairDiagnostics = diagnostics
         };
     }
 
@@ -230,7 +234,10 @@ public sealed class ContentToolCallExtractor(
             JsonWasRepaired:
                 repairResult.WasRepaired ||
                 recoveredFlattenedArguments,
-            JsonRepairAttempts: attempts);
+            JsonRepairAttempts: attempts)
+        {
+            JsonRepairDiagnostics = RepairAttemptMapper.ToDiagnostics(repairResult)
+        };
 
         return true;
     }

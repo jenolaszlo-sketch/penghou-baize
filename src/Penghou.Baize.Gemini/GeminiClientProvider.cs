@@ -19,6 +19,10 @@ public sealed class GeminiClientProvider : ILlmClientProvider
         Thinking = true,
         ThinkingDisable = true,
         StreamingToolCallArguments = true,
+        Batch =
+            BatchCapabilities.NativeBatch |
+            BatchCapabilities.Polling |
+            BatchCapabilities.Cancellation,
         SupportedThinkingEfforts =
             new HashSet<LlmThinkingEffort>
             {
@@ -37,4 +41,16 @@ public sealed class GeminiClientProvider : ILlmClientProvider
             context.ApiKey,
             context.BaseUrl,
             context.Capabilities);
+
+    /// <inheritdoc />
+    public IBaizeBatchClient? CreateBatchClient(
+        LlmClientProviderContext context) =>
+        context.Capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch)
+            ? new GeminiBatchClient(
+                context.HttpClientFactory,
+                context.Model,
+                context.ApiKey,
+                context.BaseUrl,
+                context.Capabilities)
+            : null;
 }

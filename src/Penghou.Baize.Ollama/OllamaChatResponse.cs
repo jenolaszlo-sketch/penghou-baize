@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Ollama;
 
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Ollama;
 /// Wire model for an Ollama <c>/api/chat</c> response chunk (one per line of
 /// the stream).
 /// </summary>
-public sealed class OllamaChatResponse
+internal sealed class OllamaChatResponse
 {
     /// <summary>The model that produced the response.</summary>
     [JsonPropertyName("model")]

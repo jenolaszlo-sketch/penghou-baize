@@ -9,7 +9,7 @@ public sealed class LlmCapabilitiesValidationTests
 {
     private sealed class ValidationProbeClient(
         LlmEndpointCapabilities capabilities)
-        : LlmClientBase<object>(
+        : LlmClientBase(
             model: "probe",
             httpClientFactory: new TestHttpClientFactory(
                 new HttpClient(new StubHandler())),
@@ -31,9 +31,7 @@ public sealed class LlmCapabilitiesValidationTests
             CancellationToken cancellationToken) =>
             ReadSseEventsAsync(stream, cancellationToken);
 
-        protected override object ToWireRequest(LlmRequest request) => new();
-
-        protected override HttpRequestMessage CreateHttpRequest(object wireRequest) =>
+        protected override HttpRequestMessage CreateHttpRequest(LlmRequest request) =>
             new(HttpMethod.Post, "http://localhost");
 
         protected override async IAsyncEnumerable<LlmStreamEvent> ProcessStreamAsync(

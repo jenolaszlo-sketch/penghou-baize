@@ -7,9 +7,9 @@
 
 Penghou.Baize is a provider-agnostic chat-completion client for .NET with a
 single, stable programming model across OpenAI-compatible endpoints, Anthropic
-Claude, Ollama, and Google Gemini. It exposes streaming, tool calling, usage,
-and diagnostics through one small domain surface — no provider SDK types leak
-into your application.
+Claude, Ollama, and Google Gemini. It exposes streaming, tool calling,
+multimodal input, native batch execution, usage, and diagnostics through one
+small domain surface — no provider SDK types leak into your application.
 
 ## Packages
 
@@ -21,7 +21,9 @@ into your application.
 | `Penghou.Baize.Ollama` | Ollama chat client |
 | `Penghou.Baize.Gemini` | Google Gemini chat client |
 | `Penghou.Baize.Router` | Provider-neutral, configuration-driven model routing and capability fallback |
+| `Penghou.Baize.Batch` | Provider-neutral native batch planning and aggregate coordination |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
+| `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` adapter |
 
 The core, provider clients, and router target `net8.0` and `net10.0`.
 `Penghou.Baize.Tools` targets `net9.0` and `net10.0` because its schema
@@ -30,9 +32,9 @@ generation uses the `System.Text.Json.Schema` APIs introduced in .NET 9.
 ## Install
 
 ```xml
-<PackageReference Include="Penghou.Baize" Version="0.1.0" />
+<PackageReference Include="Penghou.Baize" Version="0.2.0" />
 <!-- plus the client package for your provider(s) -->
-<PackageReference Include="Penghou.Baize.OpenAi" Version="0.1.0" />
+<PackageReference Include="Penghou.Baize.OpenAi" Version="0.2.0" />
 ```
 
 ## Quick start
@@ -67,6 +69,31 @@ await foreach (LlmStreamEvent e in client.StreamAsync(request))
         Console.Write(e.Delta);
 }
 ```
+
+## Multimodal input
+
+Messages can mix text, images, audio, video, and files. Media may be supplied
+as immutable inline bytes, an absolute URI, or a provider-hosted file ID:
+
+```csharp
+var request = new LlmRequest(
+[
+    new LlmMessage(
+        "user",
+        [
+            new LlmTextContent("Describe this diagram"),
+            new LlmImageContent(
+                "image/png",
+                new LlmInlineDataSource(imageBytes))
+        ])
+]);
+```
+
+Capabilities declare both the accepted media types and their transports. The
+router removes incompatible endpoints before ranking them, and the selected
+provider validates the request again before transmission. Provider support is
+intentionally conservative: configure only transports supported by the exact
+model and API endpoint you use.
 
 ## Tool calling
 
@@ -134,6 +161,49 @@ Repair strategies run against the whole content and each is reported as an
 `LlmRepairAttempt` (scoped `content/...`), so callers can validate the result
 and still fall back to a retry when repair could not produce schema-compliant
 JSON.
+
+`AddLlmTools` also accepts an `Action<JsonRepairOptions>` when an application
+needs to add, remove, or reorder Nuwa repair strategies. Detailed shape,
+tolerant-recovery, and winning-strategy diagnostics are available through
+`ContentRepairDiagnostics` and `LlmToolCall.JsonRepairDiagnostics`. A repaired
+document that still mismatches the supplied schema is reported but is not
+applied to the response.
+
+## Native batch inference
+
+`Penghou.Baize.Batch` groups requests by configured endpoint and exposes the
+provider's native asynchronous batch client without introducing an
+orchestration-runtime dependency. OpenAI, Anthropic, and Gemini adapters support
+native submission, polling, result retrieval, and cancellation according to
+their advertised `BatchCapabilities`.
+
+Register routing first, then batch planning:
+
+```csharp
+services.AddLlmRouting(configuration);
+services.AddBaizeBatch(new BatchPlannerOptions
+{
+    MaxItemsPerGroup = 1_000
+});
+
+var batches = provider.GetRequiredService<IBaizeBatchCoordinator>();
+var handle = await batches.SubmitAsync(new BaizeBatchSubmission(
+[
+    new BaizeBatchRequest(
+        "request-1",
+        new LlmRequest([new LlmMessage("user", "Summarize this")]),
+        Model: "gpt-batch")
+]));
+var status = await batches.GetStatusAsync(handle);
+var results = await batches.GetResultsAsync(handle);
+```
+
+Request IDs must be unique. Model names are preserved verbatim, including
+colons; select a provider explicitly with `BaizeBatchRequest.CreateForProvider`
+or the record's separate `Provider` property. Provider handles are validated so
+they cannot accidentally be used with another provider adapter. Baize does not
+currently provide durable workflow orchestration; applications should persist
+the returned `ProviderBatchHandle` if polling must survive a process restart.
 
 ## Routing
 
@@ -352,6 +422,45 @@ services.AddSingleton<ILlmRouterMemory, MyRedisRouterMemory>();
 
 See the `LlmRouting` configuration shape in
 `src/Penghou.Baize.Router/Configuration/LlmRoutingOptions.cs`.
+
+### Custom endpoint selection
+
+Hard capability filtering always runs first. Applications can replace the
+default reliability ranking after `AddLlmRouting` to apply cost, latency,
+region, tenant, or workload-specific policy without forking the router:
+
+```csharp
+services.AddLlmRouting(configuration);
+services.AddSingleton<ILlmEndpointSelectionPolicy, MySelectionPolicy>();
+```
+
+## Microsoft.Extensions.AI
+
+`Penghou.Baize.Extensions.AI` adapts any `ILlmClient` to `IChatClient`, so
+Baize clients work with the standard .NET AI middleware and ecosystem:
+
+```csharp
+using Microsoft.Extensions.AI;
+using Penghou.Baize.Extensions.AI;
+
+IChatClient chatClient = new BaizeChatClient(client, "OpenAi", "gpt-4o");
+var response = await chatClient.GetResponseAsync("Hello");
+```
+
+Text, usage, reasoning, tool calls/results, and supported multimodal content
+are mapped in both directions.
+
+## Observability
+
+Clients and routed attempts emit `Activity` spans and request, failure,
+latency, and token metrics from the `Penghou.Baize` instrumentation source.
+Register that source with OpenTelemetry in the host application:
+
+```csharp
+services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddSource(BaizeTelemetry.InstrumentationName))
+    .WithMetrics(metrics => metrics.AddMeter(BaizeTelemetry.InstrumentationName));
+```
 
 ## License
 

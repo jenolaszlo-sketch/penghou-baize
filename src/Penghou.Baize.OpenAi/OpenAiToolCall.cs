@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for a native tool call in an OpenAI assistant message.
 /// </summary>
-public sealed class OpenAiToolCall
+internal sealed class OpenAiToolCall
 {
     /// <summary>The call id.</summary>
     [JsonPropertyName("id")]

@@ -115,7 +115,7 @@ public sealed class StructuredOutputRepairTests
     }
 
     [Fact]
-    public async Task RepairAsync_ReportsLossySalvageSoCallersCanReject()
+    public async Task RepairAsync_DoesNotApplySalvageThatMismatchesSchema()
     {
         var repairer = CreateRepairer();
         const string content =
@@ -126,7 +126,11 @@ public sealed class StructuredOutputRepairTests
             LlmResponseFormat.JsonSchema(NameSchema),
             TestContext.Current.CancellationToken);
 
-        response.ContentWasRepaired.Should().BeTrue();
+        response.Content.Should().Be(content);
+        response.ContentWasRepaired.Should().BeFalse();
+        response.ContentRepairDiagnostics!.ShapeStatus
+            .Should().Be(LlmRepairShapeStatus.Mismatched);
+        response.ContentRepairDiagnostics.ShapeErrors.Should().NotBeEmpty();
         response.ContentRepairAttempts.Should().Contain(
             attempt =>
                 attempt.Name ==
@@ -186,6 +190,18 @@ public sealed class StructuredOutputRepairTests
             TestContext.Current.CancellationToken);
 
         response.ContentWasRepaired.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddLlmTools_AppliesCustomNuwaConfiguration()
+    {
+        var configured = false;
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddLlmTools(_ => configured = true);
+
+        configured.Should().BeTrue();
     }
 
     private static LlmStructuredOutputRepairer CreateRepairer() =>

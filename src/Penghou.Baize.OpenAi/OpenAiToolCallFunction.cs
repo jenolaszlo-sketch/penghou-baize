@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for the function of a complete native OpenAI tool call.
 /// </summary>
-public sealed class OpenAiToolCallFunction
+internal sealed class OpenAiToolCallFunction
 {
     /// <summary>The function name being called.</summary>
     [JsonPropertyName("name")]

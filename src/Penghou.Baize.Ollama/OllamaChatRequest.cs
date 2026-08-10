@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Ollama;
 
 /// <summary>
 /// Wire model for an Ollama <c>/api/chat</c> request.
 /// </summary>
-public sealed class OllamaChatRequest
+internal sealed class OllamaChatRequest
 {
     /// <summary>The model identifier.</summary>
     [JsonPropertyName("model")]

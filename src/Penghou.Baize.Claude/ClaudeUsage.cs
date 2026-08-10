@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
 /// <summary>
 /// Wire model for Claude Messages token usage.
 /// </summary>
-public sealed class ClaudeUsage
+internal sealed class ClaudeUsage
 {
     /// <summary>Tokens consumed by the input.</summary>
     [JsonPropertyName("input_tokens")]

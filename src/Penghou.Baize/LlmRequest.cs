@@ -6,7 +6,7 @@ public sealed record LlmRequest
     private readonly IReadOnlyList<LlmMessage> _messages;
     private readonly double? _temperature;
     private readonly int? _maxTokens;
-    private readonly IList<LlmTool> _tools;
+    private readonly IReadOnlyList<LlmTool> _tools;
     private readonly LlmResponseFormat? _responseFormat;
     private readonly LlmThinkingConfig? _thinkingConfig;
 
@@ -25,10 +25,10 @@ public sealed record LlmRequest
         LlmThinkingConfig? thinkingConfig = null)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        _messages = messages;
+        _messages = messages.ToArray();
         _temperature = temperature;
         _maxTokens = maxTokens;
-        _tools = tools ?? [];
+        _tools = tools?.ToArray() ?? [];
         _responseFormat = responseFormat;
         _thinkingConfig = thinkingConfig;
     }
@@ -43,7 +43,7 @@ public sealed record LlmRequest
     public int? MaxTokens => _maxTokens;
 
     /// <summary>Tools available to the model, when any.</summary>
-    public IList<LlmTool> Tools => _tools;
+    public IReadOnlyList<LlmTool> Tools => _tools;
 
     /// <summary>A requested response format, when any.</summary>
     public LlmResponseFormat? ResponseFormat => _responseFormat;

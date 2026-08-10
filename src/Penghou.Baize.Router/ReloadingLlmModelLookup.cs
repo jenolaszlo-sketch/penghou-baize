@@ -86,6 +86,16 @@ public sealed class ReloadingLlmModelLookup : ILlmModelLookup, IDisposable
     public bool TryGetClientByEndpointId(string endpointId, out ILlmClient client) =>
         _inner.TryGetClientByEndpointId(endpointId, out client);
 
+    /// <inheritdoc />
+    public IBaizeBatchClient GetBatchClientByEndpointId(string endpointId) =>
+        _inner.GetBatchClientByEndpointId(endpointId);
+
+    /// <inheritdoc />
+    public bool TryGetBatchClientByEndpointId(
+        string endpointId,
+        out IBaizeBatchClient client) =>
+        _inner.TryGetBatchClientByEndpointId(endpointId, out client);
+
     /// <summary>
     /// The API styles a model can be reached through, in registration order.
     /// Returns an empty list for unknown models.

@@ -1165,6 +1165,54 @@ public sealed class GeminiChatClientTests
             .Should().Be(LlmClientFailureKind.Availability);
     }
 
+    [Fact]
+    public async Task StreamAsync_SerializesInlineImageContent()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"described"}]},"finishReason":"STOP"}]}
+
+            data: [DONE]
+
+            """);
+        var capabilities = DefaultCapabilities with
+        {
+            ContentTypes = new HashSet<LlmContentType>
+            {
+                LlmContentType.Text,
+                LlmContentType.Image
+            },
+            ContentTransports = new Dictionary<LlmContentType, LlmContentTransport>
+            {
+                [LlmContentType.Image] = LlmContentTransport.InlineData
+            }
+        };
+        var client = CreateClient(handler, "gemini-2.0-flash", capabilities);
+        var request = new LlmRequest(
+            [
+                new LlmMessage(
+                    "user",
+                    [
+                        new LlmTextContent("describe"),
+                        new LlmImageContent(
+                            "image/png",
+                            new LlmInlineDataSource(new byte[] { 1, 2, 3 }))
+                    ])
+            ]);
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var inline = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[1]
+            .GetProperty("inlineData");
+        inline.GetProperty("mimeType").GetString().Should().Be("image/png");
+        inline.GetProperty("data").GetString().Should().Be("AQID");
+    }
+
     private static GeminiChatClient CreateClient(
         RecordingHandler handler,
         string model,

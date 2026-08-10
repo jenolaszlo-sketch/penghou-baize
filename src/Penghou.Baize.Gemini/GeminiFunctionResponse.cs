@@ -8,7 +8,7 @@ namespace Penghou.Baize.Gemini;
 /// model requested a function call. Sent on a user-role message so the model
 /// can continue.
 /// </summary>
-public sealed class GeminiFunctionResponse
+internal sealed class GeminiFunctionResponse
 {
     /// <summary>
     /// The function-call id this response answers. Gemini requires the exact

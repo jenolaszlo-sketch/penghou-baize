@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Ollama;
 
 /// <summary>
 /// Wire model for a native tool call in an Ollama assistant message.
 /// </summary>
-public sealed class OllamaToolCall
+internal sealed class OllamaToolCall
 {
     /// <summary>The call type; typically <c>function</c>.</summary>
     [JsonPropertyName("type")]

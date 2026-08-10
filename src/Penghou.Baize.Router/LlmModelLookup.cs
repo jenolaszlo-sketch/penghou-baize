@@ -9,6 +9,7 @@ public sealed class LlmModelLookup : ILlmModelLookup
 {
     private readonly IReadOnlyDictionary<string, Func<ILlmClient>> _defaults;
     private readonly IReadOnlyDictionary<string, Func<ILlmClient>> _byEndpointId;
+    private readonly IReadOnlyDictionary<string, Func<IBaizeBatchClient>> _batchByEndpointId;
     private readonly IReadOnlyDictionary<(string Model, LlmProviderKey Provider), Func<ILlmClient>> _byProvider;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<LlmProviderKey>> _providersByModel;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<ResolvedEndpoint>> _endpointsByModel;
@@ -19,7 +20,8 @@ public sealed class LlmModelLookup : ILlmModelLookup
         IReadOnlyDictionary<(string Model, LlmProviderKey Provider), Func<ILlmClient>> byProvider,
         IReadOnlyDictionary<string, IReadOnlyList<LlmProviderKey>>? providersByModel = null,
         IReadOnlyDictionary<string, Func<ILlmClient>>? byEndpointId = null,
-        IReadOnlyDictionary<string, IReadOnlyList<ResolvedEndpoint>>? endpointsByModel = null)
+        IReadOnlyDictionary<string, IReadOnlyList<ResolvedEndpoint>>? endpointsByModel = null,
+        IReadOnlyDictionary<string, Func<IBaizeBatchClient>>? batchByEndpointId = null)
     {
         _defaults = defaults;
         _byProvider = byProvider;
@@ -75,6 +77,8 @@ public sealed class LlmModelLookup : ILlmModelLookup
         }
 
         _byEndpointId = endpointIds;
+        _batchByEndpointId = batchByEndpointId ??
+            new Dictionary<string, Func<IBaizeBatchClient>>(StringComparer.Ordinal);
     }
 
     /// <summary>Initializes a lookup using legacy built-in API styles.</summary>
@@ -83,7 +87,8 @@ public sealed class LlmModelLookup : ILlmModelLookup
         IReadOnlyDictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>> byStyle,
         IReadOnlyDictionary<string, IReadOnlyList<ApiStyle>>? stylesByModel = null,
         IReadOnlyDictionary<string, Func<ILlmClient>>? byEndpointId = null,
-        IReadOnlyDictionary<string, IReadOnlyList<ResolvedEndpoint>>? endpointsByModel = null)
+        IReadOnlyDictionary<string, IReadOnlyList<ResolvedEndpoint>>? endpointsByModel = null,
+        IReadOnlyDictionary<string, Func<IBaizeBatchClient>>? batchByEndpointId = null)
         : this(
             defaults,
             byStyle.ToDictionary(
@@ -95,7 +100,8 @@ public sealed class LlmModelLookup : ILlmModelLookup
                     .Select(style => style.ToProviderKey())
                     .ToList()),
             byEndpointId,
-            endpointsByModel)
+            endpointsByModel,
+            batchByEndpointId)
     {
     }
 
@@ -172,6 +178,33 @@ public sealed class LlmModelLookup : ILlmModelLookup
     public bool TryGetClientByEndpointId(string endpointId, out ILlmClient client)
     {
         if (_byEndpointId.TryGetValue(endpointId, out var factory))
+        {
+            client = factory();
+            return true;
+        }
+
+        client = null!;
+        return false;
+    }
+
+    /// <inheritdoc />
+    public IBaizeBatchClient GetBatchClientByEndpointId(string endpointId)
+    {
+        if (!TryGetBatchClientByEndpointId(endpointId, out var client))
+        {
+            throw new KeyNotFoundException(
+                $"No native batch client registered for endpoint id '{endpointId}'.");
+        }
+
+        return client;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetBatchClientByEndpointId(
+        string endpointId,
+        out IBaizeBatchClient client)
+    {
+        if (_batchByEndpointId.TryGetValue(endpointId, out var factory))
         {
             client = factory();
             return true;

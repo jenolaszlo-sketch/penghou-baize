@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Penghou.Baize.Router.Tests" />
+    <InternalsVisibleTo Include="Penghou.Baize.Batch.Tests" />
   </ItemGroup>
 
   <ItemGroup>

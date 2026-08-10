@@ -45,6 +45,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<ISecretProvider, EnvironmentSecretProvider>();
         services.TryAddSingleton<ILlmRouterMemory, InMemoryLlmRouterMemory>();
+        services.TryAddSingleton<ILlmEndpointSelectionPolicy,
+            ReliabilityEndpointSelectionPolicy>();
         services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
         services.AddSingleton<ILlmModelLookup>(sp =>
@@ -82,6 +84,8 @@ public static class ServiceCollectionExtensions
         var providersByModel =
             new Dictionary<string, List<LlmProviderKey>>(StringComparer.Ordinal);
         var byEndpointId = new Dictionary<string, Func<ILlmClient>>(StringComparer.Ordinal);
+        var batchByEndpointId =
+            new Dictionary<string, Func<IBaizeBatchClient>>(StringComparer.Ordinal);
         var endpointsByModel =
             new Dictionary<string, List<ResolvedEndpoint>>(StringComparer.Ordinal);
 
@@ -94,13 +98,14 @@ public static class ServiceCollectionExtensions
             foreach (var endpoint in model.Endpoints)
             {
                 var provider = providers.GetRequiredProvider(endpoint.ProviderKey);
-                var factory = CreateClientFactory(
+                var context = CreateProviderContext(
                     httpClientFactory,
                     secrets,
                     provider,
                     model.Name,
                     endpoint,
                     options.Profiles);
+                Func<ILlmClient> factory = () => provider.CreateClient(context);
                 var id = endpoint.Id ?? $"{model.Name}:{endpoint.ProviderKey}";
 
                 if (!usedIds.Add(id))
@@ -116,6 +121,18 @@ public static class ServiceCollectionExtensions
                 byProvider.TryAdd((model.Name, endpoint.ProviderKey), factory);
                 providerKeys.Add(endpoint.ProviderKey);
                 byEndpointId[id] = factory;
+
+                if (context.Capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch))
+                {
+                    batchByEndpointId[id] = () =>
+                    {
+                        var batchClient = provider.CreateBatchClient(context) ??
+                            throw new InvalidOperationException(
+                                $"Provider '{provider.Key}' declares native batch support " +
+                                $"for endpoint '{id}' but returned no batch client.");
+                        return new EndpointBoundBatchClient(id, batchClient);
+                    };
+                }
                 endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ProviderKey));
 
                 // The first endpoint registered for a name wins as the
@@ -136,7 +153,8 @@ public static class ServiceCollectionExtensions
             byEndpointId,
             endpointsByModel.ToDictionary(
                 kv => kv.Key,
-                kv => (IReadOnlyList<ResolvedEndpoint>)kv.Value));
+                kv => (IReadOnlyList<ResolvedEndpoint>)kv.Value),
+            batchByEndpointId);
     }
 
     /// <summary>
@@ -157,7 +175,7 @@ public static class ServiceCollectionExtensions
             (options, _) => TryValidate(options, out _));
     }
 
-    private static Func<ILlmClient> CreateClientFactory(
+    private static LlmClientProviderContext CreateProviderContext(
         IHttpClientFactory httpClientFactory,
         ISecretProvider secrets,
         ILlmClientProvider provider,
@@ -171,14 +189,13 @@ public static class ServiceCollectionExtensions
         var capabilities = ResolveCapabilities(endpoint, profiles, provider);
         var settings = ResolveProviderSettings(endpoint);
 
-        return () => provider.CreateClient(
-            new LlmClientProviderContext(
-                providerModel,
-                httpClientFactory,
-                apiKey,
-                baseUrl,
-                capabilities,
-                settings));
+        return new LlmClientProviderContext(
+            providerModel,
+            httpClientFactory,
+            apiKey,
+            baseUrl,
+            capabilities,
+            settings);
     }
 
     /// <summary>
@@ -244,7 +261,14 @@ public static class ServiceCollectionExtensions
             ContentTypes =
                 overrides.ContentTypes is null
                     ? defaults.ContentTypes
-                    : overrides.ContentTypes.ToHashSet()
+                    : overrides.ContentTypes.ToHashSet(),
+            ContentTransports =
+                overrides.ContentTransports is null
+                    ? defaults.ContentTransports
+                    : new Dictionary<LlmContentType, LlmContentTransport>(
+                        overrides.ContentTransports),
+            Batch =
+                overrides.Batch ?? defaults.Batch
         };
     }
 
@@ -283,7 +307,11 @@ public static class ServiceCollectionExtensions
             ThinkingBudget =
                 top.ThinkingBudget ?? baseOptions.ThinkingBudget,
             ContentTypes =
-                top.ContentTypes ?? baseOptions.ContentTypes
+                top.ContentTypes ?? baseOptions.ContentTypes,
+            ContentTransports =
+                top.ContentTransports ?? baseOptions.ContentTransports,
+            Batch =
+                top.Batch ?? baseOptions.Batch
         };
     }
 

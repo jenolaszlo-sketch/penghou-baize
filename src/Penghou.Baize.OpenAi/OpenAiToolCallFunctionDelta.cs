@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for the incremental function fragments of an OpenAI tool-call delta.
 /// </summary>
-public sealed class OpenAiToolCallFunctionDelta
+internal sealed class OpenAiToolCallFunctionDelta
 {
     /// <summary>An incremental fragment of the function name.</summary>
     [JsonPropertyName("name")]

@@ -117,7 +117,15 @@ public sealed class LlmClientException : Exception
         return (failureKind, AllowsFallback(failureKind));
     }
 
-    private static LlmClientFailureKind ClassifyStatusCode(int? statusCode) =>
+    /// <summary>
+    /// Classifies a provider HTTP status code into an
+    /// <see cref="LlmClientFailureKind"/> using the same mapping applied to
+    /// failed HTTP responses. Reused by the asynchronous batch adapters so
+    /// per-item batch failures are classified identically to direct calls.
+    /// </summary>
+    /// <param name="statusCode">The provider HTTP status code.</param>
+    /// <returns>The normalized failure classification.</returns>
+    public static LlmClientFailureKind ClassifyStatusCode(int statusCode) =>
         statusCode switch
         {
             401 or 403 => LlmClientFailureKind.Authentication,
@@ -126,6 +134,11 @@ public sealed class LlmClientException : Exception
             408 or >= 500 => LlmClientFailureKind.Availability,
             _ => LlmClientFailureKind.Protocol
         };
+
+    private static LlmClientFailureKind ClassifyStatusCode(int? statusCode) =>
+        statusCode is { } value
+            ? ClassifyStatusCode(value)
+            : LlmClientFailureKind.Protocol;
 
     private static bool AllowsFallback(LlmClientFailureKind kind) =>
         kind is LlmClientFailureKind.Availability or LlmClientFailureKind.RateLimit;

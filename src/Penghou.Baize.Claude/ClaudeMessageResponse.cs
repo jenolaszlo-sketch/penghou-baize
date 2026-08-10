@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
 /// <summary>
 /// Wire model for a non-streaming Claude Messages response.
 /// </summary>
-public sealed class ClaudeMessageResponse
+internal sealed class ClaudeMessageResponse
 {
     /// <summary>The content blocks produced by the model.</summary>
     [JsonPropertyName("content")]

@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for OpenAI token usage.
 /// </summary>
-public sealed class OpenAiUsage
+internal sealed class OpenAiUsage
 {
     /// <summary>Tokens consumed by the input prompt.</summary>
     [JsonPropertyName("prompt_tokens")]

@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for one OpenAI Chat Completions streaming chunk.
 /// </summary>
-public sealed class OpenAiChatCompletionChunk
+internal sealed class OpenAiChatCompletionChunk
 {
     /// <summary>The per-chunk streaming choices.</summary>
     [JsonPropertyName("choices")]

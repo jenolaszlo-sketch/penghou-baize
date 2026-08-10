@@ -7,7 +7,7 @@ namespace Penghou.Baize.Gemini;
 /// carried in the URL path and streaming is selected by the
 /// <c>:streamGenerateContent?alt=sse</c> method, so neither appears here.
 /// </summary>
-public sealed class GeminiChatRequest
+internal sealed class GeminiChatRequest
 {
     /// <summary>The conversation contents (user, model and tool turns only).</summary>
     [JsonPropertyName("contents")]
@@ -33,7 +33,7 @@ public sealed class GeminiChatRequest
 /// <summary>
 /// Wire model for the Gemini <c>systemInstruction</c> object.
 /// </summary>
-public sealed class GeminiSystemInstruction
+internal sealed class GeminiSystemInstruction
 {
     /// <summary>The instruction content parts (text parts carrying the system prompt).</summary>
     [JsonPropertyName("parts")]
@@ -43,7 +43,7 @@ public sealed class GeminiSystemInstruction
 /// <summary>
 /// Wire model for the Gemini <c>generationConfig</c> object.
 /// </summary>
-public sealed class GeminiGenerationConfig
+internal sealed class GeminiGenerationConfig
 {
     /// <summary>Sampling temperature.</summary>
     [JsonPropertyName("temperature")]
@@ -73,7 +73,7 @@ public sealed class GeminiGenerationConfig
 /// Wire model for the Gemini <c>thinkingConfig</c> object controlling the
 /// model's thinking token budget.
 /// </summary>
-public sealed class GeminiThinkingConfig
+internal sealed class GeminiThinkingConfig
 {
     /// <summary>The maximum number of thinking tokens.</summary>
     [JsonPropertyName("thinkingBudget")]

@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.OpenAi;
 
 /// <summary>
 /// Wire model for the incremental <c>delta</c> of an OpenAI streaming chunk.
 /// </summary>
-public sealed class OpenAiDelta
+internal sealed class OpenAiDelta
 {
     /// <summary>The role of the assistant message.</summary>
     [JsonPropertyName("role")]

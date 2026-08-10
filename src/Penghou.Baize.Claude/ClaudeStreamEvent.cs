@@ -1,11 +1,11 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
 
 /// <summary>
 /// Wire model for a Claude Messages streaming event (SSE data payload).
 /// </summary>
-public sealed class ClaudeStreamEvent
+internal sealed class ClaudeStreamEvent
 {
     /// <summary>The event type, for example <c>message_start</c>, <c>content_block_start</c>, <c>content_block_delta</c> or <c>message_delta</c>.</summary>
     [JsonPropertyName("type")]

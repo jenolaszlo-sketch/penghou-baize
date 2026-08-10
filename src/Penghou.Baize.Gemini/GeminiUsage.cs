@@ -5,7 +5,7 @@ namespace Penghou.Baize.Gemini;
 /// <summary>
 /// Wire model for Gemini token usage metadata.
 /// </summary>
-public sealed class GeminiUsage
+internal sealed class GeminiUsage
 {
     /// <summary>Tokens consumed by the input prompt.</summary>
     [JsonPropertyName("promptTokenCount")]

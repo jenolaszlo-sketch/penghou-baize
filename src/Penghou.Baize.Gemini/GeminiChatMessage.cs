@@ -5,7 +5,7 @@ namespace Penghou.Baize.Gemini;
 /// <summary>
 /// Wire model for a single Gemini conversation message.
 /// </summary>
-public sealed class GeminiChatMessage
+internal sealed class GeminiChatMessage
 {
     /// <summary>The message role (for example <c>user</c> or <c>model</c>).</summary>
     [JsonPropertyName("role")]
@@ -19,7 +19,7 @@ public sealed class GeminiChatMessage
 /// <summary>
 /// Wire model for a single Gemini content part (text, thought or function call).
 /// </summary>
-public sealed class GeminiContentPart
+internal sealed class GeminiContentPart
 {
     /// <summary>Plain text content.</summary>
     [JsonPropertyName("text")]
@@ -45,4 +45,36 @@ public sealed class GeminiContentPart
     /// <summary>The application's response to a function call.</summary>
     [JsonPropertyName("functionResponse")]
     public GeminiFunctionResponse? FunctionResponse { get; init; }
+
+    /// <summary>Media bytes embedded directly in the request.</summary>
+    [JsonPropertyName("inlineData")]
+    public GeminiInlineData? InlineData { get; init; }
+
+    /// <summary>A URI understood by Gemini, commonly from the Files API.</summary>
+    [JsonPropertyName("fileData")]
+    public GeminiFileData? FileData { get; init; }
+}
+
+/// <summary>Gemini inline media data.</summary>
+internal sealed class GeminiInlineData
+{
+    /// <summary>The MIME type.</summary>
+    [JsonPropertyName("mimeType")]
+    public required string MimeType { get; init; }
+
+    /// <summary>The base64-encoded bytes.</summary>
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
+}
+
+/// <summary>Gemini file or media URI data.</summary>
+internal sealed class GeminiFileData
+{
+    /// <summary>The MIME type.</summary>
+    [JsonPropertyName("mimeType")]
+    public required string MimeType { get; init; }
+
+    /// <summary>The Gemini file or media URI.</summary>
+    [JsonPropertyName("fileUri")]
+    public required string FileUri { get; init; }
 }

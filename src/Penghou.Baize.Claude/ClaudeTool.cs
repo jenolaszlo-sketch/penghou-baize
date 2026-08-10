@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Penghou.Baize.Claude;
@@ -6,7 +6,7 @@ namespace Penghou.Baize.Claude;
 /// <summary>
 /// Wire model for a tool declared to the Claude Messages API.
 /// </summary>
-public sealed class ClaudeTool
+internal sealed class ClaudeTool
 {
     /// <summary>The tool name.</summary>
     [JsonPropertyName("name")]
