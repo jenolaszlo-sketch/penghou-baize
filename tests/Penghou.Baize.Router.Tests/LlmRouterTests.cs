@@ -1275,7 +1275,7 @@ public sealed class LlmRouterTests
                         new LlmEndpointOptions
                         {
                             ApiStyle = ApiStyle.Ollama,
-                            ApiKeyEnvVar = "TEST_LLM_KEY"
+                            ApiKeySecretName = "TEST_LLM_KEY"
                         }
                     ]
                 }
@@ -1338,7 +1338,7 @@ public sealed class LlmRouterTests
                 new LlmModelOptions
                 {
                     Name = "m",
-                    Endpoints = [new LlmEndpointOptions { ApiStyle = ApiStyle.OpenAi, ApiKeyEnvVar = "MISSING_KEY" }]
+                    Endpoints = [new LlmEndpointOptions { ApiStyle = ApiStyle.OpenAi, ApiKeySecretName = "MISSING_KEY" }]
                 }
             ]
         };

@@ -336,13 +336,13 @@ public static class ServiceCollectionExtensions
         LlmEndpointOptions endpoint,
         ISecretProvider secrets)
     {
-        if (string.IsNullOrEmpty(endpoint.ApiKeyEnvVar))
+        if (string.IsNullOrEmpty(endpoint.ApiKeySecretName))
             return string.Empty; // e.g. local Ollama, no auth
 
-        var value = await secrets.GetSecretAsync(endpoint.ApiKeyEnvVar);
+        var value = await secrets.GetSecretAsync(endpoint.ApiKeySecretName);
         if (string.IsNullOrWhiteSpace(value))
             throw new InvalidOperationException(
-                $"Secret '{endpoint.ApiKeyEnvVar}' is required for model " +
+                $"Secret '{endpoint.ApiKeySecretName}' is required for model " +
                 $"'{modelName}' but was not resolved.");
 
         return value;

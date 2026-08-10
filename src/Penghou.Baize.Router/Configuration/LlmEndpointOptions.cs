@@ -49,10 +49,11 @@ public sealed class LlmEndpointOptions
     public string? BaseUrl { get; init; }
 
     /// <summary>
-    /// The environment variable holding the API key; when empty or unset, no
-    /// key is sent (for example local Ollama).
+    /// The name passed to <see cref="ISecretProvider"/> to resolve the API key;
+    /// when empty or unset, no key is sent (for example local Ollama). The
+    /// default secret provider treats this as an environment-variable name.
     /// </summary>
-    public string? ApiKeyEnvVar { get; init; }
+    public string? ApiKeySecretName { get; init; }
 
     /// <summary>
     /// Per-endpoint capability overrides; each null member inherits the API

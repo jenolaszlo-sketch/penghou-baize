@@ -240,13 +240,13 @@ configured module form lets the router discover a third-party
             "Provider": "OpenAi",
             "ProviderModel": "deepseek-chat",
             "BaseUrl": "https://api.deepseek.com/v1",
-            "ApiKeyEnvVar": "DEEPSEEK_API_KEY",
+            "ApiKeySecretName": "DEEPSEEK_API_KEY",
             "Dialect": "DeepSeek"
           },
           {
             "Provider": "Claude",
             "ProviderModel": "claude-sonnet-4-5",
-            "ApiKeyEnvVar": "ANTHROPIC_API_KEY"
+            "ApiKeySecretName": "ANTHROPIC_API_KEY"
           }
         ]
       },
@@ -272,11 +272,48 @@ configured module form lets the router discover a third-party
 Every model needs a unique `Name` and at least one endpoint. `Provider` is a
 case-insensitive adapter key; built-in keys are `OpenAi`, `Claude`, `Ollama`,
 and `Gemini`, while packages can define their own. The older `ApiStyle`
-property remains accepted for built-in providers. `BaseUrl` and
-`ApiKeyEnvVar` override provider defaults. Provider-specific settings can be
+property remains accepted for built-in providers. The `BaseUrl` and
+`ApiKeySecretName` properties override provider defaults. Provider-specific settings can be
 placed in an endpoint's `Settings` object. For compatibility, OpenAI's
 top-level `Dialect` (`Standard` or `DeepSeek`) and Claude's `ThinkingStyle`
 are also forwarded as provider settings.
+
+### Secret providers
+
+`ApiKeySecretName` is a lookup key, not necessarily an environment-variable
+name and never the secret value itself. Baize passes it to `ISecretProvider`.
+The default `EnvironmentSecretProvider` reads a process environment variable
+with that name, which makes the configuration above work without additional
+registration.
+
+Applications can resolve the same logical names from another source by
+implementing `ISecretProvider`. For example, this implementation reads a
+dedicated configuration section that could itself be populated by .NET user
+secrets, Azure Key Vault configuration, or another configuration provider:
+
+```csharp
+public sealed class ConfigurationSecretProvider(IConfiguration configuration)
+    : ISecretProvider
+{
+    public Task<string?> GetSecretAsync(
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(configuration[$"LlmSecrets:{name}"]);
+    }
+}
+
+services.AddSingleton<ISecretProvider, ConfigurationSecretProvider>();
+services.AddLlmRouting(configuration);
+```
+
+Register the custom provider before `AddLlmRouting`; Baize uses
+`TryAddSingleton` so it will not replace an application-provided
+implementation. A remote secret provider should return `null` when a name is
+unknown and honor the supplied cancellation token. Baize fails endpoint
+construction with a message naming the unresolved secret, without logging its
+value.
 
 Assembly discovery accepts assembly identities, never file paths. The package
 must be referenced by the application so it is present in the output and its
@@ -412,13 +449,61 @@ reordering).
 Availability failures are counted within a sliding window; call counts and
 feature-reliability failures are cumulative. The package ships an in-memory
 implementation (`InMemoryLlmRouterMemory`). To use durable or shared storage
-(Redis, a database, ...), register your own `ILlmRouterMemory` on the service
-collection after `AddLlmRouting`:
+(Redis, a database, ...), implement `ILlmRouterMemory` over an application
+store. This example keeps the storage contract explicit so the backing system
+can update counters and cooldowns atomically:
 
 ```csharp
+public interface IRouterStatsStore
+{
+    Task IncrementCallsAsync(string endpointId, CancellationToken cancellationToken);
+
+    Task RecordFailureAsync(
+        string endpointId,
+        LlmFailureCategory category,
+        DateTimeOffset? unavailableUntil,
+        CancellationToken cancellationToken);
+
+    Task<LlmEndpointStats?> GetStatsAsync(
+        string endpointId,
+        CancellationToken cancellationToken);
+}
+
+public sealed class DurableRouterMemory(IRouterStatsStore store)
+    : ILlmRouterMemory
+{
+    public Task RecordCallAsync(
+        string endpointId,
+        CancellationToken cancellationToken = default) =>
+        store.IncrementCallsAsync(endpointId, cancellationToken);
+
+    public Task RecordFailureAsync(
+        string endpointId,
+        LlmFailureCategory category,
+        DateTimeOffset? unavailableUntil = null,
+        CancellationToken cancellationToken = default) =>
+        store.RecordFailureAsync(
+            endpointId,
+            category,
+            unavailableUntil,
+            cancellationToken);
+
+    public async Task<LlmEndpointStats> GetStatsAsync(
+        string endpointId,
+        CancellationToken cancellationToken = default) =>
+        await store.GetStatsAsync(endpointId, cancellationToken)
+            ?? new LlmEndpointStats(endpointId, 0, 0, 0, 0);
+}
+
+services.AddSingleton<ILlmRouterMemory, DurableRouterMemory>();
 services.AddLlmRouting(configuration);
-services.AddSingleton<ILlmRouterMemory, MyRedisRouterMemory>();
 ```
+
+Register custom memory before `AddLlmRouting` for the same `TryAddSingleton`
+behavior. Implementations should make increments atomic, preserve the
+`UnavailableUntil` cooldown, and apply the desired availability-failure
+window. Router memory stores endpoint reliability statistics only; it is not a
+prompt or response cache.
 
 See the `LlmRouting` configuration shape in
 `src/Penghou.Baize.Router/Configuration/LlmRoutingOptions.cs`.
