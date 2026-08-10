@@ -19,6 +19,13 @@
 /// Provider continuation metadata for the generated content text, when the
 /// provider attaches signature-like values to a regular content part.
 /// </param>
+/// <remarks>
+/// The raw ordered content parts the provider stream yielded, each retaining
+/// its provider continuation. Repair and normalization layers may update the
+/// convenience <see cref="Content"/> or <see cref="ToolCalls"/> projections
+/// without modifying these raw parts, because signed parts must be replayed
+/// exactly as received.
+/// </remarks>
 public sealed record LlmResponse(
     string Content,
     string? Reasoning = null,
@@ -30,4 +37,10 @@ public sealed record LlmResponse(
     bool ContentWasRepaired = false,
     IReadOnlyList<LlmRepairAttempt>? ContentRepairAttempts = null,
     LlmProviderContinuation? ReasoningContinuation = null,
-    LlmProviderContinuation? ContentContinuation = null);
+    LlmProviderContinuation? ContentContinuation = null)
+{
+    /// <summary>
+    /// Gets the raw ordered content parts yielded by the provider stream.
+    /// </summary>
+    public IReadOnlyList<LlmContentPart>? Parts { get; init; }
+}

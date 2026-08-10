@@ -661,6 +661,112 @@ public sealed class ClaudeChatClientTests
     }
 
     [Fact]
+    public async Task CompleteStreamingAsync_PreservesSignatureOnlyAndRedactedThinking()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: content_block_start
+            data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig_empty"}}
+
+            event: content_block_stop
+            data: {"type":"content_block_stop","index":0}
+
+            event: content_block_start
+            data: {"type":"content_block_start","index":1,"content_block":{"type":"redacted_thinking","data":"opaque_data"}}
+
+            event: content_block_stop
+            data: {"type":"content_block_stop","index":1}
+
+            event: message_delta
+            data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}
+
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(handler, "claude-test");
+        var router = CreateRouter(client);
+
+        var response = await router.CompleteStreamingAsync(
+            "claude-native",
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Reason")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Parts.Should().HaveCount(2);
+        var signatureOnly = response.Parts![0]
+            .Should().BeOfType<LlmReasoningContent>().Subject;
+        signatureOnly.Text.Should().BeEmpty();
+        signatureOnly.Continuation!.GetValue("signature")
+            .Should().Be("sig_empty");
+        var redacted = response.Parts[1]
+            .Should().BeOfType<LlmReasoningContent>().Subject;
+        redacted.Text.Should().BeEmpty();
+        redacted.Continuation!.GetValue("redactedThinkingData")
+            .Should().Be("opaque_data");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ReplaysRedactedThinkingAndDropsForeignReasoning()
+    {
+        var handler = new RecordingHandler(
+            """
+            event: message_stop
+            data: {"type":"message_stop"}
+
+            """);
+        var client = CreateClient(handler, "claude-test");
+        var request = new LlmRequest(
+        [
+            new LlmMessage(
+                "assistant",
+            [
+                new LlmReasoningContent("foreign")
+                {
+                    Continuation = new LlmProviderContinuation(
+                        "Gemini",
+                        new Dictionary<string, string>
+                        {
+                            ["thoughtSignature"] = "gemini_sig"
+                        })
+                },
+                new LlmReasoningContent(string.Empty)
+                {
+                    Continuation = new LlmProviderContinuation(
+                        "Claude",
+                        new Dictionary<string, string>
+                        {
+                            ["redactedThinkingData"] = "opaque_data"
+                        })
+                },
+                new LlmToolCallContent(
+                    new LlmToolCall("call_1", "lookup", "{}"))
+            ])
+        ]);
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var content = document.RootElement
+            .GetProperty("messages")[0]
+            .GetProperty("content");
+        content.GetArrayLength().Should().Be(2);
+        content[0].GetProperty("type").GetString()
+            .Should().Be("redacted_thinking");
+        content[0].GetProperty("data").GetString()
+            .Should().Be("opaque_data");
+        content[1].GetProperty("type").GetString()
+            .Should().Be("tool_use");
+    }
+
+    [Fact]
     public async Task StreamAsync_DeliversStructuredOutputAsContentNotToolCall()
     {
         var handler = new RecordingHandler(
@@ -674,8 +780,8 @@ public sealed class ClaudeChatClientTests
             event: content_block_delta
             data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":",\"role\":\"engineer\"}"}}
 
-            event: content_block_end
-            data: {"type":"content_block_end","index":0,"content_block":{"type":"tool_use","id":"toolu_so","name":"structured_output"}}
+            event: content_block_stop
+            data: {"type":"content_block_stop","index":0,"content_block":{"type":"tool_use","id":"toolu_so","name":"structured_output"}}
 
             event: message_delta
             data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":3}}
@@ -1158,6 +1264,44 @@ public sealed class ClaudeChatClientTests
             .GetString().Should().Be("call_2");
     }
 
+    [Fact]
+    public async Task StreamAsync_RejectsStreamWithoutMessageStop()
+    {
+        // A stream that emits deltas and a finish reason but never sends the
+        // terminating message_stop event is truncated and must not be accepted
+        // as a complete answer.
+        var handler = new RecordingHandler(
+            """
+            event: message_start
+            data: {"type":"message_start","message":{"usage":{"input_tokens":10,"output_tokens":0}}}
+
+            event: content_block_start
+            data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"partial"}}
+
+            event: message_delta
+            data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":2}}
+
+            """);
+        var client = CreateClient(
+            handler,
+            "claude-test");
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    CreateRequest(),
+                    TestContext.Current.CancellationToken));
+
+        var exception = await action.Should()
+            .ThrowAsync<LlmClientException>();
+        exception.WithMessage("*ended without a message_stop event*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
+    }
+
     private static LlmRequest CreateRequest() =>
         new(
             [
@@ -1203,6 +1347,19 @@ public sealed class ClaudeChatClientTests
             baseUrl: "https://claude.test",
             capabilities: capabilities ?? DefaultCapabilities,
             thinkingStyle: thinkingStyle ?? ClaudeThinkingStyle.Adaptive);
+
+    private static LlmRouter CreateRouter(ILlmClient client) =>
+        new(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>>
+                {
+                    ["claude-native"] = () => client
+                },
+                new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+                {
+                    [("claude-native", ApiStyle.Claude)] = () => client
+                }),
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>());
 
     private static LlmEndpointCapabilities DefaultCapabilities =>
         new()

@@ -162,10 +162,15 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
             message.Parts
                 .OfType<LlmTextContent>()
                 .Select(part => part.Text));
-        var reasoning = string.Concat(
-            message.Parts
-                .OfType<LlmReasoningContent>()
-                .Select(part => part.Text));
+        var reasoning = _dialect == OpenAiDialect.DeepSeek
+            ? string.Concat(
+                message.Parts
+                    .OfType<LlmReasoningContent>()
+                    .Where(part =>
+                        part.Continuation is null ||
+                        part.Continuation.IsFor("OpenAi"))
+                    .Select(part => part.Text))
+            : string.Empty;
         var toolCalls = message.Parts
             .OfType<LlmToolCallContent>()
             .Select(part => part.ToolCall)
@@ -240,8 +245,24 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
         Stream stream,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var receivedTerminal = false;
+        var nextPartIndex = 0;
+        int? reasoningPartIndex = null;
+        int? contentPartIndex = null;
+        var toolPartIndices = new Dictionary<int, int>();
+
         await foreach (var (_, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
+            // OpenAI terminates a complete stream with a final data: [DONE]
+            // event. A truncation (connection drop before [DONE]) leaves the
+            // stream without this signal, so the caller can reject it as
+            // incomplete rather than surfacing partial code.
+            if (data == "[DONE]")
+            {
+                receivedTerminal = true;
+                break;
+            }
+
             OpenAiChatCompletionChunk? chunk;
 
             try
@@ -281,32 +302,68 @@ public sealed class OpenAiChatClient : LlmClientBase<OpenAiChatCompletionRequest
             var delta = choice.Delta?.Content;
             var finishReason = choice.FinishReason;
 
+            // A finish reason also marks the turn complete, so a stream that
+            // reported one (and then ended) is not treated as truncated even if
+            // the trailing [DONE] was not observed.
+            if (finishReason is not null)
+                receivedTerminal = true;
+
             if (!string.IsNullOrEmpty(choice.Delta?.ReasoningContent))
             {
+                reasoningPartIndex ??= nextPartIndex++;
+
                 yield return new LlmStreamEvent(
-                    ReasoningContent: choice.Delta.ReasoningContent);
+                    ReasoningContent: choice.Delta.ReasoningContent,
+                    Continuation: new LlmProviderContinuation(
+                        Provider: "OpenAi",
+                        Values: new Dictionary<string, string>()))
+                {
+                    PartIndex = reasoningPartIndex
+                };
             }
 
             if (!string.IsNullOrEmpty(delta) || finishReason is not null)
             {
+                if (!string.IsNullOrEmpty(delta))
+                    contentPartIndex ??= nextPartIndex++;
+
                 yield return new LlmStreamEvent(
                     Delta: delta,
                     FinishReason: finishReason,
-                    Usage: null);
+                    Usage: null)
+                {
+                    PartIndex = delta is null ? null : contentPartIndex
+                };
             }
 
             if (choice.Delta?.ToolCalls is { Count: > 0 } toolCallDeltas)
             {
                 foreach (var toolCallDelta in toolCallDeltas)
                 {
+                    if (!toolPartIndices.TryGetValue(
+                            toolCallDelta.Index,
+                            out var toolPartIndex))
+                    {
+                        toolPartIndex = nextPartIndex++;
+                        toolPartIndices[toolCallDelta.Index] = toolPartIndex;
+                    }
+
                     yield return new LlmStreamEvent(
                         ToolCallDelta: new ToolCallDelta(
                             Index: toolCallDelta.Index,
                             Id: toolCallDelta.Id,
                             Name: toolCallDelta.Function?.Name,
-                            ArgumentsJsonFragment: toolCallDelta.Function?.Arguments));
+                            ArgumentsJsonFragment: toolCallDelta.Function?.Arguments))
+                    {
+                        PartIndex = toolPartIndex
+                    };
                 }
             }
         }
+
+        if (!receivedTerminal)
+            throw new LlmClientException(
+                "OpenAI streaming response ended without a terminal chunk.",
+                LlmClientFailureKind.Availability);
     }
 }

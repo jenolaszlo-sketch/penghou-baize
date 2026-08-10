@@ -26,6 +26,11 @@ public sealed class LlmCapabilitiesValidationTests
         {
         }
 
+        public static IAsyncEnumerable<(string? EventType, string Data)> ReadSseAsync(
+            Stream stream,
+            CancellationToken cancellationToken) =>
+            ReadSseEventsAsync(stream, cancellationToken);
+
         protected override object ToWireRequest(LlmRequest request) => new();
 
         protected override HttpRequestMessage CreateHttpRequest(object wireRequest) =>
@@ -38,6 +43,25 @@ public sealed class LlmCapabilitiesValidationTests
             await Task.CompletedTask;
             yield break;
         }
+    }
+
+    [Fact]
+    public async Task ReadSseAsync_PropagatesCancellationBeforeReading()
+    {
+        await using var stream = new MemoryStream("data: partial\n\n"u8.ToArray());
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var action = async () =>
+        {
+            await foreach (var _ in ValidationProbeClient.ReadSseAsync(
+                               stream,
+                               cancellation.Token))
+            {
+            }
+        };
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

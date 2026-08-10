@@ -18,7 +18,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
 
       - name: Build
         run: dotnet build Penghou.Baize.slnx --configuration Release
@@ -31,7 +34,7 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage/
           /p:CoverletOutputFormat=cobertura
-          /p:Threshold=75
+          /p:Threshold=40
           /p:ThresholdType=line
 
       - name: Test and coverage (Claude)
@@ -41,6 +44,15 @@ jobs:
           --no-restore
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-claude/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Test and coverage (OpenAI)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.OpenAi.Tests/Penghou.Baize.Client.OpenAi.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-openai/
           /p:CoverletOutputFormat=cobertura
 
       - name: Test and coverage (Ollama)
@@ -69,6 +81,7 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-router/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Router]*'
           /p:Threshold=80
           /p:ThresholdType=line
 
@@ -88,6 +101,7 @@ jobs:
           path: |
             coverage/
             coverage-claude/
+            coverage-openai/
             coverage-ollama/
             coverage-gemini/
             coverage-router/

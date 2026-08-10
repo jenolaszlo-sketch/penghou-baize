@@ -3,8 +3,8 @@ namespace Penghou.Baize;
 /// <summary>
 /// Default <see cref="ILlmPromptBuilder"/> that forwards the configured
 /// messages, temperature, token limit, tools, response format, and thinking
-/// settings into a request, dropping tools for the
-/// <see cref="ModelStrategy.StructuredOutput"/> strategy.
+/// settings into a request. Tools and structured output are deliberately
+/// mutually exclusive because providers express that combination differently.
 /// </summary>
 public sealed class LlmPromptBuilder : ILlmPromptBuilder
 {

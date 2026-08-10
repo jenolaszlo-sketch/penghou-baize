@@ -32,6 +32,55 @@ public sealed class LlmRequestTests
     }
 }
 
+public sealed class LlmResponseTests
+{
+    [Fact]
+    public void PositionalConstructor_PreservesOriginalFirstThreeParameters()
+    {
+        var response = new LlmResponse("content", "reasoning", "stop");
+
+        response.Content.Should().Be("content");
+        response.Reasoning.Should().Be("reasoning");
+        response.FinishReason.Should().Be("stop");
+        response.Parts.Should().BeNull();
+    }
+
+    [Fact]
+    public void ProviderContinuation_IsForProviderCaseInsensitively()
+    {
+        var continuation = new LlmProviderContinuation(
+            "Claude",
+            new Dictionary<string, string>());
+
+        continuation.IsFor("claude").Should().BeTrue();
+        continuation.IsFor("Gemini").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Parts_RemainsAdditiveToOriginalPositionalContract()
+    {
+        var constructor = typeof(LlmResponse).GetConstructors()
+            .Should().ContainSingle().Subject;
+        var deconstruct = typeof(LlmResponse).GetMethod("Deconstruct")!;
+
+        constructor.GetParameters().Should().HaveCount(11);
+        deconstruct.GetParameters().Should().HaveCount(11);
+        new LlmResponse("content").Parts.Should().BeNull();
+    }
+
+    [Fact]
+    public void StreamPartIndex_RemainsAdditiveToOriginalPositionalContract()
+    {
+        var constructor = typeof(LlmStreamEvent).GetConstructors()
+            .Should().ContainSingle().Subject;
+        var deconstruct = typeof(LlmStreamEvent).GetMethod("Deconstruct")!;
+
+        constructor.GetParameters().Should().HaveCount(9);
+        deconstruct.GetParameters().Should().HaveCount(9);
+        new LlmStreamEvent { PartIndex = 3 }.PartIndex.Should().Be(3);
+    }
+}
+
 public sealed class LlmMessageTests
 {
     [Fact]

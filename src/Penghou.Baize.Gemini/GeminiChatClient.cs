@@ -137,20 +137,25 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                             {
                                 Text = text.Text,
                                 ThoughtSignature =
-                                    text.Continuation?.GetValue(
-                                        "thoughtSignature")
+                                    GeminiContinuation(text.Continuation)
+                                        ?.GetValue("thoughtSignature")
                             });
                         break;
 
                     case LlmReasoningContent reasoning:
+                        var continuation = GeminiContinuation(
+                            reasoning.Continuation);
+
+                        if (continuation is null)
+                            break;
+
                         parts.Add(
                             new GeminiContentPart
                             {
                                 Text = reasoning.Text,
                                 Thought = true,
                                 ThoughtSignature =
-                                    reasoning.Continuation?.GetValue(
-                                        "thoughtSignature")
+                                    continuation.GetValue("thoughtSignature")
                             });
                         break;
 
@@ -159,9 +164,10 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                             new GeminiContentPart
                             {
                                 ThoughtSignature =
-                                    (toolCall.ToolCall.Continuation ??
-                                     toolCall.Continuation)?.GetValue(
-                                        "thoughtSignature"),
+                                    GeminiContinuation(
+                                        toolCall.ToolCall.Continuation ??
+                                        toolCall.Continuation)?.GetValue(
+                                            "thoughtSignature"),
                                 FunctionCall =
                                     new GeminiFunctionCall
                                     {
@@ -312,6 +318,12 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
         }
     }
 
+    private static LlmProviderContinuation? GeminiContinuation(
+        LlmProviderContinuation? continuation) =>
+        continuation is not null && continuation.IsFor("Gemini")
+            ? continuation
+            : null;
+
     private static GeminiTool ToWireTool(LlmTool tool)
     {
         return new GeminiTool
@@ -339,9 +351,17 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
         var receivedFinalChunk = false;
         var contentLength = 0;
         var nativeToolCallCount = 0;
+        var nextPartIndex = 0;
 
         await foreach (var (_, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
+            // Gemini terminates the stream with a final data: [DONE] event.
+            if (data == "[DONE]")
+            {
+                receivedFinalChunk = true;
+                break;
+            }
+
             receivedChunk = true;
 
             GeminiChatResponse? chunk;
@@ -377,6 +397,7 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
 
             foreach (var part in content.Parts)
             {
+                var partIndex = nextPartIndex++;
                 var continuation = part.ThoughtSignature is null
                     ? null
                     : new LlmProviderContinuation(
@@ -395,13 +416,19 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                     {
                         yield return new LlmStreamEvent(
                             ReasoningContent: part.Text,
-                            Continuation: continuation);
+                            Continuation: continuation)
+                        {
+                            PartIndex = partIndex
+                        };
                     }
                     else
                     {
                         yield return new LlmStreamEvent(
                             Delta: part.Text,
-                            Continuation: continuation);
+                            Continuation: continuation)
+                        {
+                            PartIndex = partIndex
+                        };
                     }
                 }
 
@@ -418,7 +445,10 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                             ArgumentsJsonFragment:
                                 functionCall.Args.ToString(),
                             Continuation: continuation),
-                        Continuation: continuation);
+                        Continuation: continuation)
+                    {
+                        PartIndex = partIndex
+                    };
 
                     nativeToolCallCount++;
                 }
@@ -452,7 +482,12 @@ public sealed class GeminiChatClient : LlmClientBase<GeminiChatRequest>
                 "Gemini stream returned no chunks.",
                 LlmClientFailureKind.Availability);
 
-        if (!receivedFinalChunk && contentLength == 0 && nativeToolCallCount == 0)
+        // A complete Gemini response must report a finish reason on its final
+        // candidate (or be terminated by the [DONE] sentinel). A stream that
+        // emitted partial content but ended without one is truncated and must
+        // be surfaced as an availability failure so the router can fail over,
+        // rather than accepted as a "successful" partial answer.
+        if (!receivedFinalChunk)
             throw new LlmClientException(
                 "Gemini stream ended without a final chunk.",
                 LlmClientFailureKind.Availability);

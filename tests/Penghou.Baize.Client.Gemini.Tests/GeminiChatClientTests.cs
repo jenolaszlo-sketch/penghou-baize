@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Penghou.Baize;
@@ -480,7 +480,7 @@ public sealed class GeminiChatClientTests
     {
         var handler = new RecordingHandler(
             """
-            data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"functionCall":{"id":"fc_1","name":"emit_files","args":{}},"thoughtSignature":"sig_fc"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
+            data: {"candidates":[{"content":{"parts":[{"text":"preface","thoughtSignature":"sig_txt"},{"text":"answer"},{"functionCall":{"id":"fc_1","name":"emit_files","args":{}},"thoughtSignature":"sig_fc"},{"text":"","thoughtSignature":"sig_tail"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":4,"totalTokenCount":10}}
 
             data: [DONE]
 
@@ -516,13 +516,36 @@ public sealed class GeminiChatClientTests
         response.ContentContinuation.Should().NotBeNull();
         response.ContentContinuation!
             .GetValue("thoughtSignature")
-            .Should().Be("sig_txt");
+            .Should().Be("sig_tail");
         response.ToolCalls.Should().HaveCount(1);
         response.ToolCalls![0].Continuation
             .Should().NotBeNull();
         response.ToolCalls[0].Continuation!
             .GetValue("thoughtSignature")
             .Should().Be("sig_fc");
+
+        // The signed content part and the signed tool-call part are retained as
+        // distinct, ordered parts with their own continuations instead of being
+        // merged into one string.
+        response.Content.Should().Be("prefaceanswer");
+        response.Parts.Should().HaveCount(4);
+        response.Parts![0].Should().BeOfType<LlmTextContent>()
+            .Which.Text.Should().Be("preface");
+        response.Parts[0].Continuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_txt");
+        response.Parts[1].Should().BeOfType<LlmTextContent>()
+            .Which.Text.Should().Be("answer");
+        response.Parts[1].Continuation.Should().BeNull();
+        response.Parts[2].Should().BeOfType<LlmToolCallContent>()
+            .Which.ToolCall.Continuation!
+            .GetValue("thoughtSignature")
+            .Should().Be("sig_fc");
+        var signatureOnly = response.Parts[3]
+            .Should().BeOfType<LlmTextContent>().Subject;
+        signatureOnly.Text.Should().BeEmpty();
+        signatureOnly.Continuation!.GetValue("thoughtSignature")
+            .Should().Be("sig_tail");
     }
 
     [Fact]
@@ -853,19 +876,19 @@ public sealed class GeminiChatClientTests
         var client = CreateClient(
             handler,
             "gemini-2.0-flash");
-         var router = new LlmRouter(
-             new LlmModelLookup(
-                 new Dictionary<string, Func<ILlmClient>>
-                 {
-                     ["gemini-native"] = () => client
-                 },
-                 new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
-                 {
-                     [("gemini-native", ApiStyle.Gemini)] = () => client
-                 }),
-             new Dictionary<
-                 ModelStrategy,
-                 IReadOnlyList<string>>());
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>>
+                {
+                    ["gemini-native"] = () => client
+                },
+                new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+                {
+                    [("gemini-native", ApiStyle.Gemini)] = () => client
+                }),
+            new Dictionary<
+                ModelStrategy,
+                IReadOnlyList<string>>());
 
         var response =
             await router.CompleteStreamingAsync(
@@ -1114,6 +1137,33 @@ public sealed class GeminiChatClientTests
             .ValueKind.Should().Be(JsonValueKind.Object);
     }
 
+    [Fact]
+    public async Task StreamAsync_RejectsStreamWithPartialContentButNoTerminal()
+    {
+        // A stream that emits partial text deltas but never reports a finish
+        // reason or the [DONE] sentinel is truncated; it must not be accepted
+        // as a complete answer even though it produced content.
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"partial"}]},"finishReason":null}]}
+            """);
+        var client = CreateClient(
+            handler,
+            "gemini-2.0-flash");
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    new LlmRequest([new LlmMessage("user", "hello")]),
+                    TestContext.Current.CancellationToken));
+
+        var exception = await action.Should()
+            .ThrowAsync<LlmClientException>();
+        exception.WithMessage("*ended without a final chunk*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
+    }
+
     private static GeminiChatClient CreateClient(
         RecordingHandler handler,
         string model,
@@ -1180,7 +1230,8 @@ public sealed class GeminiChatClientTests
         public string? RequestBody { get; private set; }
 
         public IReadOnlyDictionary<string, string>
-            RequestHeaders { get; private set; } =
+            RequestHeaders
+        { get; private set; } =
             new Dictionary<string, string>();
 
         protected override async Task<

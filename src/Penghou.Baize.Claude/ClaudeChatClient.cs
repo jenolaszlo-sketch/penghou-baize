@@ -223,15 +223,32 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                     break;
 
                 case LlmReasoningContent reasoning:
-                    // Replay signed thinking blocks so the model can continue
-                    // a conversation that combined extended thinking with tool
-                    // use; Anthropic requires the exact signature back.
-                    blocks.Add(new ClaudeContentBlock
+                    var continuation = reasoning.Continuation;
+
+                    // Thinking blocks are model/provider-bound. Foreign or
+                    // unsigned reasoning must not be reconstructed as Claude
+                    // thinking because Anthropic validates the opaque payload.
+                    if (continuation is null || !continuation.IsFor("Claude"))
+                        break;
+
+                    if (continuation.GetValue("redactedThinkingData") is { } data)
                     {
-                        Type = "thinking",
-                        Thinking = reasoning.Text,
-                        Signature = reasoning.Continuation?.GetValue("signature")
-                    });
+                        blocks.Add(new ClaudeContentBlock
+                        {
+                            Type = "redacted_thinking",
+                            Data = data
+                        });
+                    }
+                    else if (continuation.GetValue("signature") is { } signature)
+                    {
+                        blocks.Add(new ClaudeContentBlock
+                        {
+                            Type = "thinking",
+                            Thinking = reasoning.Text,
+                            Signature = signature
+                        });
+                    }
+
                     break;
 
                 case LlmToolCallContent toolCall:
@@ -265,6 +282,7 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
     {
         ClaudeUsage? inputUsage = null;
         var syntheticToolJson = new Dictionary<int, StringBuilder>();
+        var receivedMessageStop = false;
 
         await foreach (var (eventType, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
@@ -284,13 +302,21 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                         var text = delta?.Text;
 
                         if (!string.IsNullOrEmpty(text))
-                            yield return new LlmStreamEvent(Delta: text);
+                        {
+                            yield return new LlmStreamEvent(Delta: text)
+                            {
+                                PartIndex = evt?.Index
+                            };
+                        }
 
                         if (delta?.Type == "thinking_delta" &&
                             !string.IsNullOrEmpty(delta.Thinking))
                         {
                             yield return new LlmStreamEvent(
-                                ReasoningContent: delta.Thinking);
+                                ReasoningContent: delta.Thinking)
+                            {
+                                PartIndex = evt?.Index
+                            };
                         }
 
                         // Claude sends the thinking block's signature in its own
@@ -308,7 +334,10 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                                         {
                                             ["signature"] =
                                                 delta.Signature
-                                        }));
+                                        }))
+                            {
+                                PartIndex = evt?.Index
+                            };
                         }
 
                         if (delta?.Type == "input_json_delta" &&
@@ -324,7 +353,10 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                                 yield return new LlmStreamEvent(
                                     ToolCallDelta: new ToolCallDelta(
                                         Index: toolIndex,
-                                        ArgumentsJsonFragment: delta.PartialJson));
+                                        ArgumentsJsonFragment: delta.PartialJson))
+                                {
+                                    PartIndex = toolIndex
+                                };
                             }
                         }
 
@@ -335,6 +367,42 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                     {
                         var evt = TryDeserialize<ClaudeStreamEvent>(data);
                         var block = evt?.ContentBlock;
+
+                        if (block?.Type == "thinking" && evt?.Index is { } thinkingIndex)
+                        {
+                            var continuation = string.IsNullOrEmpty(block.Signature)
+                                ? null
+                                : new LlmProviderContinuation(
+                                    Provider: "Claude",
+                                    Values: new Dictionary<string, string>
+                                    {
+                                        ["signature"] = block.Signature
+                                    });
+
+                            yield return new LlmStreamEvent(
+                                ReasoningContent: block.Thinking ?? string.Empty,
+                                Continuation: continuation)
+                            {
+                                PartIndex = thinkingIndex
+                            };
+                        }
+
+                        if (block?.Type == "redacted_thinking" &&
+                            block.Data is { } redactedData &&
+                            evt?.Index is { } redactedIndex)
+                        {
+                            yield return new LlmStreamEvent(
+                                ReasoningContent: string.Empty,
+                                Continuation: new LlmProviderContinuation(
+                                    Provider: "Claude",
+                                    Values: new Dictionary<string, string>
+                                    {
+                                        ["redactedThinkingData"] = redactedData
+                                    }))
+                            {
+                                PartIndex = redactedIndex
+                            };
+                        }
 
                         if (block?.Type == "tool_use" &&
                             evt?.Index is { } toolIndex)
@@ -349,14 +417,17 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                                     ToolCallDelta: new ToolCallDelta(
                                         Index: toolIndex,
                                         Id: block.Id,
-                                        Name: block.Name));
+                                        Name: block.Name))
+                                {
+                                    PartIndex = toolIndex
+                                };
                             }
                         }
 
                         break;
                     }
 
-                case "content_block_end":
+                case "content_block_stop":
                     {
                         var evt = TryDeserialize<ClaudeStreamEvent>(data);
 
@@ -369,7 +440,10 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                             // support. Surface its payload as content instead
                             // of leaking it as a tool call.
                             yield return new LlmStreamEvent(
-                                Delta: builder.ToString());
+                                Delta: builder.ToString())
+                            {
+                                PartIndex = toolIndex
+                            };
                         }
 
                         break;
@@ -399,6 +473,7 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                     }
 
                 case "message_stop":
+                    receivedMessageStop = true;
                     yield break;
 
                 case "error":
@@ -419,6 +494,11 @@ public sealed class ClaudeChatClient : LlmClientBase<ClaudeMessageRequest>
                     }
             }
         }
+
+        if (!receivedMessageStop)
+            throw new LlmClientException(
+                "Claude streaming response ended without a message_stop event.",
+                LlmClientFailureKind.Availability);
     }
 
     /// <inheritdoc />

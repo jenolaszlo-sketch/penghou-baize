@@ -339,6 +339,81 @@ public sealed class OpenAiChatClientTests
             .WithMessage("*would be silently capped to 'high'*");
     }
 
+    [Fact]
+    public async Task StreamAsync_RejectsStreamWithoutTerminal()
+    {
+        // A stream that emits partial content but never reaches OpenAI's [DONE]
+        // sentinel (for example the connection dropped mid-response) is
+        // truncated and must be surfaced as an availability failure so the
+        // router can fail over, rather than accepted as a complete answer.
+        var handler = new RecordingHandler(
+            """
+            data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"partial"},"finish_reason":null}]}
+            """);
+        var client = CreateClient(
+            handler,
+            "gpt-4o-mini");
+
+        var action = async () =>
+            await CollectAsync(
+                client.StreamAsync(
+                    new LlmRequest([new LlmMessage("user", "Hello")]),
+                    TestContext.Current.CancellationToken));
+
+        var exception = await action.Should()
+            .ThrowAsync<LlmClientException>();
+        exception.WithMessage("*ended without a terminal chunk*");
+        exception.Which.FailureKind
+            .Should().Be(LlmClientFailureKind.Availability);
+    }
+
+    [Theory]
+    [InlineData(OpenAiDialect.Standard, false)]
+    [InlineData(OpenAiDialect.DeepSeek, true)]
+    public async Task StreamAsync_ReplaysReasoningOnlyForDeepSeekDialect(
+        OpenAiDialect dialect,
+        bool expectsLocalReasoning)
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(
+            handler,
+            dialect == OpenAiDialect.DeepSeek ? "deepseek-chat" : "gpt-4o-mini",
+            dialect: dialect);
+        var request = new LlmRequest(
+        [
+            new LlmMessage(
+                "assistant",
+            [
+                new LlmReasoningContent("local"),
+                new LlmReasoningContent("foreign")
+                {
+                    Continuation = new LlmProviderContinuation(
+                        "Claude",
+                        new Dictionary<string, string> { ["signature"] = "sig" })
+                },
+                new LlmTextContent("answer")
+            ])
+        ]);
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var message = document.RootElement.GetProperty("messages")[0];
+
+        if (expectsLocalReasoning)
+        {
+            message.GetProperty("reasoning_content").GetString()
+                .Should().Be("local");
+        }
+        else
+        {
+            message.TryGetProperty("reasoning_content", out _)
+                .Should().BeFalse();
+        }
+    }
+
     private static LlmEndpointCapabilities DefaultCapabilities =>
         new()
         {

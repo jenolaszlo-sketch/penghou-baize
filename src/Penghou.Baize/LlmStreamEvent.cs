@@ -23,4 +23,12 @@ public sealed record LlmStreamEvent(
     LlmProviderDiagnostics? Diagnostics = null,
     LlmRateLimitInfo? RateLimit = null,
     LlmRouterDiagnostics? RouterDiagnostics = null,
-    LlmProviderContinuation? Continuation = null);
+    LlmProviderContinuation? Continuation = null)
+{
+    /// <summary>
+    /// Gets the provider-assigned index of the response content part this
+    /// event updates. Events sharing an index are accumulated into one ordered
+    /// part.
+    /// </summary>
+    public int? PartIndex { get; init; }
+}

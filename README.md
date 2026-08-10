@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/Penghou.Baize)](https://www.nuget.org/packages/Penghou.Baize)
 [![CI](https://github.com/jenolaszlo-sketch/penghou-baize/actions/workflows/ci.yml/badge.svg)](https://github.com/jenolaszlo-sketch/penghou-baize/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/jenolaszlo-sketch/penghou-baize)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-9.0%20%7C%2010.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512BD4)](https://dotnet.microsoft.com/)
 
 Penghou.Baize is a provider-agnostic chat-completion client for .NET with a
 single, stable programming model across OpenAI-compatible endpoints, Anthropic
@@ -23,7 +23,9 @@ into your application.
 | `Penghou.Baize.Router` | Configuration-driven model routing and capability fallback |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
 
-Targets `net9.0` and `net10.0`.
+The core, provider clients, and router target `net8.0` and `net10.0`.
+`Penghou.Baize.Tools` targets `net9.0` and `net10.0` because its schema
+generation uses the `System.Text.Json.Schema` APIs introduced in .NET 9.
 
 ## Install
 

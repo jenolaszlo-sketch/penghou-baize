@@ -16,6 +16,105 @@ namespace Penghou.Baize.Router.Tests;
 public sealed class LlmRouterTests
 {
     [Fact]
+    public async Task CompleteStreamingAsync_PreservesOrderedPartsAndLateContinuations()
+    {
+        var geminiSignature = new LlmProviderContinuation(
+            "Gemini",
+            new Dictionary<string, string> { ["thoughtSignature"] = "sig-text" });
+        var claudeSignature = new LlmProviderContinuation(
+            "Claude",
+            new Dictionary<string, string> { ["signature"] = "sig-thinking" });
+        var client = new EventClient(
+        [
+            new LlmStreamEvent(Delta: "before") { PartIndex = 0 },
+            // Gemini can deliver a signature in a final empty-text chunk.
+            new LlmStreamEvent(
+                Delta: string.Empty,
+                Continuation: geminiSignature) { PartIndex = 0 },
+            new LlmStreamEvent(
+                ToolCallDelta: new ToolCallDelta(
+                    Index: 0,
+                    Id: "call-1",
+                    Name: "lookup",
+                    ArgumentsJsonFragment: "{}")) { PartIndex = 1 },
+            // Claude omitted thinking has no visible text, only a signature.
+            new LlmStreamEvent(
+                ReasoningContent: string.Empty,
+                Continuation: claudeSignature) { PartIndex = 2 },
+            new LlmStreamEvent(Delta: "after") { PartIndex = 3 },
+            new LlmStreamEvent(FinishReason: "stop")
+        ]);
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>> { ["m"] = () => client },
+                new Dictionary<(string, ApiStyle), Func<ILlmClient>>
+                {
+                    [("m", ApiStyle.OpenAi)] = () => client
+                }),
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>());
+
+        var response = await router.CompleteStreamingAsync(
+            "m",
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "test")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("beforeafter");
+        response.Parts.Should().HaveCount(4);
+        response.Parts![0].Should().BeOfType<LlmTextContent>()
+            .Which.Continuation.Should().BeSameAs(geminiSignature);
+        response.Parts[1].Should().BeOfType<LlmToolCallContent>()
+            .Which.ToolCall.Name.Should().Be("lookup");
+        response.Parts[2].Should().BeOfType<LlmReasoningContent>()
+            .Which.Should().BeEquivalentTo(
+                new LlmReasoningContent(string.Empty)
+                {
+                    Continuation = claudeSignature
+                });
+        response.Parts[3].Should().BeOfType<LlmTextContent>()
+            .Which.Text.Should().Be("after");
+    }
+
+    [Fact]
+    public async Task CompleteStreamingAsync_UsesSameGeneratedToolCallInBothProjections()
+    {
+        var client = new EventClient(
+        [
+            new LlmStreamEvent(
+                ToolCallDelta: new ToolCallDelta(
+                    Index: 0,
+                    Name: "lookup",
+                    ArgumentsJsonFragment: "{}")) { PartIndex = 0 },
+            new LlmStreamEvent(FinishReason: "tool_calls")
+        ]);
+        var router = new LlmRouter(
+            new LlmModelLookup(
+                new Dictionary<string, Func<ILlmClient>> { ["m"] = () => client },
+                new Dictionary<(string, ApiStyle), Func<ILlmClient>>
+                {
+                    [("m", ApiStyle.Ollama)] = () => client
+                }),
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>());
+
+        var response = await router.CompleteStreamingAsync(
+            "m",
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "test")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var projected = response.ToolCalls.Should().ContainSingle().Subject;
+        var part = response.Parts.Should().ContainSingle().Subject
+            .Should().BeOfType<LlmToolCallContent>().Subject.ToolCall;
+
+        part.Should().BeSameAs(projected);
+        part.Id.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public async Task Router_StrategySkipsUnregisteredModelAndUsesNextCandidate()
     {
         var client = new StubClient("fallback result");
@@ -725,7 +824,8 @@ public sealed class LlmRouterTests
 
     [Fact]
     public async Task Router_EmitsAttemptDiagnosticsOnSuccessfulStream()
-    {        var client = new StubClient("ok");
+    {
+        var client = new StubClient("ok");
         var lookup = new LlmModelLookup(
             new Dictionary<string, Func<ILlmClient>>
             {
@@ -1762,6 +1862,25 @@ public sealed class LlmRouterTests
             await Task.CompletedTask;
             yield return new LlmStreamEvent();
             throw exception;
+        }
+    }
+
+    private sealed class EventClient(IReadOnlyList<LlmStreamEvent> events) : ILlmClient
+    {
+        public LlmEndpointCapabilities Capabilities { get; } =
+            new() { NativeToolCalling = true, ParallelToolCalls = true };
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+
+            foreach (var evt in events)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return evt;
+            }
         }
     }
 

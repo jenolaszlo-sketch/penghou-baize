@@ -195,6 +195,9 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
         var receivedFinalChunk = false;
         var contentLength = 0;
         var nativeToolCallCount = 0;
+        var nextPartIndex = 0;
+        int? contentPartIndex = null;
+        var toolPartIndices = new Dictionary<int, int>();
 
         while (true)
         {
@@ -215,12 +218,16 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
             if (!string.IsNullOrEmpty(
                     chatResponse.Message?.Content))
             {
+                contentPartIndex ??= nextPartIndex++;
                 contentLength +=
                     chatResponse.Message.Content.Length;
 
                 yield return new LlmStreamEvent(
                     Delta:
-                        chatResponse.Message.Content);
+                        chatResponse.Message.Content)
+                {
+                    PartIndex = contentPartIndex
+                };
             }
 
             if (chatResponse.Message?.ToolCalls is
@@ -235,20 +242,29 @@ public sealed class OllamaChatClient : LlmClientBase<OllamaChatRequest>
                 {
                     var toolCall =
                         toolCalls[position];
+                    var toolIndex = toolCall.Function.Index ?? position;
+
+                    if (!toolPartIndices.TryGetValue(toolIndex, out var partIndex))
+                    {
+                        partIndex = nextPartIndex++;
+                        toolPartIndices[toolIndex] = partIndex;
+                    }
 
                     yield return new LlmStreamEvent(
                         ToolCallDelta:
                             new ToolCallDelta(
                                 Index:
-                                    toolCall.Function.Index ??
-                                    position,
+                                    toolIndex,
                                 Id: null,
                                 Name:
                                     toolCall.Function.Name,
                                 ArgumentsJsonFragment:
                                     GetArgumentsJson(
                                         toolCall.Function
-                                            .Arguments)));
+                                            .Arguments)))
+                    {
+                        PartIndex = partIndex
+                    };
                 }
             }
 

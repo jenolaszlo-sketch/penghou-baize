@@ -4,3 +4,4 @@
 *.slnx text eol=lf
 *.md text eol=lf
 *.props text eol=lf
+*.yml text eol=lf

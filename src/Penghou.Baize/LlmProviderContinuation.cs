@@ -13,6 +13,12 @@ public sealed record LlmProviderContinuation(
     string Provider,
     IReadOnlyDictionary<string, string> Values)
 {
+    /// <summary>Whether this metadata belongs to the named provider.</summary>
+    /// <param name="provider">The provider name to compare.</param>
+    /// <returns><c>true</c> when the provider names match.</returns>
+    public bool IsFor(string provider) =>
+        string.Equals(Provider, provider, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// The continuation value for <paramref name="key"/>, or null when the
     /// provider did not supply one.

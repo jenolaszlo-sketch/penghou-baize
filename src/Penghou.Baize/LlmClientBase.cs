@@ -227,8 +227,10 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
     /// Reads an SSE stream line by line, buffering the <c>data:</c> fields of
     /// each event until the blank line that terminates it, then yielding the
     /// combined payload together with the most recently observed event type.
-    /// Accepts <c>data:</c> with or without a trailing space and terminates on
-    /// the "[DONE]" sentinel.
+    /// Accepts <c>data:</c> with or without a trailing space. Provider-specific
+    /// stream termini (such as OpenAI's <c>[DONE]</c>) are surfaced to callers
+    /// rather than intercepted here, so each provider can validate that its own
+    /// terminal signal arrived and reject truncated streams.
     /// </summary>
     /// <param name="stream">The response body stream.</param>
     /// <param name="cancellationToken">Propagates notification that streaming should be cancelled.</param>
@@ -241,8 +243,9 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
         string? eventType = null;
         List<string>? dataLines = null;
 
-        while (!cancellationToken.IsCancellationRequested)
+        while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var line = await reader.ReadLineAsync(cancellationToken);
 
             if (line is null)
@@ -255,12 +258,14 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
                     var payload = string.Join('\n', dataLines);
                     dataLines = null;
 
-                    if (payload == "[DONE]")
-                        yield break;
-
                     if (!string.IsNullOrWhiteSpace(payload))
                         yield return (eventType, payload);
                 }
+
+                // The event-type buffer is cleared at each event boundary, so a follow-on
+                // event without an event: field does not inherit the previous
+                // type (per the WHATWG SSE "event type buffer" reset).
+                eventType = null;
 
                 continue;
             }
@@ -282,7 +287,7 @@ public abstract class LlmClientBase<TWireRequest> : ILlmClient
         {
             var payload = string.Join('\n', dataLines);
 
-            if (payload != "[DONE]" && !string.IsNullOrWhiteSpace(payload))
+            if (!string.IsNullOrWhiteSpace(payload))
                 yield return (eventType, payload);
         }
     }

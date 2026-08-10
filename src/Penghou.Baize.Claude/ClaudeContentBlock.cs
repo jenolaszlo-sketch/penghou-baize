@@ -4,8 +4,7 @@ using System.Text.Json.Serialization;
 namespace Penghou.Baize.Claude;
 
 /// <summary>
-/// Wire model for a single Claude Messages content block (<c>text</c>,
-/// <c>tool_use</c> or <c>tool_result</c>).
+/// Wire model for a single Claude Messages content block.
 /// </summary>
 public sealed class ClaudeContentBlock
 {
@@ -30,6 +29,10 @@ public sealed class ClaudeContentBlock
     /// </summary>
     [JsonPropertyName("signature")]
     public string? Signature { get; init; }
+
+    /// <summary>Opaque encrypted data for <c>redacted_thinking</c> blocks.</summary>
+    [JsonPropertyName("data")]
+    public string? Data { get; init; }
 
     /// <summary>The tool call id for <c>tool_use</c> blocks.</summary>
     [JsonPropertyName("id")]
