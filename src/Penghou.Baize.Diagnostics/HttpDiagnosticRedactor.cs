@@ -13,7 +13,8 @@ internal static class HttpDiagnosticRedactor
             "Cookie",
             "Set-Cookie",
             "X-Api-Key",
-            "Api-Key"
+            "Api-Key",
+            "X-Goog-Api-Key"
         };
 
     private static readonly HashSet<string> SensitiveQueryParameters =
@@ -26,7 +27,9 @@ internal static class HttpDiagnosticRedactor
             "token",
             "secret",
             "signature",
-            "sig"
+            "sig",
+            // Gemini resumable upload URLs are bearer-like capabilities.
+            "upload_id"
         };
 
     public static string RedactUri(Uri? uri)

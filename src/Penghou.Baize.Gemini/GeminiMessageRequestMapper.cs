@@ -20,11 +20,15 @@ internal static class GeminiMessageRequestMapper
     /// <param name="model">The endpoint model identifier.</param>
     /// <param name="capabilities">The declared capabilities of the endpoint.</param>
     /// <param name="request">The canonical request.</param>
+    /// <param name="schemaAdapter">Adapter for the provider's JSON Schema dialect.</param>
+    /// <param name="apiVersion">The Gemini API version receiving the request.</param>
     /// <returns>The Gemini wire request.</returns>
     public static GeminiChatRequest Build(
         string model,
         LlmEndpointCapabilities capabilities,
-        LlmRequest request)
+        LlmRequest request,
+        ILlmSchemaAdapter? schemaAdapter = null,
+        string? apiVersion = null)
     {
         var contents = new List<GeminiChatMessage>();
         var systemText = new List<string>();
@@ -165,9 +169,14 @@ internal static class GeminiMessageRequestMapper
 
         var responseSchema = request.ResponseFormat?.Schema is null
             ? (JsonElement?)null
-            : ParseJsonElement(
-                request.ResponseFormat.Schema,
-                "response format schema");
+            : AdaptSchema(
+                ParseJsonElement(
+                    request.ResponseFormat.Schema,
+                    "response format schema"),
+                schemaAdapter,
+                model,
+                apiVersion,
+                LlmSchemaPurpose.StructuredResponse);
 
         return new GeminiChatRequest
         {
@@ -187,7 +196,11 @@ internal static class GeminiMessageRequestMapper
             },
             Tools = capabilities.NativeToolCalling && request.Tools.Count > 0
                 ? request.Tools
-                    .Select(ToWireTool)
+                    .Select(tool => ToWireTool(
+                        tool,
+                        schemaAdapter,
+                        model,
+                        apiVersion))
                     .ToList()
                 : null
         };
@@ -287,7 +300,11 @@ internal static class GeminiMessageRequestMapper
             _ => null
         };
 
-    private static GeminiTool ToWireTool(LlmTool tool)
+    private static GeminiTool ToWireTool(
+        LlmTool tool,
+        ILlmSchemaAdapter? schemaAdapter,
+        string model,
+        string? apiVersion)
     {
         return new GeminiTool
         {
@@ -297,13 +314,34 @@ internal static class GeminiMessageRequestMapper
                 {
                     Name = tool.Name,
                     Description = tool.Description,
-                    Parameters = ParseJsonElement(
-                        tool.InputSchemaJson,
-                        $"tool schema '{tool.Name}'")
+                    Parameters = AdaptSchema(
+                        ParseJsonElement(
+                            tool.InputSchemaJson,
+                            $"tool schema '{tool.Name}'"),
+                        schemaAdapter,
+                        model,
+                        apiVersion,
+                        LlmSchemaPurpose.ToolInput)
                 }
             }
         };
     }
+
+    private static JsonElement AdaptSchema(
+        JsonElement schema,
+        ILlmSchemaAdapter? adapter,
+        string model,
+        string? apiVersion,
+        LlmSchemaPurpose purpose) =>
+        (adapter ?? GeminiSchemaAdapter.Default)
+            .Adapt(
+                schema,
+                new LlmSchemaAdaptationContext(
+                    new LlmProviderKey("Gemini"),
+                    model,
+                    apiVersion,
+                    purpose))
+            .Schema;
 
     private static LlmProviderContinuation? GeminiContinuation(
         LlmProviderContinuation? continuation) =>

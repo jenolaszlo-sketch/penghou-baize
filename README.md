@@ -51,6 +51,7 @@ code change is required when upgrading the application's target framework.
 - [Getting started and fluent routing](docs/getting-started.md)
 - [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
 - [Coverage policy and package baselines](docs/coverage.md)
+- [Live provider compatibility matrix](docs/live-provider-compatibility.md)
 - [Generation client roadmap](docs/roadmap-generation-client.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
@@ -859,11 +860,61 @@ $env:GEMINI_API_KEY = "your-key"
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release
 ```
 
+Run only one paid capability while developing it:
+
+```powershell
+# Baseline streaming only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=Baseline"
+
+# Native tools only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=Tools"
+
+# Sequential multi-turn tool round trip
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ComplexTools"
+
+# Parallel tool calls in one model turn
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ParallelTools"
+
+# Structured output only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=StructuredOutput"
+
+# Image input only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageInput"
+
+# Audio input only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=AudioInput"
+
+# Video input only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=VideoInput"
+
+# PDF/file input only
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=FileInput"
+
+# Image generation only (currently reports skipped until GenerationClient is implemented)
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
+
+# Native batch only (when live batch coverage is enabled)
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=Batch"
+```
+
+Omit `--filter` for the complete live suite. Filters affect test execution, so
+unselected capabilities make no provider calls and consume no model tokens.
+
+For local development, copy `.env.example` to the ignored `.env.local` file
+and fill in the credential instead. The live-test harness finds that file from
+the repository tree and never overwrites environment variables already
+provided by the shell or CI.
+
 Supported provider values are `OpenAi`, `Claude`, `Gemini`, and `Ollama`.
 Use `BAIZE_LIVE_BASE_URL` for compatible gateways or local servers and
 `BAIZE_LIVE_SECRET_NAME` when the credential has a different environment
 variable name. Set `BAIZE_LIVE_TEST_TOOLS=1` to additionally run the native
-tool-call contract test. The tests print Baize activities and metrics and keep
+tool-call contract test. Set `BAIZE_LIVE_TEST_THINKING=1` to opt into the
+larger-budget thinking test; the baseline smoke test leaves provider thinking
+at its default and reserves enough output budget for thinking-first models.
+Set `BAIZE_LIVE_TEST_BATCH=1` to opt into native batch submission and polling,
+which can run substantially longer than synchronous tests. The tests
+print Baize activities and metrics and keep
 the correlated raw transport artifacts under
 `tests/Penghou.Baize.IntegrationTests/bin/.../artifacts/live-diagnostics` by
 default. Without `BAIZE_RUN_LIVE_TESTS=1`, every live test is skipped.

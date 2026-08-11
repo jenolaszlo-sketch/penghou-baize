@@ -32,7 +32,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     private readonly Uri _uploadUri;
     private readonly Uri _createUri;
     private readonly string _versionedBase;
+    private readonly string _apiVersion;
     private readonly LlmEndpointCapabilities _capabilities;
+    private readonly ILlmSchemaAdapter _schemaAdapter;
 
     /// <inheritdoc />
     public string ProviderId => "Gemini";
@@ -48,17 +50,20 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     /// <param name="apiKey">The Gemini API key.</param>
     /// <param name="baseUrl">Base API URL. When it does not already include a version segment such as <c>v1beta</c> or <c>v1</c>, <c>v1beta</c> is appended.</param>
     /// <param name="capabilities">The declared capabilities of the endpoint.</param>
+    /// <param name="schemaAdapter">Adapter for Gemini's native JSON Schema dialect.</param>
     public GeminiBatchClient(
         IHttpClientFactory httpClientFactory,
         string model,
         string apiKey,
         string baseUrl,
-        LlmEndpointCapabilities capabilities)
+        LlmEndpointCapabilities capabilities,
+        ILlmSchemaAdapter? schemaAdapter = null)
     {
         _httpClientFactory = httpClientFactory;
         _model = model;
         _apiKey = apiKey;
         _capabilities = capabilities;
+        _schemaAdapter = schemaAdapter ?? GeminiSchemaAdapter.Default;
 
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         var lastSegment =
@@ -69,8 +74,11 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             ? normalizedBaseUrl
             : normalizedBaseUrl[..normalizedBaseUrl.LastIndexOf('/')];
 
-        _versionedBase = $"{rootBase}/v1beta";
-        _uploadUri = new Uri($"{rootBase}/upload/v1beta/files");
+        // Gemini's asynchronous batch and file APIs currently use v1beta,
+        // even when a caller supplies a versioned chat base URL.
+        _apiVersion = "v1beta";
+        _versionedBase = $"{rootBase}/{_apiVersion}";
+        _uploadUri = new Uri($"{rootBase}/upload/{_apiVersion}/files");
         _createUri = new Uri($"{_versionedBase}/models/{model}:batchGenerateContent");
     }
 
@@ -372,7 +380,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             var wireRequest = GeminiMessageRequestMapper.Build(
                 _model,
                 _capabilities,
-                item.Request);
+                item.Request,
+                _schemaAdapter,
+                _apiVersion);
 
             var line = new
             {
@@ -678,9 +688,12 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         var usage = response.Usage is null
             ? null
             : new LlmUsage(
-                response.Usage.PromptTokenCount,
-                response.Usage.CandidatesTokenCount,
-                response.Usage.TotalTokenCount);
+                PromptTokens: response.Usage.PromptTokenCount,
+                CompletionTokens: SumGeneratedTokens(
+                    response.Usage.CandidatesTokenCount,
+                    response.Usage.ThoughtsTokenCount),
+                TotalTokens: response.Usage.TotalTokenCount,
+                ThinkingTokens: response.Usage.ThoughtsTokenCount);
 
         return new LlmResponse(
             Content: string.Concat(text),
@@ -692,7 +705,17 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             ToolCalls: toolCalls.Count > 0 ? toolCalls : null,
             Diagnostics: new LlmProviderDiagnostics(
                 Provider: "Gemini",
-                Api: "batch"),
+                ActualModel: response.ModelVersion,
+                Api: "batch",
+                Done: candidate.FinishReason is not null,
+                DoneReason: candidate.FinishReason is null
+                    ? null
+                    : MapFinishReason(candidate.FinishReason),
+                NativeToolCallCount: toolCalls.Count,
+                ContentLength: text.Sum(item => item.Length),
+                ResponseId: response.ResponseId,
+                ServiceTier: response.ServiceTier ?? response.Usage?.ServiceTier,
+                ThinkingTokens: response.Usage?.ThoughtsTokenCount),
             ReasoningContinuation: reasoningContinuation);
     }
 
@@ -704,6 +727,11 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             "SAFETY" => "content_filter",
             _ => finishReason.ToLowerInvariant()
         };
+
+    private static int? SumGeneratedTokens(int? candidates, int? thoughts) =>
+        candidates.HasValue || thoughts.HasValue
+            ? candidates.GetValueOrDefault() + thoughts.GetValueOrDefault()
+            : null;
 
     private static BaizeBatchState MapState(
         string? state,

@@ -6,9 +6,11 @@
 /// <param name="TotalTokens">Total tokens consumed across the call.</param>
 /// <param name="PromptCacheHitTokens">Tokens served from a prompt cache, when reported.</param>
 /// <param name="PromptCacheMissTokens">Tokens written to a prompt cache, when reported.</param>
+/// <param name="ThinkingTokens">Tokens generated for provider-side reasoning or thinking, when reported.</param>
 public sealed record LlmUsage(
     int? PromptTokens,
     int? CompletionTokens,
     int? TotalTokens,
     int? PromptCacheHitTokens = null,
-    int? PromptCacheMissTokens = null);
+    int? PromptCacheMissTokens = null,
+    int? ThinkingTokens = null);

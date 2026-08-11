@@ -15,6 +15,12 @@ public interface ILlmClientProvider
     /// <summary>Conservative capabilities guaranteed by the wire adapter.</summary>
     LlmEndpointCapabilities DefaultCapabilities { get; }
 
+    /// <summary>
+    /// Adapts canonical JSON Schema to this provider's wire dialect, when the
+    /// provider cannot consume canonical schemas directly.
+    /// </summary>
+    ILlmSchemaAdapter? SchemaAdapter => null;
+
     /// <summary>Creates a client for a configured endpoint.</summary>
     /// <param name="context">The resolved provider-neutral endpoint context.</param>
     /// <returns>The configured client.</returns>

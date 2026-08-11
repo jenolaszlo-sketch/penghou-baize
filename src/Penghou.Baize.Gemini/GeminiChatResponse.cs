@@ -14,6 +14,18 @@ internal sealed class GeminiChatResponse
     /// <summary>Aggregate token usage for the chunk.</summary>
     [JsonPropertyName("usageMetadata")]
     public GeminiUsage? Usage { get; init; }
+
+    /// <summary>The concrete model version that served the request.</summary>
+    [JsonPropertyName("modelVersion")]
+    public string? ModelVersion { get; init; }
+
+    /// <summary>The provider-assigned response identifier.</summary>
+    [JsonPropertyName("responseId")]
+    public string? ResponseId { get; init; }
+
+    /// <summary>The Gemini service tier used for the request, when reported at response level.</summary>
+    [JsonPropertyName("serviceTier")]
+    public string? ServiceTier { get; init; }
 }
 
 /// <summary>

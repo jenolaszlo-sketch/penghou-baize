@@ -10,6 +10,8 @@ internal sealed record LiveTestSettings(
 {
     public static LiveTestSettings Load()
     {
+        LiveEnvironment.Load();
+
         if (!IsTrue(Environment.GetEnvironmentVariable("BAIZE_RUN_LIVE_TESTS")))
             Assert.Skip("Set BAIZE_RUN_LIVE_TESTS=1 to run paid/live model tests.");
 
@@ -45,8 +47,32 @@ internal sealed record LiveTestSettings(
             diagnosticsDirectory);
     }
 
-    public static bool ToolsEnabled =>
-        IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_TOOLS"));
+    public static bool ToolsEnabled
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_TOOLS"));
+        }
+    }
+
+    public static bool ThinkingEnabled
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_THINKING"));
+        }
+    }
+
+    public static bool BatchEnabled
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_BATCH"));
+        }
+    }
 
     private static string Required(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } value

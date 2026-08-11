@@ -14,6 +14,62 @@ namespace Penghou.Baize.Gemini.Tests;
 public sealed class GeminiChatClientTests
 {
     [Fact]
+    public async Task StreamAsync_MapsThinkingUsageAndProviderDiagnostics()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"BAIZE_OK"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":15,"candidatesTokenCount":2,"thoughtsTokenCount":61,"totalTokenCount":78},"modelVersion":"gemini-3.6-flash-001","responseId":"response-123","serviceTier":"standard"}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gemini-3.6-flash");
+
+        var response = await client.CompleteAsync(
+            new LlmRequest([new LlmMessage("user", "Reply")]),
+            TestContext.Current.CancellationToken);
+
+        response.Usage.Should().NotBeNull();
+        response.Usage!.CompletionTokens.Should().Be(63);
+        response.Usage.ThinkingTokens.Should().Be(61);
+        response.Diagnostics.Should().NotBeNull();
+        response.Diagnostics!.ActualModel.Should().Be("gemini-3.6-flash-001");
+        response.Diagnostics.ResponseId.Should().Be("response-123");
+        response.Diagnostics.ServiceTier.Should().Be("standard");
+        response.Diagnostics.ThinkingTokens.Should().Be(61);
+    }
+
+    [Fact]
+    public async Task StreamAsync_AdaptsToolSchemaForGeminiWireDialect()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"echo_value","args":{"value":"ok"}}}]},"finishReason":"STOP"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gemini-3.6-flash");
+        var canonicalSchema =
+            """{"type":"object","properties":{"value":{"type":"object","additionalProperties":false}},"additionalProperties":false}""";
+
+        await CollectAsync(
+            client.StreamAsync(
+                new LlmRequest(
+                    [new LlmMessage("user", "Call the tool")],
+                    tools: [new LlmTool("echo_value", "Echo", canonicalSchema)]),
+                TestContext.Current.CancellationToken));
+
+        using var request = JsonDocument.Parse(handler.RequestBody!);
+        var parameters = request.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("functionDeclarations")[0]
+            .GetProperty("parameters");
+        parameters.GetRawText().Should().NotContain("\"additionalProperties\":");
+        canonicalSchema.Should().Contain("\"additionalProperties\":false");
+    }
+
+    [Fact]
     public async Task StreamAsync_MapsTextAndToolCallDeltas()
     {
         var handler = new RecordingHandler(
@@ -1124,7 +1180,7 @@ public sealed class GeminiChatClientTests
             [new LlmMessage("user", "Return the shape")],
             responseFormat:
                 LlmResponseFormat.JsonSchema(
-                    """{"type":"object"}"""));
+                    """{"type":"object","additionalProperties":false}"""));
 
         await CollectAsync(
             client.StreamAsync(
@@ -1138,8 +1194,10 @@ public sealed class GeminiChatClientTests
                 .GetProperty("generationConfig");
         generationConfig.GetProperty("responseMimeType")
             .GetString().Should().Be("application/json");
-        generationConfig.GetProperty("responseSchema")
-            .ValueKind.Should().Be(JsonValueKind.Object);
+        var responseSchema = generationConfig.GetProperty("responseSchema");
+        responseSchema.ValueKind.Should().Be(JsonValueKind.Object);
+        responseSchema.TryGetProperty("additionalProperties", out _)
+            .Should().BeFalse();
     }
 
     [Fact]

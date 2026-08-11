@@ -15,7 +15,15 @@ internal sealed class GeminiUsage
     [JsonPropertyName("candidatesTokenCount")]
     public int? CandidatesTokenCount { get; init; }
 
+    /// <summary>Tokens generated for model thinking.</summary>
+    [JsonPropertyName("thoughtsTokenCount")]
+    public int? ThoughtsTokenCount { get; init; }
+
     /// <summary>Total tokens across prompt and candidates.</summary>
     [JsonPropertyName("totalTokenCount")]
     public int? TotalTokenCount { get; init; }
+
+    /// <summary>The Gemini service tier used for the request.</summary>
+    [JsonPropertyName("serviceTier")]
+    public string? ServiceTier { get; init; }
 }

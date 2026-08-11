@@ -10,6 +10,9 @@ public sealed class GeminiClientProvider : ILlmClientProvider
     public string DefaultBaseUrl => "https://generativelanguage.googleapis.com";
 
     /// <inheritdoc />
+    public ILlmSchemaAdapter SchemaAdapter => GeminiSchemaAdapter.Default;
+
+    /// <inheritdoc />
     public LlmEndpointCapabilities DefaultCapabilities { get; } = new()
     {
         NativeToolCalling = true,
@@ -17,6 +20,9 @@ public sealed class GeminiClientProvider : ILlmClientProvider
         NativeStructuredOutput = true,
         StructuredOutputViaTool = false,
         Thinking = true,
+        // The Gemini adapter can encode an explicit disabled mode as
+        // thinkingBudget: 0. Model-specific endpoint overrides may still
+        // narrow this capability when a model does not accept that setting.
         ThinkingDisable = true,
         StreamingToolCallArguments = true,
         Batch =
@@ -40,7 +46,8 @@ public sealed class GeminiClientProvider : ILlmClientProvider
             context.HttpClientFactory,
             context.ApiKey,
             context.BaseUrl,
-            context.Capabilities);
+            context.Capabilities,
+            SchemaAdapter);
 
     /// <inheritdoc />
     public IBaizeBatchClient? CreateBatchClient(
@@ -51,6 +58,7 @@ public sealed class GeminiClientProvider : ILlmClientProvider
                 context.Model,
                 context.ApiKey,
                 context.BaseUrl,
-                context.Capabilities)
+                context.Capabilities,
+                SchemaAdapter)
             : null;
 }

@@ -43,7 +43,7 @@ public sealed class HttpTrafficCaptureHandlerTests
             var factory = provider.GetRequiredService<IHttpClientFactory>();
             var request = new HttpRequestMessage(
                 HttpMethod.Post,
-                "https://example.test/chat?key=top-secret&mode=test")
+                "https://example.test/chat?key=top-secret&upload_id=upload-secret&mode=test")
             {
                 Content = new StringContent("hello", Encoding.UTF8, "application/json")
             };
@@ -51,6 +51,7 @@ public sealed class HttpTrafficCaptureHandlerTests
                 new System.Net.Http.Headers.AuthenticationHeaderValue(
                     "Bearer",
                     "top-secret");
+            request.Headers.Add("x-goog-api-key", "google-secret");
 
             using var response = await factory.CreateClient("llm").SendAsync(
                 request,
@@ -66,9 +67,13 @@ public sealed class HttpTrafficCaptureHandlerTests
                 Directory.GetFiles(directory, "*.response.raw").Single());
 
             requestLog.Should().Contain("key=[REDACTED]");
+            requestLog.Should().Contain("upload_id=[REDACTED]");
             requestLog.Should().Contain("mode=test");
             requestLog.Should().Contain("Authorization: [REDACTED]");
+            requestLog.Should().Contain("x-goog-api-key: [REDACTED]");
             requestLog.Should().NotContain("top-secret");
+            requestLog.Should().NotContain("google-secret");
+            requestLog.Should().NotContain("upload-secret");
             rawResponse.Should().Be("abcde");
             responseLog.Should().Contain("Truncated: True");
             measurements.Should().Contain("baize.diagnostics.sessions");
@@ -149,7 +154,7 @@ public sealed class HttpTrafficCaptureHandlerTests
                 new StubHandler("private-response"));
             using var request = new HttpRequestMessage(
                 HttpMethod.Post,
-                "https://example.test/activity")
+                "https://example.test/activity?upload_id=upload-secret")
             {
                 Content = new StringContent("private-prompt")
             };
@@ -165,7 +170,9 @@ public sealed class HttpTrafficCaptureHandlerTests
                     StringComparison.Ordinal) == true).ToArray();
             var activity = matchingActivities.Should().ContainSingle().Subject;
             activity.Tags.Select(tag => tag.Value).Should()
-                .NotContain(["private-prompt", "private-response"]);
+                .NotContain(["private-prompt", "private-response", "upload-secret"]);
+            activity.GetTagItem("url.full")?.ToString()
+                .Should().Contain("upload_id=[REDACTED]");
         }
         finally
         {

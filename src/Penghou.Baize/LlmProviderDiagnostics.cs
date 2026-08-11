@@ -13,6 +13,9 @@
 /// <param name="GenerationTokensPerSecond">Token generation throughput, when reported.</param>
 /// <param name="NativeToolCallCount">Number of native tool calls received, when reported.</param>
 /// <param name="ContentLength">Total characters of streamed content, when reported.</param>
+/// <param name="ResponseId">Provider-assigned response identifier, when reported.</param>
+/// <param name="ServiceTier">Provider service tier used for the request, when reported.</param>
+/// <param name="ThinkingTokens">Tokens used for provider-side reasoning or thinking, when reported.</param>
 public sealed record LlmProviderDiagnostics(
     string Provider,
     string? ActualModel = null,
@@ -25,4 +28,7 @@ public sealed record LlmProviderDiagnostics(
     double? GenerationDurationMilliseconds = null,
     double? GenerationTokensPerSecond = null,
     int? NativeToolCallCount = null,
-    int? ContentLength = null);
+    int? ContentLength = null,
+    string? ResponseId = null,
+    string? ServiceTier = null,
+    int? ThinkingTokens = null);

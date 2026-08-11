@@ -24,6 +24,8 @@ public sealed class GeminiChatClient : LlmClientBase
         };
 
     private readonly Uri _chatUri;
+    private readonly string _apiVersion;
+    private readonly ILlmSchemaAdapter _schemaAdapter;
 
     /// <summary>
     /// Creates a Gemini streaming client.
@@ -33,12 +35,14 @@ public sealed class GeminiChatClient : LlmClientBase
     /// <param name="apiKey">The Gemini API key.</param>
     /// <param name="baseUrl">Base API URL. When it does not already include a version segment such as <c>v1beta</c> or <c>v1</c>, <c>v1beta</c> is appended.</param>
     /// <param name="capabilities">The declared capabilities of the endpoint.</param>
+    /// <param name="schemaAdapter">Adapter for Gemini's native JSON Schema dialect.</param>
     public GeminiChatClient(
         string model,
         IHttpClientFactory httpClientFactory,
         string apiKey,
         string baseUrl,
-        LlmEndpointCapabilities capabilities)
+        LlmEndpointCapabilities capabilities,
+        ILlmSchemaAdapter? schemaAdapter = null)
         : base(model, httpClientFactory, apiKey, capabilities, "Gemini")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
@@ -52,6 +56,8 @@ public sealed class GeminiChatClient : LlmClientBase
                 (normalizedBaseUrl.LastIndexOf('/') + 1)..];
         var includeVersionSegment =
             !LooksLikeApiVersion(lastSegment);
+        _apiVersion = includeVersionSegment ? "v1beta" : lastSegment;
+        _schemaAdapter = schemaAdapter ?? GeminiSchemaAdapter.Default;
 
         _chatUri = new Uri(
             $"{normalizedBaseUrl}" +
@@ -91,7 +97,12 @@ public sealed class GeminiChatClient : LlmClientBase
 
     /// <inheritdoc />
     private GeminiChatRequest ToWireRequest(LlmRequest request) =>
-        GeminiMessageRequestMapper.Build(Model, Capabilities, request);
+        GeminiMessageRequestMapper.Build(
+            Model,
+            Capabilities,
+            request,
+            _schemaAdapter,
+            _apiVersion);
 
     private static bool LooksLikeApiVersion(string segment) =>
         segment.Length >= 2 &&
@@ -108,6 +119,11 @@ public sealed class GeminiChatClient : LlmClientBase
         var contentLength = 0;
         var nativeToolCallCount = 0;
         var nextPartIndex = 0;
+        string? doneReason = null;
+        string? actualModel = null;
+        string? responseId = null;
+        string? serviceTier = null;
+        int? thinkingTokens = null;
 
         await foreach (var (_, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
@@ -115,6 +131,18 @@ public sealed class GeminiChatClient : LlmClientBase
             if (data == "[DONE]")
             {
                 receivedFinalChunk = true;
+                yield return new LlmStreamEvent(
+                    Diagnostics: new LlmProviderDiagnostics(
+                        Provider: "Gemini",
+                        ActualModel: actualModel ?? Model,
+                        Api: "native",
+                        Done: true,
+                        DoneReason: doneReason,
+                        NativeToolCallCount: nativeToolCallCount,
+                        ContentLength: contentLength,
+                        ResponseId: responseId,
+                        ServiceTier: serviceTier,
+                        ThinkingTokens: thinkingTokens));
                 break;
             }
 
@@ -138,20 +166,13 @@ public sealed class GeminiChatClient : LlmClientBase
             if (chunk is null)
                 continue;
 
-            if (chunk.Candidates is null || chunk.Candidates.Count == 0)
-                continue;
+            actualModel = chunk.ModelVersion ?? actualModel;
+            responseId = chunk.ResponseId ?? responseId;
+            serviceTier = chunk.ServiceTier ?? chunk.Usage?.ServiceTier ?? serviceTier;
+            thinkingTokens = chunk.Usage?.ThoughtsTokenCount ?? thinkingTokens;
+            var candidate = chunk.Candidates?.FirstOrDefault();
 
-            var candidate = chunk.Candidates[0];
-
-            if (candidate.Content is null)
-                continue;
-
-            var content = candidate.Content;
-
-            if (content.Parts is null)
-                continue;
-
-            foreach (var part in content.Parts)
+            foreach (var part in candidate?.Content?.Parts ?? [])
             {
                 var partIndex = nextPartIndex++;
                 var continuation = part.ThoughtSignature is null
@@ -210,27 +231,33 @@ public sealed class GeminiChatClient : LlmClientBase
                 }
             }
 
-            if (candidate.FinishReason is not null)
+            if (candidate?.FinishReason is not null)
             {
                 receivedFinalChunk = true;
+                doneReason = MapFinishReason(candidate.FinishReason);
 
                 yield return new LlmStreamEvent(
-                    FinishReason:
-                        MapFinishReason(
-                            candidate.FinishReason));
+                    FinishReason: doneReason);
             }
 
             if (chunk.Usage is not null)
             {
                 yield return new LlmStreamEvent(
-                    Usage: new LlmUsage(
-                        PromptTokens:
-                            chunk.Usage.PromptTokenCount,
-                        CompletionTokens:
-                            chunk.Usage.CandidatesTokenCount,
-                        TotalTokens:
-                            chunk.Usage.TotalTokenCount));
+                    Usage: ToLlmUsage(chunk.Usage));
             }
+
+            yield return new LlmStreamEvent(
+                Diagnostics: new LlmProviderDiagnostics(
+                    Provider: "Gemini",
+                    ActualModel: actualModel ?? Model,
+                    Api: "native",
+                    Done: receivedFinalChunk,
+                    DoneReason: doneReason,
+                    NativeToolCallCount: nativeToolCallCount,
+                    ContentLength: contentLength,
+                    ResponseId: responseId,
+                    ServiceTier: serviceTier,
+                    ThinkingTokens: thinkingTokens));
         }
 
         if (!receivedChunk)
@@ -257,4 +284,18 @@ public sealed class GeminiChatClient : LlmClientBase
             "SAFETY" => "content_filter",
             _ => finishReason.ToLowerInvariant()
         };
+
+    private static LlmUsage ToLlmUsage(GeminiUsage usage) =>
+        new(
+            PromptTokens: usage.PromptTokenCount,
+            CompletionTokens: SumGeneratedTokens(
+                usage.CandidatesTokenCount,
+                usage.ThoughtsTokenCount),
+            TotalTokens: usage.TotalTokenCount,
+            ThinkingTokens: usage.ThoughtsTokenCount);
+
+    private static int? SumGeneratedTokens(int? candidates, int? thoughts) =>
+        candidates.HasValue || thoughts.HasValue
+            ? candidates.GetValueOrDefault() + thoughts.GetValueOrDefault()
+            : null;
 }

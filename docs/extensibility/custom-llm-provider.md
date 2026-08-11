@@ -33,3 +33,12 @@ services.AddLlmRouting(configuration);
 Alternatively, configuration can list the provider assembly under `ProviderModules`. The package must still be referenced so its DLL and dependencies are copied to output. Module discovery accepts assembly identities, never filesystem paths, and should be treated as a trusted-code boundary.
 
 Provider clients should validate requests against their effective capabilities, stream canonical `LlmStreamEvent` values, preserve cancellation, populate usage/diagnostics when the API supplies them, and throw `LlmClientException` with safe provider failure details.
+
+If the provider accepts only a subset or dialect of JSON Schema, expose an
+`ILlmSchemaAdapter` through the provider's optional `SchemaAdapter` property
+and use it when constructing wire requests. Keep the caller's canonical schema
+unchanged for local validation. An adapter returns an owned schema plus a
+deterministic list of changes, including whether provider-side enforcement was
+weakened. Scope adaptations by `LlmSchemaAdaptationContext` (API version,
+model, and tool-input versus structured-response purpose) rather than changing
+the shared schema generator for one provider.

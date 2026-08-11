@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Penghou.Baize\Penghou.Baize.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Batch\Penghou.Baize.Batch.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Router\Penghou.Baize.Router.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Diagnostics\Penghou.Baize.Diagnostics.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Tools\Penghou.Baize.Tools.csproj" />
@@ -27,6 +28,10 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
