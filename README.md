@@ -132,14 +132,25 @@ events; `Penghou.Baize.Router`'s `CompleteStreamingAsync` collects them into
 `LlmResponse.ToolCalls`:
 
 ```csharp
+using Penghou.Baize.Tools;
+using Penghou.Baize.Tools.Schema;
+using System.Text.Json.Serialization;
+
+public sealed class GetWeatherArguments
+{
+    [JsonPropertyName("city")]
+    [SchemaDescription("The city whose current weather should be returned")]
+    public required string City { get; init; }
+}
+
 var promptBuilder = new LlmPromptBuilder
 {
     Messages = messages,
     Tools =
     [
-        new LlmTool(
-            "get_weather", "Returns the weather for a city",
-            """{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}""")
+        LlmToolFactory.Create<GetWeatherArguments>(
+            "get_weather",
+            "Returns the weather for a city")
     ]
 };
 
@@ -150,6 +161,23 @@ var response = await router.CompleteStreamingAsync(
 foreach (var call in response.ToolCalls)
     Console.WriteLine($"{call.Name}: {call.ArgumentsJson}");
 ```
+
+`LlmToolFactory.Create<TArguments>` generates and caches a
+provider-compatible JSON Schema for the argument type. On .NET 9 and later it
+uses `System.Text.Json.Schema`; the .NET 8 fallback supports ordinary objects,
+collections, dictionaries, required members, `JsonPropertyName`, and
+`SchemaDescription`. Generate the string directly when it needs further
+inspection or composition:
+
+```csharp
+var schemaJson = JsonSchemaGenerator
+    .GenerateSchemaJson<GetWeatherArguments>();
+var tool = new LlmTool("get_weather", "Returns the weather", schemaJson);
+```
+
+The generic type represents tool arguments, not the tool's return value.
+Keep the explicit `LlmTool` constructor for externally supplied or manually
+composed schemas.
 
 Routing strategies are selection hints, not request shapes. Applications that
 already have a canonical request can route it directly without rebuilding it
