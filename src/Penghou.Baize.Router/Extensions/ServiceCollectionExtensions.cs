@@ -467,6 +467,13 @@ public static class ServiceCollectionExtensions
         }
 
         foreach (var (strategy, chain) in options.StrategyFallbacks)
+        {
+            if (chain.Count == 0)
+            {
+                error = $"StrategyFallbacks['{strategy}'] must contain at least one model.";
+                return false;
+            }
+
             foreach (var modelName in chain)
             {
                 if (!allModelNames.Contains(modelName))
@@ -477,12 +484,39 @@ public static class ServiceCollectionExtensions
                     return false;
                 }
             }
+        }
+
+        foreach (var (route, chain) in options.NamedRoutes)
+        {
+            if (string.IsNullOrWhiteSpace(route))
+            {
+                error = "NamedRoutes contains an empty route name.";
+                return false;
+            }
+
+            if (chain.Count == 0)
+            {
+                error = $"NamedRoutes['{route}'] must contain at least one model.";
+                return false;
+            }
+
+            foreach (var modelName in chain)
+            {
+                if (!allModelNames.Contains(modelName))
+                {
+                    error =
+                        $"NamedRoutes['{route}'] references unknown model '{modelName}'. " +
+                        "Check for a typo against the Models[].Name entries.";
+                    return false;
+                }
+            }
+        }
 
         error = null;
         return true;
     }
 
-    private static void ValidateConfiguration(LlmRoutingOptions options)
+    internal static void ValidateConfiguration(LlmRoutingOptions options)
     {
         if (!TryValidate(options, out var error))
             throw new InvalidOperationException(error);

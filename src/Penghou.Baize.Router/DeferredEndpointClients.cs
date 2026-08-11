@@ -145,7 +145,10 @@ internal sealed class DeferredEndpointClients(
 internal sealed class DeferredLlmClient(
     DeferredEndpointClients endpoint,
     LlmEndpointCapabilities capabilities,
-    LlmClientMetadata metadata) : ILlmClient, ILlmClientMetadataProvider
+    LlmClientMetadata metadata) :
+    ILlmClient,
+    ILlmCompletionClient,
+    ILlmClientMetadataProvider
 {
     public LlmEndpointCapabilities Capabilities { get; } = capabilities;
 
@@ -159,6 +162,12 @@ internal sealed class DeferredLlmClient(
         await foreach (var item in client.StreamAsync(request, cancellationToken))
             yield return item;
     }
+
+    public async Task<LlmResponse> CompleteAsync(
+        LlmRequest request,
+        CancellationToken cancellationToken = default) =>
+        await (await endpoint.GetChatClientAsync(cancellationToken))
+            .CompleteAsync(request, cancellationToken);
 }
 
 internal sealed class DeferredBatchClient(

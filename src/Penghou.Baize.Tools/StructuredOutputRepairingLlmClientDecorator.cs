@@ -23,7 +23,7 @@ public sealed class StructuredOutputRepairingLlmClientDecorator(
     private sealed class StructuredOutputRepairingLlmClient(
         ILlmClient inner,
         ILlmStructuredOutputRepairer repairer)
-        : ILlmClient, ILlmClientMetadataProvider
+        : ILlmClient, ILlmCompletionClient, ILlmClientMetadataProvider
     {
         public LlmEndpointCapabilities Capabilities => inner.Capabilities;
 
@@ -95,6 +95,19 @@ public sealed class StructuredOutputRepairingLlmClientDecorator(
                     ContentRepairDiagnostics = repaired.ContentRepairDiagnostics
                 };
             }
+        }
+
+        public async Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var response = await inner.CompleteAsync(request, cancellationToken);
+            return request.ResponseFormat?.Schema is null
+                ? response
+                : await repairer.RepairAsync(
+                    response,
+                    request.ResponseFormat,
+                    cancellationToken);
         }
     }
 }

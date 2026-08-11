@@ -6,14 +6,40 @@ namespace Penghou.Baize.Batch;
 /// Default aggregate batch coordinator with concurrent provider operations and
 /// resilient completion polling.
 /// </summary>
+/// <param name="planner">Builds the physical provider-batch plan.</param>
+/// <param name="resolver">Resolves batch clients by endpoint id.</param>
+/// <param name="timeProvider">Optional time source used while polling.</param>
+/// <param name="random">Optional jitter source used while polling.</param>
+/// <param name="options">Controls bounded physical submission concurrency.</param>
 public sealed class BaizeBatchCoordinator(
     IBaizeBatchPlanner planner,
     IBaizeBatchClientResolver resolver,
-    TimeProvider? timeProvider = null,
-    Random? random = null) : IBaizeBatchCoordinator
+    TimeProvider? timeProvider,
+    Random? random,
+    BatchCoordinatorOptions? options) : IBaizeBatchCoordinator
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly Random _random = random ?? Random.Shared;
+    private readonly int _maxConcurrentSubmissions = ValidateOptions(options);
+
+    /// <summary>Initializes a coordinator with default submission concurrency.</summary>
+    public BaizeBatchCoordinator(
+        IBaizeBatchPlanner planner,
+        IBaizeBatchClientResolver resolver,
+        TimeProvider? timeProvider = null,
+        Random? random = null)
+        : this(planner, resolver, timeProvider, random, null)
+    {
+    }
+
+    /// <summary>Initializes a coordinator with explicit coordination options.</summary>
+    public BaizeBatchCoordinator(
+        IBaizeBatchPlanner planner,
+        IBaizeBatchClientResolver resolver,
+        BatchCoordinatorOptions options)
+        : this(planner, resolver, null, null, options)
+    {
+    }
     /// <inheritdoc />
     public async Task<BaizeBatchHandle> SubmitAsync(
         BaizeBatchSubmission submission,
@@ -29,50 +55,93 @@ public sealed class BaizeBatchCoordinator(
         BatchTelemetry.Submissions.Add(
             1,
             new KeyValuePair<string, object?>("gen_ai.operation.name", "batch_submit"));
-        var parts = new List<ProviderBatchPart>();
+        using var gate = new SemaphoreSlim(_maxConcurrentSubmissions);
+        var results = await Task.WhenAll(plan.Groups.Select(
+            (group, index) => SubmitGroupAsync(
+                plan.LogicalBatchId,
+                submission,
+                group,
+                index,
+                gate,
+                cancellationToken)));
+        var parts = results
+            .Where(result => result.Part is not null)
+            .OrderBy(result => result.Index)
+            .Select(result => result.Part!)
+            .ToArray();
+        var failures = results
+            .Where(result => result.Error is not null)
+            .OrderBy(result => result.Index)
+            .Select(result => new BaizeBatchSubmissionFailure(
+                result.Index,
+                result.EndpointId,
+                result.Error!))
+            .ToArray();
 
-        for (var index = 0; index < plan.Groups.Count; index++)
+        if (failures.Length > 0)
         {
-            var group = plan.Groups[index];
-            var client = resolver.GetClient(group.EndpointId);
+            activity?.SetStatus(ActivityStatusCode.Error);
+            activity?.SetTag(
+                "error.type",
+                failures[0].Error.GetType().FullName);
+            var partial = new BaizeBatchHandle(plan.LogicalBatchId, parts);
+            throw new BaizeBatchSubmissionException(
+                $"Logical batch '{plan.LogicalBatchId}' failed to submit " +
+                $"{failures.Length} of {plan.Groups.Count} physical batch(es). " +
+                $"{parts.Length} physical batch(es) were accepted.",
+                partial,
+                failures);
+        }
 
-            try
-            {
-                var providerHandle = await client.SubmitAsync(
-                    group.Items,
-                    new BatchSubmissionOptions
-                    {
-                        IdempotencyKey = $"{plan.LogicalBatchId}:{index}",
-                        Metadata = submission.Metadata
-                    },
-                    cancellationToken);
-                parts.Add(new ProviderBatchPart(
+        activity?.SetStatus(ActivityStatusCode.Ok);
+        return new BaizeBatchHandle(plan.LogicalBatchId, parts);
+    }
+
+    private async Task<PhysicalSubmissionResult> SubmitGroupAsync(
+        string logicalBatchId,
+        BaizeBatchSubmission submission,
+        ProviderBatchGroup group,
+        int index,
+        SemaphoreSlim gate,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            var client = resolver.GetClient(group.EndpointId);
+            var providerHandle = await client.SubmitAsync(
+                group.Items,
+                new BatchSubmissionOptions
+                {
+                    IdempotencyKey = $"{logicalBatchId}:{index}",
+                    Metadata = submission.Metadata
+                },
+                cancellationToken);
+            return new PhysicalSubmissionResult(
+                index,
+                group.EndpointId,
+                new ProviderBatchPart(
                     providerHandle.ProviderId,
                     providerHandle.BatchId,
                     group.EndpointId,
                     group.Items.Select(item => item.RequestId).ToArray(),
-                    providerHandle.Metadata));
-            }
-            catch (Exception exception) when
-                (exception is not OperationCanceledException ||
-                 !cancellationToken.IsCancellationRequested)
-            {
-                activity?.SetStatus(ActivityStatusCode.Error);
-                activity?.SetTag("error.type", exception.GetType().FullName);
-                var partial = new BaizeBatchHandle(
-                    plan.LogicalBatchId,
-                    parts.ToArray());
-                throw new BaizeBatchSubmissionException(
-                    $"Logical batch '{plan.LogicalBatchId}' failed while " +
-                    $"submitting endpoint '{group.EndpointId}'. " +
-                    $"{parts.Count} physical batch(es) were already accepted.",
-                    partial,
-                    exception);
-            }
+                    providerHandle.Metadata),
+                null);
         }
-
-        activity?.SetStatus(ActivityStatusCode.Ok);
-        return new BaizeBatchHandle(plan.LogicalBatchId, parts.ToArray());
+        catch (Exception exception) when
+            (exception is not OperationCanceledException ||
+             !cancellationToken.IsCancellationRequested)
+        {
+            return new PhysicalSubmissionResult(
+                index,
+                group.EndpointId,
+                null,
+                exception);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -293,6 +362,26 @@ public sealed class BaizeBatchCoordinator(
             part.BatchId,
             part.EndpointId,
             part.Metadata);
+
+    private static int ValidateOptions(BatchCoordinatorOptions? options)
+    {
+        var maximum = options?.MaxConcurrentSubmissions ?? 4;
+        if (maximum <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                maximum,
+                "MaxConcurrentSubmissions must be greater than zero.");
+        }
+
+        return maximum;
+    }
+
+    private sealed record PhysicalSubmissionResult(
+        int Index,
+        string EndpointId,
+        ProviderBatchPart? Part,
+        Exception? Error);
 
     private static void ValidateHandle(BaizeBatchHandle handle)
     {

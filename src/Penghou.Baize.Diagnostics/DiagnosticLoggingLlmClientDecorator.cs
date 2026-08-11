@@ -13,7 +13,7 @@ internal sealed class DiagnosticLoggingLlmClientDecorator(
 
     private sealed class DiagnosticLoggingLlmClient(
         ILlmClient inner,
-        ILogger logger) : ILlmClient, ILlmClientMetadataProvider
+        ILogger logger) : ILlmClient, ILlmCompletionClient, ILlmClientMetadataProvider
     {
         public LlmEndpointCapabilities Capabilities => inner.Capabilities;
 
@@ -93,6 +93,45 @@ internal sealed class DiagnosticLoggingLlmClientDecorator(
                     finishReason,
                     usage?.PromptTokens,
                     usage?.CompletionTokens);
+            }
+        }
+
+        public async Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            logger.LogDebug(
+                "Starting Baize completion for endpoint {EndpointId}, provider " +
+                "{Provider}, model {Model}, messages {MessageCount}, tools " +
+                "{ToolCount}",
+                Metadata.EndpointId,
+                Metadata.Provider,
+                Metadata.Model,
+                request.Messages.Count,
+                request.Tools.Count);
+            try
+            {
+                var response = await inner.CompleteAsync(request, cancellationToken);
+                logger.LogDebug(
+                    "Completed Baize completion for endpoint {EndpointId}, " +
+                    "provider {Provider}, model {Model}, content characters " +
+                    "{ContentCharacters}, tool calls {ToolCallCount}, finish " +
+                    "reason {FinishReason}, prompt tokens {PromptTokens}, " +
+                    "completion tokens {CompletionTokens}",
+                    Metadata.EndpointId,
+                    Metadata.Provider,
+                    Metadata.Model,
+                    response.Content.Length,
+                    response.ToolCalls?.Count ?? 0,
+                    response.FinishReason,
+                    response.Usage?.PromptTokens,
+                    response.Usage?.CompletionTokens);
+                return response;
+            }
+            catch (Exception exception)
+            {
+                LogFailure(exception);
+                throw;
             }
         }
 

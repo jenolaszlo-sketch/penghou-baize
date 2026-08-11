@@ -127,6 +127,9 @@ public sealed class ReloadingLlmModelLookup : ILlmModelLookup, IDisposable
         _inner = Build(options);
     }
 
-    private ILlmModelLookup Build(LlmRoutingOptions options) =>
-        ServiceCollectionExtensions.BuildLookup(_services, options);
+    private ILlmModelLookup Build(LlmRoutingOptions options)
+    {
+        ServiceCollectionExtensions.ValidateConfiguration(options);
+        return ServiceCollectionExtensions.BuildLookup(_services, options);
+    }
 }

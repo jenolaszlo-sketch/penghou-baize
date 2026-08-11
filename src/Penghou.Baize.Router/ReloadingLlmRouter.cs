@@ -111,6 +111,20 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         CancellationToken cancellationToken = default)
         => _inner.StreamAsync(strategy, request, cancellationToken);
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default) =>
+        _inner.StreamRouteAsync(route, builder, cancellationToken);
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        LlmRequest request,
+        CancellationToken cancellationToken = default) =>
+        _inner.StreamRouteAsync(route, request, cancellationToken);
+
     /// <summary>
     /// The endpoint the router would currently use for a model, chosen from
     /// the model's configured endpoints by least-failing history.
@@ -143,6 +157,12 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         CancellationToken cancellationToken = default) =>
         _inner.ResolveAsync(strategy, cancellationToken);
 
+    /// <inheritdoc />
+    public Task<ResolvedEndpoint> ResolveRouteAsync(
+        string route,
+        CancellationToken cancellationToken = default) =>
+        _inner.ResolveRouteAsync(route, cancellationToken);
+
     /// <summary>Releases the options subscription.</summary>
     public void Dispose()
     {
@@ -160,13 +180,19 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
 
     private LlmRouter Build(LlmRoutingOptions options)
     {
+        ServiceCollectionExtensions.ValidateConfiguration(options);
         var strategyLookup = options.StrategyFallbacks.ToDictionary(
             kv => kv.Key,
             kv => (IReadOnlyList<string>)kv.Value.AsReadOnly());
+        var namedRoutes = options.NamedRoutes.ToDictionary(
+            kv => kv.Key,
+            kv => (IReadOnlyList<string>)kv.Value.AsReadOnly(),
+            StringComparer.Ordinal);
 
         return new LlmRouter(
             _lookup,
             strategyLookup,
+            namedRoutes,
             _memory,
             maxPendingRequests: options.MaxPendingRequests,
             requestTimeout: options.RequestTimeout,

@@ -79,6 +79,19 @@ await foreach (LlmStreamEvent e in client.StreamAsync(request))
 }
 ```
 
+When incremental events are not needed, Core can collect any direct client
+without a Router dependency:
+
+```csharp
+var response = await client.CompleteAsync(request);
+Console.WriteLine(response.Content);
+```
+
+`CompleteAsync` uses `ILlmCompletionClient` when a provider or custom gateway
+offers a native non-streaming path; otherwise it drains `StreamAsync` through
+the same canonical collector used by the router. Passing an `onDelta` callback
+always retains the streaming path.
+
 ## Multimodal input
 
 Messages can mix text, images, audio, video, and files. Media may be supplied
@@ -200,6 +213,13 @@ services.AddLlmRouting(configuration);
 services.AddLlmStructuredOutputRepair();
 ```
 
+Direct clients can opt in without the router:
+
+```csharp
+var repairedClient = client.WithStructuredOutputRepair(repairer);
+var response = await repairedClient.CompleteAsync(schemaRequest);
+```
+
 Schema-constrained responses are buffered until their complete JSON document
 can be validated and repaired. The resulting stream and collected
 `LlmResponse` carry `ContentWasRepaired`, `ContentRepairAttempts`, and detailed
@@ -219,10 +239,15 @@ Register routing first, then batch planning:
 
 ```csharp
 services.AddLlmRouting(configuration);
-services.AddBaizeBatch(new BatchPlannerOptions
-{
-    MaxItemsPerGroup = 1_000
-});
+services.AddBaizeBatch(
+    new BatchPlannerOptions
+    {
+        MaxItemsPerGroup = 1_000
+    },
+    new BatchCoordinatorOptions
+    {
+        MaxConcurrentSubmissions = 4
+    });
 
 var batches = provider.GetRequiredService<IBaizeBatchCoordinator>();
 var handle = await batches.SubmitAsync(new BaizeBatchSubmission(
@@ -320,10 +345,27 @@ configured module form lets the router discover a third-party
     ],
     "StrategyFallbacks": {
       "StructuredOutput": [ "deepseek", "qwen" ]
+    },
+    "NamedRoutes": {
+      "low-cost": [ "qwen", "deepseek" ],
+      "reasoning": [ "deepseek" ]
     }
   }
 }
 ```
+
+Named routes are application-defined fallback chains and are deliberately
+distinct from model names:
+
+```csharp
+var response = await router.CompleteRouteAsync(
+    "low-cost",
+    request);
+```
+
+Use `StreamAsync("qwen", request)` to target a model registration and
+`StreamRouteAsync("low-cost", request)` to target a named chain. Routes select
+endpoints but do not alter the canonical request shape.
 
 Every model needs a unique `Name` and at least one endpoint. `Provider` is a
 case-insensitive adapter key; built-in keys are `OpenAi`, `Claude`, `Ollama`,

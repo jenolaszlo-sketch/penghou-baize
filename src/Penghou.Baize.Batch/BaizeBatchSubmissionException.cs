@@ -15,8 +15,28 @@ public sealed class BaizeBatchSubmissionException : Exception
         : base(message, innerException)
     {
         PartialHandle = partialHandle;
+        Failures = [new BaizeBatchSubmissionFailure(-1, string.Empty, innerException)];
+    }
+
+    /// <summary>Initializes an aggregate physical-submission failure.</summary>
+    public BaizeBatchSubmissionException(
+        string message,
+        BaizeBatchHandle partialHandle,
+        IReadOnlyList<BaizeBatchSubmissionFailure> failures)
+        : base(
+            message,
+            failures.Count > 0
+                ? failures[0].Error
+                : new InvalidOperationException("No submission failure was supplied."))
+    {
+        ArgumentNullException.ThrowIfNull(failures);
+        PartialHandle = partialHandle;
+        Failures = failures;
     }
 
     /// <summary>The provider batches accepted before submission failed.</summary>
     public BaizeBatchHandle PartialHandle { get; }
+
+    /// <summary>Every physical submission that failed, in plan order.</summary>
+    public IReadOnlyList<BaizeBatchSubmissionFailure> Failures { get; }
 }

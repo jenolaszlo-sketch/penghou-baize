@@ -13,7 +13,17 @@ public static class BatchServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddBaizeBatch(
         this IServiceCollection services,
-        BatchPlannerOptions? options = null)
+        BatchPlannerOptions? options = null) =>
+        AddBaizeBatch(services, options, null);
+
+    /// <summary>
+    /// Registers batch planning and coordination with explicit options for
+    /// bounded concurrent physical submissions.
+    /// </summary>
+    public static IServiceCollection AddBaizeBatch(
+        this IServiceCollection services,
+        BatchPlannerOptions? options,
+        BatchCoordinatorOptions? coordinatorOptions)
     {
         ArgumentNullException.ThrowIfNull(services);
         var plannerOptions = options ?? new BatchPlannerOptions();
@@ -33,7 +43,11 @@ public static class BatchServiceCollectionExtensions
                 provider.GetRequiredService<ILlmModelLookup>(),
                 provider.GetRequiredService<IBaizeBatchClientResolver>(),
                 plannerOptions));
-        services.TryAddSingleton<IBaizeBatchCoordinator, BaizeBatchCoordinator>();
+        services.TryAddSingleton<IBaizeBatchCoordinator>(provider =>
+            new BaizeBatchCoordinator(
+                provider.GetRequiredService<IBaizeBatchPlanner>(),
+                provider.GetRequiredService<IBaizeBatchClientResolver>(),
+                coordinatorOptions ?? new BatchCoordinatorOptions()));
 
         return services;
     }

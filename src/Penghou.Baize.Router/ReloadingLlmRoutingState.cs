@@ -72,6 +72,18 @@ internal sealed class ReloadingLlmRoutingState :
         CancellationToken cancellationToken = default) =>
         _current.Router.StreamAsync(strategy, request, cancellationToken);
 
+    public IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.StreamRouteAsync(route, builder, cancellationToken);
+
+    public IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        LlmRequest request,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.StreamRouteAsync(route, request, cancellationToken);
+
     [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
     public ResolvedEndpoint Resolve(string model) =>
         ResolveAsync(model).GetAwaiter().GetResult();
@@ -89,6 +101,11 @@ internal sealed class ReloadingLlmRoutingState :
         ModelStrategy strategy,
         CancellationToken cancellationToken = default) =>
         _current.Router.ResolveAsync(strategy, cancellationToken);
+
+    public Task<ResolvedEndpoint> ResolveRouteAsync(
+        string route,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.ResolveRouteAsync(route, cancellationToken);
 
     public ILlmClient GetClient(string model) => _current.Lookup.GetClient(model);
 
@@ -159,6 +176,22 @@ internal sealed class ReloadingLlmRoutingState :
             return;
 
         var version = Interlocked.Increment(ref _reloadVersion);
+        if (!ServiceCollectionExtensions.TryValidate(options, out var validationError))
+        {
+            RouterTelemetry.ConfigurationReloadFailures.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    "error.type",
+                    "ConfigurationValidation"));
+            _logger.LogError(
+                "Rejected invalid Baize routing snapshot version " +
+                "{ReloadVersion}; the previous snapshot remains active. " +
+                "Validation error: {ValidationError}",
+                version,
+                validationError);
+            return;
+        }
+
         try
         {
             var replacement = Build(options);
@@ -190,15 +223,21 @@ internal sealed class ReloadingLlmRoutingState :
 
     private RoutingRuntimeSnapshot Build(LlmRoutingOptions options)
     {
+        ServiceCollectionExtensions.ValidateConfiguration(options);
         var built = ServiceCollectionExtensions.BuildRoutingLookup(
             _services,
             options);
         var strategies = options.StrategyFallbacks.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<string>)pair.Value.AsReadOnly());
+        var namedRoutes = options.NamedRoutes.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value.AsReadOnly(),
+            StringComparer.Ordinal);
         var router = new LlmRouter(
             built.Lookup,
             strategies,
+            namedRoutes,
             _memory,
             options.MaxPendingRequests,
             options.RequestTimeout,

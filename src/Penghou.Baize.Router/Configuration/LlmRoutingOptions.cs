@@ -29,6 +29,13 @@ public sealed class LlmRoutingOptions
     public Dictionary<ModelStrategy, List<string>> StrategyFallbacks { get; init; } = [];
 
     /// <summary>
+    /// Application-defined fallback chains addressed explicitly by route
+    /// name. Named routes select models but do not change request shape.
+    /// </summary>
+    public Dictionary<string, List<string>> NamedRoutes { get; init; } =
+        new(StringComparer.Ordinal);
+
+    /// <summary>
     /// The maximum number of concurrently in-flight LLM streams across the
     /// router; 0 (the default) means unbounded.
     /// </summary>

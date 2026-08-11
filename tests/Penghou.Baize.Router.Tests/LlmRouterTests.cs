@@ -1685,6 +1685,55 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public async Task ReloadingRoutingState_RejectsInvalidReloadAndKeepsLastGoodSnapshot()
+    {
+        var initial = new LlmRoutingOptions
+        {
+            Models =
+            [
+                new LlmModelOptions
+                {
+                    Name = "model-a",
+                    Endpoints = [new LlmEndpointOptions { ApiStyle = ApiStyle.Ollama }]
+                }
+            ],
+            StrategyFallbacks = new Dictionary<ModelStrategy, List<string>>
+            {
+                [ModelStrategy.Auto] = ["model-a"]
+            }
+        };
+        var monitor = new ManualOptionsMonitor(initial);
+        var services = new StubServiceProvider(new Dictionary<Type, object>
+        {
+            [typeof(IHttpClientFactory)] = new TestHttpClientFactory(
+                new HttpClient(new ModelEchoHandler())),
+            [typeof(ISecretProvider)] = new RecordingSecretProvider(string.Empty)
+        });
+        using var state = new ReloadingLlmRoutingState(
+            monitor,
+            services,
+            new InMemoryLlmRouterMemory(),
+            new ReliabilityEndpointSelectionPolicy(),
+            logger: null);
+
+        monitor.Set(new LlmRoutingOptions
+        {
+            Models = initial.Models,
+            StrategyFallbacks = new Dictionary<ModelStrategy, List<string>>
+            {
+                [ModelStrategy.Auto] = ["missing"]
+            }
+        });
+
+        var response = await state.CompleteStreamingAsync(
+            ModelStrategy.Auto,
+            new LlmRequest([new LlmMessage("user", "hello")]),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("from a");
+    }
+
+    [Fact]
     public async Task ReloadingLlmRouter_AppliesOptionsChange()
     {
         var monitor = new ManualOptionsMonitor(new LlmRoutingOptions

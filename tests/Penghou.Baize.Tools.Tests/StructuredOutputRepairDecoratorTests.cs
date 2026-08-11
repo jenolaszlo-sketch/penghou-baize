@@ -50,6 +50,32 @@ public sealed class StructuredOutputRepairDecoratorTests
         events.Should().ContainSingle().Which.Delta.Should().Be("hello");
     }
 
+    [Fact]
+    public async Task WithStructuredOutputRepair_DecoratesDirectClient()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddLlmTools();
+        using var provider = services.BuildServiceProvider();
+        var client = new EventClient(
+                new LlmStreamEvent(Delta: "{\"name\":\"Ada\""),
+                new LlmStreamEvent(FinishReason: "stop"))
+            .WithStructuredOutputRepair(
+                provider.GetRequiredService<ILlmStructuredOutputRepairer>());
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Return JSON")],
+            responseFormat: LlmResponseFormat.JsonSchema(
+                """{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}"""));
+
+        var response = await client.CompleteAsync(
+            request,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.ContentWasRepaired.Should().BeTrue();
+        using var document = JsonDocument.Parse(response.Content);
+        document.RootElement.GetProperty("name").GetString().Should().Be("Ada");
+    }
+
     private static async Task<List<LlmStreamEvent>> CollectAsync(
         IAsyncEnumerable<LlmStreamEvent> stream)
     {

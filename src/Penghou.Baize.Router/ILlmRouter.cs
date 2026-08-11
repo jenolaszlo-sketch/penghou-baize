@@ -46,6 +46,25 @@ public interface ILlmRouter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Streams a request through an application-defined named fallback route.
+    /// Named routes are distinct from model registration names.
+    /// </summary>
+    IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not support named routes.");
+
+    /// <summary>Streams a canonical request through a named fallback route.</summary>
+    IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        LlmRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not support named routes.");
+
+    /// <summary>
     /// The endpoint the router would currently use for a model, chosen from
     /// the model's configured endpoints by least-failing history.
     /// </summary>
@@ -72,4 +91,11 @@ public interface ILlmRouter
     Task<ResolvedEndpoint> ResolveAsync(
         ModelStrategy strategy,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Resolves the endpoint currently preferred by a named route.</summary>
+    Task<ResolvedEndpoint> ResolveRouteAsync(
+        string route,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not support named routes.");
 }

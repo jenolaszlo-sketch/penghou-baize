@@ -39,6 +39,33 @@ public class LlmRouter(
     private readonly TimeSpan? _requestTimeout = requestTimeout;
     private readonly ILlmEndpointSelectionPolicy _selectionPolicy =
         selectionPolicy ?? new ReliabilityEndpointSelectionPolicy();
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _namedRouteLookup =
+        new Dictionary<string, IReadOnlyList<string>>(
+            StringComparer.Ordinal);
+
+    /// <summary>
+    /// Initializes a router with application-defined named fallback chains in
+    /// addition to the built-in strategy chains.
+    /// </summary>
+    public LlmRouter(
+        ILlmModelLookup modelLookup,
+        IReadOnlyDictionary<ModelStrategy, IReadOnlyList<string>> strategyLookup,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> namedRouteLookup,
+        ILlmRouterMemory? memory = null,
+        int maxPendingRequests = 0,
+        TimeSpan? requestTimeout = null,
+        ILlmEndpointSelectionPolicy? selectionPolicy = null)
+        : this(
+            modelLookup,
+            strategyLookup,
+            memory,
+            maxPendingRequests,
+            requestTimeout,
+            selectionPolicy)
+    {
+        _namedRouteLookup = namedRouteLookup ??
+            throw new ArgumentNullException(nameof(namedRouteLookup));
+    }
 
     /// <summary>
     /// Streams a completion for a model, using the endpoint the router would
@@ -125,6 +152,52 @@ public class LlmRouter(
         }
     }
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(route);
+        ArgumentNullException.ThrowIfNull(builder);
+        return StreamRouteAsync(
+            route,
+            builder.Build(ModelStrategy.Auto),
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<LlmStreamEvent> StreamRouteAsync(
+        string route,
+        LlmRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(route);
+        ArgumentNullException.ThrowIfNull(request);
+        if (_gate is not null)
+            await _gate.WaitAsync(cancellationToken);
+
+        try
+        {
+            var candidates = await ResolveNamedRouteOrderedAsync(
+                route,
+                request,
+                cancellationToken);
+
+            await foreach (var evt in StreamThroughAsync(
+                candidates,
+                request,
+                cancellationToken))
+            {
+                yield return evt;
+            }
+        }
+        finally
+        {
+            _gate?.Release();
+        }
+    }
+
     /// <summary>
     /// The endpoint the router would currently use for a model, chosen from
     /// the model's configured endpoints by least-failing history.
@@ -162,6 +235,12 @@ public class LlmRouter(
         CancellationToken cancellationToken = default) =>
         (await ResolveOrderedAsync(strategy, null, cancellationToken)).First();
 
+    /// <inheritdoc />
+    public async Task<ResolvedEndpoint> ResolveRouteAsync(
+        string route,
+        CancellationToken cancellationToken = default) =>
+        (await ResolveNamedRouteOrderedAsync(route, null, cancellationToken)).First();
+
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         string model,
         LlmRequest? request,
@@ -198,6 +277,30 @@ public class LlmRouter(
             FilterCompatible(candidates, request),
             request,
             strategy,
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveNamedRouteOrderedAsync(
+        string route,
+        LlmRequest? request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(route);
+        if (!_namedRouteLookup.TryGetValue(route, out var chain) || chain.Count == 0)
+            throw new InvalidOperationException($"No models configured for route '{route}'.");
+
+        var candidates = ExpandCandidates(chain);
+        if (candidates.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"No model configured for route '{route}' is registered. " +
+                $"Tried: {string.Join(", ", chain)}.");
+        }
+
+        return await OrderCandidatesAsync(
+            FilterCompatible(candidates, request),
+            request,
+            ModelStrategy.Auto,
             cancellationToken);
     }
 
