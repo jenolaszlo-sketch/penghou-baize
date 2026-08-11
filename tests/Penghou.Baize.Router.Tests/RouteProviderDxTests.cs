@@ -88,6 +88,39 @@ public sealed class RouteProviderDxTests
         routeProvider.Request!.Metadata["acme.tenant-id"].Should().Be("tenant-a");
     }
 
+    [Theory]
+    [InlineData("null-resolution", "null resolution")]
+    [InlineData("null-endpoints", "null resolution")]
+    [InlineData("null-explanation", "null resolution")]
+    [InlineData("empty", "no execution candidates")]
+    [InlineData("duplicate", "duplicate endpoint")]
+    [InlineData("unknown", "unknown endpoint")]
+    [InlineData("wrong-target", "target does not match")]
+    [InlineData("wrong-selection", "selected endpoint does not match")]
+    public async Task CustomRouteProvider_InvalidResultsFailBeforeExecution(
+        string failureCase,
+        string messageFragment)
+    {
+        var endpoint = new ResolvedEndpoint(
+            "endpoint",
+            "model",
+            new LlmProviderKey("test"));
+        var lookup = Lookup(endpoint, new StubClient());
+        var router = new LlmRouter(
+            lookup,
+            new StaticRouteProvider(CreateInvalidResolution(failureCase, endpoint)));
+
+        var action = () => router.ExplainModelAsync(
+            "model",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var exception = await action.Should().ThrowAsync<LlmRoutingException>();
+        exception.Which.FailureKind.Should()
+            .Be(LlmRoutingFailureKind.InvalidProviderResult);
+        exception.Which.Target.Should().Be(LlmRouteTarget.Model("model"));
+        exception.Which.Message.Should().Contain(messageFragment);
+    }
+
     [Fact]
     public void FluentRegistration_ValidatesTheSameOptionGraph()
     {
@@ -206,6 +239,39 @@ public sealed class RouteProviderDxTests
                 [endpoint.Model] = [endpoint]
             });
 
+    private static LlmRouteResolution CreateInvalidResolution(
+        string failureCase,
+        ResolvedEndpoint endpoint)
+    {
+        var unknown = new ResolvedEndpoint(
+            "unknown",
+            "model",
+            new LlmProviderKey("test"));
+        var target = failureCase == "wrong-target"
+            ? LlmRouteTarget.Named("other")
+            : LlmRouteTarget.Model("model");
+        var endpoints = failureCase switch
+        {
+            "null-endpoints" => null!,
+            "empty" => [],
+            "duplicate" => [endpoint, endpoint],
+            "unknown" => [unknown],
+            _ => new[] { endpoint }
+        };
+        var selected = failureCase == "wrong-selection" ? unknown : endpoint;
+        var stats = new LlmEndpointStats(endpoint.EndpointId, 0, 0, 0, 0);
+        var explanation = failureCase == "null-explanation"
+            ? null!
+            : new LlmRouteExplanation(
+                target,
+                [endpoint.Model],
+                [new LlmRouteCandidateExplanation(endpoint, true, null, 0, stats)],
+                selected);
+        return failureCase == "null-resolution"
+            ? null!
+            : new LlmRouteResolution(endpoints, explanation);
+    }
+
     private sealed class StubClient : ILlmClient
     {
         public LlmEndpointCapabilities Capabilities { get; } = new();
@@ -246,5 +312,14 @@ public sealed class RouteProviderDxTests
                 endpoint);
             return ValueTask.FromResult(new LlmRouteResolution([endpoint], explanation));
         }
+    }
+
+    private sealed class StaticRouteProvider(LlmRouteResolution resolution)
+        : ILlmRouteProvider
+    {
+        public ValueTask<LlmRouteResolution> ResolveAsync(
+            LlmRoutingContext context,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(resolution);
     }
 }

@@ -37,8 +37,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage/
           /p:CoverletOutputFormat=cobertura
-          /p:Threshold=40
-          /p:ThresholdType=line
+          '/p:Include=[Penghou.Baize]*'
+          /p:Threshold=55
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Claude)
         run: >
@@ -48,6 +49,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-claude/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Claude]*'
+          /p:Threshold=69
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (OpenAI)
         run: >
@@ -57,6 +61,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-openai/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.OpenAi]*'
+          /p:Threshold=74
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Ollama)
         run: >
@@ -66,6 +73,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-ollama/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Ollama]*'
+          /p:Threshold=77
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Gemini)
         run: >
@@ -75,6 +85,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-gemini/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Gemini]*'
+          /p:Threshold=65
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Router)
         run: >
@@ -85,8 +98,8 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage-router/
           /p:CoverletOutputFormat=cobertura
           '/p:Include=[Penghou.Baize.Router]*'
-          /p:Threshold=80
-          /p:ThresholdType=line
+          /p:Threshold=72
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Batch)
         run: >
@@ -96,6 +109,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-batch/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Batch]*'
+          /p:Threshold=61
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Tools)
         run: >
@@ -105,6 +121,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-tools/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Tools]*'
+          /p:Threshold=65
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Extensions.AI)
         run: >
@@ -114,6 +133,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-extensions-ai/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Extensions.AI]*'
+          /p:Threshold=62
+          /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Diagnostics)
         run: >
@@ -123,6 +145,9 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=${{ github.workspace }}/coverage-diagnostics/
           /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Diagnostics]*'
+          /p:Threshold=50
+          /p:ThresholdType=line%2cbranch
 
       - name: Validate packages
         run: dotnet pack Penghou.Baize.slnx --configuration Release --no-build --output artifacts

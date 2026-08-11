@@ -273,7 +273,7 @@ public class LlmRouter(
         string model,
         LlmRequest? request = null,
         CancellationToken cancellationToken = default) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.Model(model), request),
             cancellationToken)).Explanation;
 
@@ -282,7 +282,7 @@ public class LlmRouter(
         ModelStrategy strategy,
         LlmRequest? request = null,
         CancellationToken cancellationToken = default) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.ForStrategy(strategy), request),
             cancellationToken)).Explanation;
 
@@ -291,7 +291,7 @@ public class LlmRouter(
         string route,
         LlmRequest? request = null,
         CancellationToken cancellationToken = default) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.Named(route), request),
             cancellationToken)).Explanation;
 
@@ -299,7 +299,7 @@ public class LlmRouter(
         string model,
         LlmRequest? request,
         CancellationToken cancellationToken) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.Model(model), request),
             cancellationToken)).Endpoints;
 
@@ -307,7 +307,7 @@ public class LlmRouter(
         ModelStrategy strategy,
         LlmRequest? request,
         CancellationToken cancellationToken) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.ForStrategy(strategy), request),
             cancellationToken)).Endpoints;
 
@@ -315,9 +315,80 @@ public class LlmRouter(
         string route,
         LlmRequest? request,
         CancellationToken cancellationToken) =>
-        (await RouteProvider.ResolveAsync(
+        (await ResolveRouteAsync(
             new LlmRoutingContext(LlmRouteTarget.Named(route), request),
             cancellationToken)).Endpoints;
+
+    private async Task<LlmRouteResolution> ResolveRouteAsync(
+        LlmRoutingContext context,
+        CancellationToken cancellationToken)
+    {
+        var resolution = await RouteProvider.ResolveAsync(context, cancellationToken);
+        if (resolution is null || resolution.Endpoints is null ||
+            resolution.Explanation is null)
+        {
+            throw InvalidRouteProviderResult(
+                context,
+                "The route provider returned a null resolution, endpoint list, or explanation.");
+        }
+
+        if (resolution.Endpoints.Count == 0)
+        {
+            throw InvalidRouteProviderResult(
+                context,
+                "The route provider returned no execution candidates.",
+                resolution);
+        }
+
+        var endpointIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var endpoint in resolution.Endpoints)
+        {
+            if (!endpointIds.Add(endpoint.EndpointId))
+            {
+                throw InvalidRouteProviderResult(
+                    context,
+                    $"The route provider returned duplicate endpoint '{endpoint.EndpointId}'.",
+                    resolution);
+            }
+
+            if (!modelLookup.TryGetClientByEndpointId(endpoint.EndpointId, out _))
+            {
+                throw InvalidRouteProviderResult(
+                    context,
+                    $"The route provider returned unknown endpoint '{endpoint.EndpointId}'.",
+                    resolution);
+            }
+        }
+
+        if (resolution.Explanation.Target != context.Target)
+        {
+            throw InvalidRouteProviderResult(
+                context,
+                "The route explanation target does not match the requested target.",
+                resolution);
+        }
+
+        if (resolution.Explanation.SelectedEndpoint != resolution.Endpoints[0])
+        {
+            throw InvalidRouteProviderResult(
+                context,
+                "The route explanation's selected endpoint does not match the first execution candidate.",
+                resolution);
+        }
+
+        return resolution;
+    }
+
+    private static LlmRoutingException InvalidRouteProviderResult(
+        LlmRoutingContext context,
+        string message,
+        LlmRouteResolution? resolution = null) =>
+        new(
+            message,
+            LlmRoutingFailureKind.InvalidProviderResult,
+            context.Target,
+            resolution?.Explanation?.ConfiguredModels,
+            resolution?.Explanation?.Candidates);
 
     private async IAsyncEnumerable<LlmStreamEvent> StreamThroughAsync(
         IReadOnlyList<ResolvedEndpoint> candidates,

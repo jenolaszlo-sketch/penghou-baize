@@ -13,5 +13,8 @@ public enum LlmRoutingFailureKind
     NoRegisteredEndpoint,
 
     /// <summary>Every resolved endpoint was rejected by request requirements.</summary>
-    NoCompatibleEndpoint
+    NoCompatibleEndpoint,
+
+    /// <summary>A custom route provider returned an inconsistent or unknown endpoint.</summary>
+    InvalidProviderResult
 }

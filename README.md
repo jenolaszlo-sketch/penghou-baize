@@ -50,6 +50,7 @@ code change is required when upgrading the application's target framework.
 
 - [Getting started and fluent routing](docs/getting-started.md)
 - [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
+- [Coverage policy and package baselines](docs/coverage.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
 - [Runnable quick-start sample](samples/Penghou.Baize.QuickStart)

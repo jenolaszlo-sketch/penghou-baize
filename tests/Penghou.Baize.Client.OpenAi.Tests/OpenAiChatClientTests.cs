@@ -437,6 +437,230 @@ public sealed class OpenAiChatClientTests
         }
     }
 
+    [Fact]
+    public async Task StreamAsync_MapsToolsStructuredSchemaAndOmitsApplicationMetadata()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var capabilities = DefaultCapabilities with
+        {
+            ToolsWithStructuredOutput = true
+        };
+        var client = CreateClient(handler, "gpt-4o-mini", capabilities);
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Look up the weather and return JSON")],
+            temperature: 0.1,
+            maxTokens: 200,
+            tools:
+            [
+                new LlmTool(
+                    "get_weather",
+                    "Gets weather",
+                    """{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}""")
+            ],
+            responseFormat: LlmResponseFormat.JsonSchema(
+                """{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}"""),
+            metadata: new Dictionary<string, object?>
+            {
+                ["acme.tenant-id"] = "private-tenant"
+            });
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var root = document.RootElement;
+        root.GetProperty("stream").GetBoolean().Should().BeTrue();
+        root.GetProperty("stream_options").GetProperty("include_usage")
+            .GetBoolean().Should().BeTrue();
+        root.GetProperty("temperature").GetDouble().Should().Be(0.1);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(200);
+        root.GetProperty("tools")[0].GetProperty("function")
+            .GetProperty("parameters").GetProperty("required")[0]
+            .GetString().Should().Be("city");
+        var responseFormat = root.GetProperty("response_format");
+        responseFormat.GetProperty("type").GetString().Should().Be("json_schema");
+        responseFormat.GetProperty("json_schema").GetProperty("strict")
+            .GetBoolean().Should().BeTrue();
+        root.TryGetProperty("metadata", out _).Should().BeFalse();
+        handler.RequestBody.Should().NotContain("private-tenant");
+    }
+
+    [Fact]
+    public async Task StreamAsync_ReplaysToolCallsAndMultipleToolResults()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(handler, "gpt-4o-mini");
+        var request = new LlmRequest(
+        [
+            LlmMessage.Assistant(
+                [new LlmToolCall("call-1", "lookup", "{\"id\":1}")],
+                "checking"),
+            LlmMessage.ToolResults(
+            [
+                new LlmToolResult("call-1", "lookup", "first"),
+                new LlmToolResult("call-2", "lookup", "second")
+            ])
+        ]);
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var messages = document.RootElement.GetProperty("messages");
+        messages.GetArrayLength().Should().Be(3);
+        messages[0].GetProperty("content").GetString().Should().Be("checking");
+        messages[0].GetProperty("tool_calls")[0].GetProperty("function")
+            .GetProperty("arguments").GetString().Should().Be("{\"id\":1}");
+        messages[1].GetProperty("tool_call_id").GetString().Should().Be("call-1");
+        messages[2].GetProperty("content").GetString().Should().Be("second");
+    }
+
+    [Fact]
+    public async Task StreamAsync_MapsSupportedMultimodalTransports()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var capabilities = DefaultCapabilities with
+        {
+            ContentTypes = new HashSet<LlmContentType>
+            {
+                LlmContentType.Text,
+                LlmContentType.Image,
+                LlmContentType.Audio,
+                LlmContentType.File
+            },
+            ContentTransports = new Dictionary<LlmContentType, LlmContentTransport>
+            {
+                [LlmContentType.Image] =
+                    LlmContentTransport.Uri | LlmContentTransport.InlineData,
+                [LlmContentType.Audio] = LlmContentTransport.InlineData,
+                [LlmContentType.File] =
+                    LlmContentTransport.InlineData | LlmContentTransport.ProviderFile
+            }
+        };
+        var client = CreateClient(handler, "gpt-4o-mini", capabilities);
+        var request = new LlmRequest(
+        [
+            new LlmMessage("user",
+            [
+                new LlmTextContent("inspect"),
+                new LlmImageContent(
+                    "image/png",
+                    new LlmUriSource(new Uri("https://example.test/image.png"))),
+                new LlmImageContent(
+                    "image/png",
+                    new LlmInlineDataSource(new byte[] { 1, 2 })),
+                new LlmAudioContent(
+                    "audio/x-wav",
+                    new LlmInlineDataSource(new byte[] { 3, 4 })),
+                new LlmFileContent(
+                    "application/pdf",
+                    new LlmInlineDataSource(new byte[] { 5 }),
+                    "inline.pdf"),
+                new LlmFileContent(
+                    "application/pdf",
+                    new LlmProviderFileSource(new LlmProviderKey("OpenAi"), "file-1"),
+                    "uploaded.pdf")
+            ])
+        ]);
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var content = document.RootElement.GetProperty("messages")[0]
+            .GetProperty("content");
+        content.GetArrayLength().Should().Be(6);
+        content[0].GetProperty("type").GetString().Should().Be("text");
+        content[1].GetProperty("image_url").GetProperty("url")
+            .GetString().Should().Be("https://example.test/image.png");
+        content[2].GetProperty("image_url").GetProperty("url")
+            .GetString().Should().StartWith("data:image/png;base64,");
+        content[3].GetProperty("input_audio").GetProperty("format")
+            .GetString().Should().Be("wav");
+        content[4].GetProperty("file").GetProperty("file_data")
+            .GetString().Should().StartWith("data:application/pdf;base64,");
+        content[5].GetProperty("file").GetProperty("file_id")
+            .GetString().Should().Be("file-1");
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsWireUnsupportedMediaAfterCapabilityValidation()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var capabilities = DefaultCapabilities with
+        {
+            ContentTypes = new HashSet<LlmContentType>
+            {
+                LlmContentType.Text,
+                LlmContentType.Audio,
+                LlmContentType.File
+            },
+            ContentTransports = new Dictionary<LlmContentType, LlmContentTransport>
+            {
+                [LlmContentType.Audio] =
+                    LlmContentTransport.InlineData | LlmContentTransport.Uri,
+                [LlmContentType.File] = LlmContentTransport.ProviderFile
+            }
+        };
+        var client = CreateClient(handler, "gpt-4o-mini", capabilities);
+
+        var badAudio = async () => await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+            [
+                new LlmMessage("user",
+                [
+                    new LlmAudioContent(
+                        "audio/ogg",
+                        new LlmInlineDataSource(new byte[] { 1 }))
+                ])
+            ]),
+            TestContext.Current.CancellationToken));
+        var foreignFile = async () => await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+            [
+                new LlmMessage("user",
+                [
+                    new LlmFileContent(
+                        "application/pdf",
+                        new LlmProviderFileSource(new LlmProviderKey("Gemini"), "file-1"))
+                ])
+            ]),
+            TestContext.Current.CancellationToken));
+
+        await badAudio.Should().ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*does not support inline audio media type 'audio/ogg'*");
+        await foreignFile.Should().ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*does not support file source*");
+        handler.RequestBody.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StreamAsync_MapsReasoningFragmentedToolCallUsageAndFinish()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"id":"chatcmpl-test","model":"actual-model","choices":[{"index":0,"delta":{"reasoning_content":"thinking","tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"lookup","arguments":"{\"city\":"}}]},"finish_reason":null}]}
+
+            data: {"id":"chatcmpl-test","model":"actual-model","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"Paris\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":8,"completion_tokens":3,"total_tokens":11}}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gpt-4o-mini");
+
+        var events = await CollectAsync(client.StreamAsync(
+            new LlmRequest([new LlmMessage("user", "weather")]),
+            TestContext.Current.CancellationToken));
+
+        events.Should().Contain(item => item.ReasoningContent == "thinking");
+        events.Where(item => item.ToolCallDelta is not null).Should().HaveCount(2);
+        events.Should().Contain(item => item.FinishReason == "tool_calls");
+        events.Any(item => item.Usage?.TotalTokens == 11).Should().BeTrue();
+    }
+
     private static LlmEndpointCapabilities DefaultCapabilities =>
         new()
         {
