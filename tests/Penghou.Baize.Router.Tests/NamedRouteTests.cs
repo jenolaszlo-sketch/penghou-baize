@@ -76,8 +76,9 @@ public sealed class NamedRouteTests
             new LlmRequest([new LlmMessage("user", "hello")]),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
+        var exception = await action.Should().ThrowAsync<LlmRoutingException>()
             .WithMessage("*route 'low-cost'*");
+        exception.Which.FailureKind.Should().Be(LlmRoutingFailureKind.RouteNotFound);
     }
 
     private static LlmModelLookup Lookup(

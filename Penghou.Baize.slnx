@@ -11,6 +11,9 @@
     <Project Path="src/Penghou.Baize.Extensions.AI/Penghou.Baize.Extensions.AI.csproj" />
     <Project Path="src/Penghou.Baize.Diagnostics/Penghou.Baize.Diagnostics.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Penghou.Baize.QuickStart/Penghou.Baize.QuickStart.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Client.Claude.Tests/Penghou.Baize.Client.Claude.Tests.csproj" />

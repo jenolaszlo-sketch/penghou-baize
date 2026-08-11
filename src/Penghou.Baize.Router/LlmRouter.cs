@@ -42,6 +42,7 @@ public class LlmRouter(
     private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _namedRouteLookup =
         new Dictionary<string, IReadOnlyList<string>>(
             StringComparer.Ordinal);
+    private ILlmRouteProvider? _routeProvider;
 
     /// <summary>
     /// Initializes a router with application-defined named fallback chains in
@@ -65,6 +66,32 @@ public class LlmRouter(
     {
         _namedRouteLookup = namedRouteLookup ??
             throw new ArgumentNullException(nameof(namedRouteLookup));
+        _routeProvider = new ConfiguredLlmRouteProvider(
+            modelLookup,
+            strategyLookup,
+            _namedRouteLookup,
+            _memory,
+            _selectionPolicy);
+    }
+
+    /// <summary>
+    /// Initializes a router with a completely replaceable route provider.
+    /// </summary>
+    public LlmRouter(
+        ILlmModelLookup modelLookup,
+        ILlmRouteProvider routeProvider,
+        ILlmRouterMemory? memory = null,
+        int maxPendingRequests = 0,
+        TimeSpan? requestTimeout = null)
+        : this(
+            modelLookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>(),
+            memory,
+            maxPendingRequests,
+            requestTimeout)
+    {
+        _routeProvider = routeProvider ??
+            throw new ArgumentNullException(nameof(routeProvider));
     }
 
     /// <summary>
@@ -241,68 +268,56 @@ public class LlmRouter(
         CancellationToken cancellationToken = default) =>
         (await ResolveNamedRouteOrderedAsync(route, null, cancellationToken)).First();
 
+    /// <inheritdoc />
+    public async Task<LlmRouteExplanation> ExplainModelAsync(
+        string model,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.Model(model), request),
+            cancellationToken)).Explanation;
+
+    /// <inheritdoc />
+    public async Task<LlmRouteExplanation> ExplainStrategyAsync(
+        ModelStrategy strategy,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.ForStrategy(strategy), request),
+            cancellationToken)).Explanation;
+
+    /// <inheritdoc />
+    public async Task<LlmRouteExplanation> ExplainRouteAsync(
+        string route,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.Named(route), request),
+            cancellationToken)).Explanation;
+
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         string model,
         LlmRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var candidates = ExpandCandidates([model]);
-
-        if (candidates.Count == 0)
-            throw new KeyNotFoundException($"No client registered for model '{model}'.");
-
-        return await OrderCandidatesAsync(
-            FilterCompatible(candidates, request),
-            request,
-            ModelStrategy.Auto,
-            cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.Model(model), request),
+            cancellationToken)).Endpoints;
 
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         ModelStrategy strategy,
         LlmRequest? request,
-        CancellationToken cancellationToken)
-    {
-        if (!strategyLookup.TryGetValue(strategy, out var chain) || chain.Count == 0)
-            throw new InvalidOperationException($"No models configured for strategy '{strategy}'.");
-
-        var candidates = ExpandCandidates(chain);
-
-        if (candidates.Count == 0)
-            throw new InvalidOperationException(
-                $"No model configured for strategy '{strategy}' is registered. " +
-                $"Tried: {string.Join(", ", chain)}.");
-
-        return await OrderCandidatesAsync(
-            FilterCompatible(candidates, request),
-            request,
-            strategy,
-            cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.ForStrategy(strategy), request),
+            cancellationToken)).Endpoints;
 
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveNamedRouteOrderedAsync(
         string route,
         LlmRequest? request,
-        CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(route);
-        if (!_namedRouteLookup.TryGetValue(route, out var chain) || chain.Count == 0)
-            throw new InvalidOperationException($"No models configured for route '{route}'.");
-
-        var candidates = ExpandCandidates(chain);
-        if (candidates.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"No model configured for route '{route}' is registered. " +
-                $"Tried: {string.Join(", ", chain)}.");
-        }
-
-        return await OrderCandidatesAsync(
-            FilterCompatible(candidates, request),
-            request,
-            ModelStrategy.Auto,
-            cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        (await RouteProvider.ResolveAsync(
+            new LlmRoutingContext(LlmRouteTarget.Named(route), request),
+            cancellationToken)).Endpoints;
 
     private async IAsyncEnumerable<LlmStreamEvent> StreamThroughAsync(
         IReadOnlyList<ResolvedEndpoint> candidates,
@@ -508,59 +523,13 @@ public class LlmRouter(
         throw lastFailure ?? new LlmClientException("Every endpoint failed before producing output.");
     }
 
-    private List<ResolvedEndpoint> ExpandCandidates(IReadOnlyList<string> models)
-    {
-        var candidates = new List<ResolvedEndpoint>();
-
-        foreach (var model in models)
-            candidates.AddRange(modelLookup.GetEndpoints(model));
-
-        return candidates;
-    }
-
-    private IReadOnlyList<ResolvedEndpoint> FilterCompatible(
-        IReadOnlyList<ResolvedEndpoint> candidates,
-        LlmRequest? request)
-    {
-        if (request is null)
-            return candidates;
-
-        var requirements = LlmRequestRequirements.From(request);
-        var compatible = new List<ResolvedEndpoint>();
-        var failures = new List<string>();
-
-        foreach (var endpoint in candidates)
-        {
-            var capabilities = modelLookup
-                .GetClientByEndpointId(endpoint.EndpointId)
-                .Capabilities;
-            if (requirements.IsSatisfiedBy(capabilities, out var reason))
-                compatible.Add(endpoint);
-            else
-                failures.Add($"{endpoint.EndpointId}: {reason}");
-        }
-
-        if (compatible.Count == 0)
-        {
-            throw new LlmRequestValidationException(
-                "No configured endpoint satisfies the request capabilities. " +
-                string.Join("; ", failures));
-        }
-
-        return compatible;
-    }
-
-    private async Task<IReadOnlyList<ResolvedEndpoint>> OrderCandidatesAsync(
-        IReadOnlyList<ResolvedEndpoint> candidates,
-        LlmRequest? request,
-        ModelStrategy strategy,
-        CancellationToken cancellationToken)
-        => await _selectionPolicy.OrderAsync(
-            candidates,
-            request,
-            strategy,
+    private ILlmRouteProvider RouteProvider =>
+        _routeProvider ??= new ConfiguredLlmRouteProvider(
+            modelLookup,
+            strategyLookup,
+            _namedRouteLookup,
             _memory,
-            cancellationToken);
+            _selectionPolicy);
 
     private static LlmStreamEvent DiagnosticsEvent(IReadOnlyList<LlmRouterAttempt> attempts) =>
         new(RouterDiagnostics: new LlmRouterDiagnostics(attempts));

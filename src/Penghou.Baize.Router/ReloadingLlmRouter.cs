@@ -163,6 +163,27 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         CancellationToken cancellationToken = default) =>
         _inner.ResolveRouteAsync(route, cancellationToken);
 
+    /// <inheritdoc />
+    public Task<LlmRouteExplanation> ExplainModelAsync(
+        string model,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _inner.ExplainModelAsync(model, request, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<LlmRouteExplanation> ExplainStrategyAsync(
+        ModelStrategy strategy,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _inner.ExplainStrategyAsync(strategy, request, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<LlmRouteExplanation> ExplainRouteAsync(
+        string route,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _inner.ExplainRouteAsync(route, request, cancellationToken);
+
     /// <summary>Releases the options subscription.</summary>
     public void Dispose()
     {

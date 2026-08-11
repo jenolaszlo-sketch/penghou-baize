@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Penghou.Baize;
 using Penghou.Baize.Router.Configuration;
@@ -11,6 +12,39 @@ namespace Penghou.Baize.Router.Extensions;
 /// <summary>Dependency-injection helpers for configuring model routing.</summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>Registers routing services from a fluent configuration.</summary>
+    public static IServiceCollection AddLlmRouting(
+        this IServiceCollection services,
+        Action<LlmRoutingBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var builder = new LlmRoutingBuilder();
+        configure(builder);
+        var options = builder.Build();
+        ValidateConfiguration(options);
+        RegisterRoutingServices(
+            services,
+            options,
+            _ => new StaticOptionsMonitor<LlmRoutingOptions>(options));
+
+        if (builder.ValidateEndpointsAtStartup)
+            services.AddLlmEndpointValidationOnStart();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Validates provider construction and secret resolution when the host
+    /// starts. This can also be used with configuration-file registration.
+    /// </summary>
+    public static IServiceCollection AddLlmEndpointValidationOnStart(
+        this IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
+            LlmEndpointValidationHostedService>());
+        return services;
+    }
+
     /// <summary>
     /// Registers routing services from the <c>LlmRouting</c> configuration
     /// section: the model lookup, the strategy lookup, an
@@ -42,8 +76,20 @@ public static class ServiceCollectionExtensions
 
         ValidateConfiguration(options);
 
-        ProviderModuleLoader.Register(services, options.ProviderModules);
+        RegisterRoutingServices(
+            services,
+            options,
+            sp => ResolveOptionsMonitor(sp, section));
 
+        return services;
+    }
+
+    private static void RegisterRoutingServices(
+        IServiceCollection services,
+        LlmRoutingOptions options,
+        Func<IServiceProvider, IOptionsMonitor<LlmRoutingOptions>> monitorFactory)
+    {
+        ProviderModuleLoader.Register(services, options.ProviderModules);
         services.TryAddSingleton<ISecretProvider, EnvironmentSecretProvider>();
         services.TryAddSingleton<ILlmRouterMemory, InMemoryLlmRouterMemory>();
         services.TryAddSingleton<ILlmEndpointSelectionPolicy,
@@ -51,7 +97,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
         services.AddSingleton(sp => new ReloadingLlmRoutingState(
-            ResolveOptionsMonitor(sp, section),
+            monitorFactory(sp),
             sp,
             sp.GetRequiredService<ILlmRouterMemory>(),
             sp.GetRequiredService<ILlmEndpointSelectionPolicy>(),
@@ -63,7 +109,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILlmEndpointValidator>(sp =>
             sp.GetRequiredService<ReloadingLlmRoutingState>());
 
-        return services;
     }
 
     /// <summary>Builds the model lookup for a set of routing options.</summary>
@@ -519,6 +564,8 @@ public static class ServiceCollectionExtensions
     internal static void ValidateConfiguration(LlmRoutingOptions options)
     {
         if (!TryValidate(options, out var error))
-            throw new InvalidOperationException(error);
+            throw new LlmConfigurationException(
+                LlmConfigurationFailureKind.Structural,
+                error!);
     }
 }

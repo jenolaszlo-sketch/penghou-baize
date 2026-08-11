@@ -46,6 +46,14 @@ code change is required when upgrading the application's target framework.
 <PackageReference Include="Penghou.Baize.OpenAi" Version="0.2.0" />
 ```
 
+## Documentation
+
+- [Getting started and fluent routing](docs/getting-started.md)
+- [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
+- [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
+- [Create a custom route provider](docs/extensibility/custom-route-provider.md)
+- [Runnable quick-start sample](samples/Penghou.Baize.QuickStart)
+
 ## Quick start
 
 ```csharp
@@ -466,6 +474,27 @@ DI-constructible implementation, and chooses a unique `LlmProviderKey`. A
 module entry can set `Type` to its fully-qualified type name; when omitted,
 Baize registers every public concrete provider in that assembly.
 
+The shortest explicit provider registration looks like this:
+
+```csharp
+public sealed class AcmeProvider : ILlmClientProvider
+{
+    public LlmProviderKey Key => new("Acme");
+    public string DefaultBaseUrl => "https://llm.acme.test/v1";
+    public LlmEndpointCapabilities DefaultCapabilities { get; } = new();
+    public ILlmClient CreateClient(LlmClientProviderContext context) =>
+        new AcmeClient(context);
+}
+
+services.AddSingleton<ILlmClientProvider, AcmeProvider>();
+services.AddLlmRouting(configuration);
+```
+
+Provider packages should expose a small `AddAcmeLlmProvider` extension and
+claim conservative capabilities. See the full [provider creation
+guide](docs/extensibility/custom-llm-provider.md) for discovery, trimming,
+validation, streaming, and error-handling guidance.
+
 The router resolves each endpoint's capabilities in three layers, from the
 most conservative to the most specific:
 
@@ -653,6 +682,28 @@ region, tenant, or workload-specific policy without forking the router:
 services.AddLlmRouting(configuration);
 services.AddSingleton<ILlmEndpointSelectionPolicy, MySelectionPolicy>();
 ```
+
+For policy that replaces route resolution itself, implement
+`ILlmRouteProvider`. Derive from `LlmRouteProviderBase` when the policy needs
+the replaceable router memory, then register it through DI:
+
+```csharp
+public sealed class TenantRouteProvider(ILlmRouterMemory memory)
+    : LlmRouteProviderBase(memory)
+{
+    public override ValueTask<LlmRouteResolution> ResolveAsync(
+        LlmRoutingContext context,
+        CancellationToken cancellationToken = default) =>
+        ResolveForTenantAsync(context, cancellationToken);
+}
+
+services.AddSingleton<ILlmRouteProvider, TenantRouteProvider>();
+services.AddLlmRouting(configuration);
+```
+
+The router continues to own execution, fallback safety, diagnostics, and
+memory updates. See the [custom route provider
+guide](docs/extensibility/custom-route-provider.md) for the complete contract.
 
 ## Microsoft.Extensions.AI
 

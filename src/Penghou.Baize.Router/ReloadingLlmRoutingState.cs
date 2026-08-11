@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -106,6 +107,24 @@ internal sealed class ReloadingLlmRoutingState :
         string route,
         CancellationToken cancellationToken = default) =>
         _current.Router.ResolveRouteAsync(route, cancellationToken);
+
+    public Task<LlmRouteExplanation> ExplainModelAsync(
+        string model,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.ExplainModelAsync(model, request, cancellationToken);
+
+    public Task<LlmRouteExplanation> ExplainStrategyAsync(
+        ModelStrategy strategy,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.ExplainStrategyAsync(strategy, request, cancellationToken);
+
+    public Task<LlmRouteExplanation> ExplainRouteAsync(
+        string route,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        _current.Router.ExplainRouteAsync(route, request, cancellationToken);
 
     public ILlmClient GetClient(string model) => _current.Lookup.GetClient(model);
 
@@ -234,14 +253,22 @@ internal sealed class ReloadingLlmRoutingState :
             pair => pair.Key,
             pair => (IReadOnlyList<string>)pair.Value.AsReadOnly(),
             StringComparer.Ordinal);
-        var router = new LlmRouter(
-            built.Lookup,
-            strategies,
-            namedRoutes,
-            _memory,
-            options.MaxPendingRequests,
-            options.RequestTimeout,
-            _selectionPolicy);
+        var customRouteProvider = _services.GetService<ILlmRouteProvider>();
+        var router = customRouteProvider is null
+            ? new LlmRouter(
+                built.Lookup,
+                strategies,
+                namedRoutes,
+                _memory,
+                options.MaxPendingRequests,
+                options.RequestTimeout,
+                _selectionPolicy)
+            : new LlmRouter(
+                built.Lookup,
+                customRouteProvider,
+                _memory,
+                options.MaxPendingRequests,
+                options.RequestTimeout);
         return new RoutingRuntimeSnapshot(
             built.Lookup,
             router,

@@ -98,4 +98,28 @@ public interface ILlmRouter
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException(
             $"Router '{GetType().FullName}' does not support named routes.");
+
+    /// <summary>Explains direct-model selection without sending a request.</summary>
+    Task<LlmRouteExplanation> ExplainModelAsync(
+        string model,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not expose route explanations.");
+
+    /// <summary>Explains typed-strategy selection without sending a request.</summary>
+    Task<LlmRouteExplanation> ExplainStrategyAsync(
+        ModelStrategy strategy,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not expose route explanations.");
+
+    /// <summary>Explains named-route selection without sending a request.</summary>
+    Task<LlmRouteExplanation> ExplainRouteAsync(
+        string route,
+        LlmRequest? request = null,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"Router '{GetType().FullName}' does not expose route explanations.");
 }
