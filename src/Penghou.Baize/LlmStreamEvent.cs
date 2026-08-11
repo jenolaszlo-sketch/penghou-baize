@@ -31,4 +31,13 @@ public sealed record LlmStreamEvent(
     /// part.
     /// </summary>
     public int? PartIndex { get; init; }
+
+    /// <summary>Whether a response decorator repaired structured content.</summary>
+    public bool ContentWasRepaired { get; init; }
+
+    /// <summary>The structured-content repair attempts, when any.</summary>
+    public IReadOnlyList<LlmRepairAttempt>? ContentRepairAttempts { get; init; }
+
+    /// <summary>Detailed structured-content repair diagnostics.</summary>
+    public LlmJsonRepairDiagnostics? ContentRepairDiagnostics { get; init; }
 }

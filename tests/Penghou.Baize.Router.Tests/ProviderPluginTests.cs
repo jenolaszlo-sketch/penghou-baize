@@ -8,6 +8,9 @@ using Penghou.Baize.Claude;
 using Penghou.Baize.Gemini;
 using Penghou.Baize.Ollama;
 using Penghou.Baize.OpenAi;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace Penghou.Baize.Router.Tests;
 
@@ -122,6 +125,55 @@ public sealed class ProviderPluginTests
 
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("*missing*custom-test*ProviderModules*");
+    }
+
+    [Fact]
+    public void ProviderModuleLoading_EmitsContentFreeTelemetry()
+    {
+        var activities = new ConcurrentQueue<Activity>();
+        var loadMetricObserved = 0;
+        using var activityListener = new ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == BaizeTelemetry.InstrumentationName,
+            Sample = static (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllData,
+            ActivityStopped = activities.Enqueue
+        };
+        ActivitySource.AddActivityListener(activityListener);
+        using var meterListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == BaizeTelemetry.InstrumentationName &&
+                    instrument.Name == "baize.provider.module.loads")
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        meterListener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+        {
+            if (tags.ToArray().Any(tag =>
+                    tag.Key == "baize.provider.module.assembly" &&
+                    Equals(tag.Value, "Penghou.Baize.TestProvider")))
+            {
+                Interlocked.Exchange(ref loadMetricObserved, 1);
+            }
+        });
+        meterListener.Start();
+        var services = new ServiceCollection();
+
+        services.AddLlmRouting(Configuration(
+            "Penghou.Baize.TestProvider",
+            typeof(TestLlmClientProvider).FullName));
+
+        activities.Should().Contain(activity =>
+            activity.OperationName == "llm.provider.module.load" &&
+            Equals(
+                activity.GetTagItem("baize.provider.module.assembly"),
+                "Penghou.Baize.TestProvider"));
+        Volatile.Read(ref loadMetricObserved).Should().Be(1);
     }
 
     private static IConfiguration Configuration(string assembly, string? type)

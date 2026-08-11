@@ -7,3 +7,4 @@ TestResults/
 .idea/
 *.nupkg
 *.snupkg
+logs/

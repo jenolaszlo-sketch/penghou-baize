@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Penghou.Baize.Router.Configuration;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Diagnostics;
 
 namespace Penghou.Baize.Router.Extensions;
 
@@ -14,20 +15,58 @@ internal static class ProviderModuleLoader
     {
         foreach (var module in modules)
         {
-            var assembly = LoadAssembly(module);
-            var providerTypes = ResolveProviderTypes(assembly, module).ToList();
-
-            if (providerTypes.Count == 0)
+            var started = Stopwatch.GetTimestamp();
+            using var activity = BaizeTelemetry.Activities.StartActivity(
+                "llm.provider.module.load",
+                ActivityKind.Internal);
+            activity?.SetTag("gen_ai.operation.name", "provider_module_load");
+            activity?.SetTag("baize.provider.module.assembly", module.Assembly);
+            activity?.SetTag("baize.provider.module.type", module.Type);
+            var tags = new TagList
             {
-                throw new InvalidOperationException(
-                    $"Provider assembly '{module.Assembly}' contains no public, " +
-                    $"concrete {nameof(ILlmClientProvider)} implementation.");
+                { "gen_ai.operation.name", "provider_module_load" },
+                { "baize.provider.module.assembly", module.Assembly }
+            };
+
+            try
+            {
+                var assembly = LoadAssembly(module);
+                var providerTypes = ResolveProviderTypes(assembly, module).ToList();
+
+                if (providerTypes.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Provider assembly '{module.Assembly}' contains no public, " +
+                        $"concrete {nameof(ILlmClientProvider)} implementation.");
+                }
+
+                foreach (var providerType in providerTypes)
+                {
+                    services.TryAddEnumerable(
+                        ServiceDescriptor.Singleton(
+                            typeof(ILlmClientProvider),
+                            providerType));
+                }
+
+                activity?.SetTag(
+                    "baize.provider.module.provider_count",
+                    providerTypes.Count);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+                RouterTelemetry.ProviderModuleLoads.Add(1, tags);
             }
-
-            foreach (var providerType in providerTypes)
+            catch (Exception exception)
             {
-                services.TryAddEnumerable(
-                    ServiceDescriptor.Singleton(typeof(ILlmClientProvider), providerType));
+                activity?.SetStatus(ActivityStatusCode.Error);
+                activity?.SetTag("error.type", exception.GetType().FullName);
+                tags.Add("error.type", exception.GetType().Name);
+                RouterTelemetry.ProviderModuleLoadFailures.Add(1, tags);
+                throw;
+            }
+            finally
+            {
+                RouterTelemetry.ProviderModuleLoadDuration.Record(
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    tags);
             }
         }
     }

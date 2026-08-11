@@ -1,4 +1,5 @@
 using Penghou.Nuwa;
+using System.Diagnostics;
 
 namespace Penghou.Baize.Tools;
 
@@ -31,35 +32,61 @@ public sealed class LlmStructuredOutputRepairer(
         if (expectation is null)
             return response;
 
-        using var repairResult =
-            await jsonRepairPipeline.RepairAsync(
-                response.Content,
-                expectation,
-                cancellationToken);
-        var attempts = PrefixAttempts(
-            RepairAttemptMapper.Combine(repairResult),
-            "content");
-        var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
+        var started = Stopwatch.GetTimestamp();
+        using var activity = BaizeTelemetry.Activities.StartActivity(
+            "llm.structured_output.repair",
+            ActivityKind.Internal);
+        activity?.SetTag("gen_ai.operation.name", "structured_output_repair");
+        ToolsTelemetry.RepairAttempts.Add(1);
 
-        if (repairResult.Document is null ||
-            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
+        try
         {
+            using var repairResult =
+                await jsonRepairPipeline.RepairAsync(
+                    response.Content,
+                    expectation,
+                    cancellationToken);
+            var attempts = PrefixAttempts(
+                RepairAttemptMapper.Combine(repairResult),
+                "content");
+            var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
+
+            activity?.SetTag("baize.repair.succeeded", repairResult.Document is not null);
+            activity?.SetTag("baize.repair.changed", repairResult.WasRepaired);
+
+            if (repairResult.Document is null ||
+                repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
+            {
+                activity?.SetStatus(ActivityStatusCode.Ok);
+                return response with
+                {
+                    ContentRepairAttempts = attempts,
+                    ContentRepairDiagnostics = diagnostics
+                };
+            }
+
+            if (repairResult.WasRepaired)
+                ToolsTelemetry.Repairs.Add(1);
+            activity?.SetStatus(ActivityStatusCode.Ok);
             return response with
             {
+                Content = repairResult.Document.RootElement.GetRawText(),
+                ContentWasRepaired = repairResult.WasRepaired,
                 ContentRepairAttempts = attempts,
                 ContentRepairDiagnostics = diagnostics
             };
         }
-
-        return response with
+        catch (Exception exception)
         {
-            Content =
-                repairResult.Document.RootElement.GetRawText(),
-            ContentWasRepaired =
-                repairResult.WasRepaired,
-            ContentRepairAttempts = attempts,
-            ContentRepairDiagnostics = diagnostics
-        };
+            activity?.SetStatus(ActivityStatusCode.Error);
+            activity?.SetTag("error.type", exception.GetType().FullName);
+            throw;
+        }
+        finally
+        {
+            ToolsTelemetry.RepairDuration.Record(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
     }
 
     private static IReadOnlyList<LlmRepairAttempt>

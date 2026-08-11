@@ -217,7 +217,7 @@ public sealed class LlmRouterTests
             new Dictionary<ModelStrategy, IReadOnlyList<string>>(),
             memory);
 
-        router.Resolve("multi")
+        (await router.ResolveAsync("multi", TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("multi:Claude", "multi", ApiStyle.Claude));
 
         var response = await router.CompleteStreamingAsync(
@@ -275,7 +275,7 @@ public sealed class LlmRouterTests
             LlmFailureCategory.Availability,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        router.Resolve("model-a")
+        (await router.ResolveAsync("model-a", TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("backup-gateway", "model-a", ApiStyle.OpenAi));
 
         var response = await router.CompleteStreamingAsync(
@@ -490,7 +490,7 @@ public sealed class LlmRouterTests
             },
             memory);
 
-        router.Resolve(ModelStrategy.Auto)
+        (await router.ResolveAsync(ModelStrategy.Auto, TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("model-a:Ollama", "model-a", ApiStyle.Ollama));
     }
 
@@ -524,7 +524,7 @@ public sealed class LlmRouterTests
             },
             memory);
 
-        router.Resolve(ModelStrategy.Auto)
+        (await router.ResolveAsync(ModelStrategy.Auto, TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("model-a:Ollama", "model-a", ApiStyle.Ollama));
 
         var response = await router.CompleteStreamingAsync(
@@ -544,7 +544,7 @@ public sealed class LlmRouterTests
         stats.UnavailableUntil.Should().NotBeNull();
         stats.UnavailableUntil!.Value.Should().BeAfter(DateTimeOffset.UtcNow);
 
-        router.Resolve(ModelStrategy.Auto)
+        (await router.ResolveAsync(ModelStrategy.Auto, TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("model-b:Ollama", "model-b", ApiStyle.Ollama));
 
         response.RouterDiagnostics.Should().NotBeNull();
@@ -808,7 +808,7 @@ public sealed class LlmRouterTests
         stats.UnavailableUntil.Should().NotBeNull();
         stats.UnavailableUntil!.Value.Should().BeAfter(DateTimeOffset.UtcNow);
 
-        router.Resolve(ModelStrategy.Auto)
+        (await router.ResolveAsync(ModelStrategy.Auto, TestContext.Current.CancellationToken))
             .Should().Be(new ResolvedEndpoint("model-b:Ollama", "model-b", ApiStyle.Ollama));
 
         response.RouterDiagnostics.Should().NotBeNull();

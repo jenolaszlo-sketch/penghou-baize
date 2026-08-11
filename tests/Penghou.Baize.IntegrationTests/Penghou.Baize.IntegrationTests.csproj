@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="1.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0-pre.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="FluentAssertions" Version="7.2.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Penghou.Baize\Penghou.Baize.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Router\Penghou.Baize.Router.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Diagnostics\Penghou.Baize.Diagnostics.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Tools\Penghou.Baize.Tools.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.OpenAi\Penghou.Baize.OpenAi.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Claude\Penghou.Baize.Claude.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Gemini\Penghou.Baize.Gemini.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Ollama\Penghou.Baize.Ollama.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

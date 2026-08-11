@@ -132,6 +132,7 @@ public class LlmRouter(
     /// <param name="model">The model's registration name.</param>
     /// <returns>The resolved endpoint.</returns>
     /// <exception cref="KeyNotFoundException">Thrown when the model has no registered endpoints.</exception>
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
     public ResolvedEndpoint Resolve(string model)
         => ResolveOrderedAsync(model, null, CancellationToken.None).GetAwaiter().GetResult().First();
 
@@ -151,6 +152,7 @@ public class LlmRouter(
     /// Thrown when the strategy has no configured chain or none of its models
     /// are registered.
     /// </exception>
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
     public ResolvedEndpoint Resolve(ModelStrategy strategy)
         => ResolveOrderedAsync(strategy, null, CancellationToken.None).GetAwaiter().GetResult().First();
 
@@ -223,6 +225,15 @@ public class LlmRouter(
             attemptActivity?.SetTag("gen_ai.request.model", endpoint.Model);
             attemptActivity?.SetTag("baize.endpoint.id", endpoint.EndpointId);
             attemptActivity?.SetTag("gen_ai.provider.name", endpoint.Provider.ToString());
+            attemptActivity?.SetTag("gen_ai.operation.name", "chat");
+            var telemetryTags = new TagList
+            {
+                { "gen_ai.operation.name", "chat" },
+                { "gen_ai.provider.name", endpoint.Provider.ToString() },
+                { "gen_ai.request.model", endpoint.Model },
+                { "baize.endpoint.id", endpoint.EndpointId }
+            };
+            RouterTelemetry.Attempts.Add(1, telemetryTags);
 
             await _memory.RecordCallAsync(endpoint.EndpointId, cancellationToken);
 
@@ -265,7 +276,7 @@ public class LlmRouter(
 
                 if (incompatible is not null)
                 {
-                    attemptActivity?.SetStatus(ActivityStatusCode.Error, incompatible.Message);
+                    attemptActivity?.SetStatus(ActivityStatusCode.Error);
                     attemptActivity?.SetTag("error.type", incompatible.GetType().FullName);
                     // The request cannot be expressed on this endpoint's
                     // declared capabilities. Validation precedes any event, so
@@ -280,13 +291,17 @@ public class LlmRouter(
                         Error: incompatible.Message));
 
                     lastFailure = incompatible;
+                    RouterTelemetry.Failures.Add(1, telemetryTags);
+                    RouterTelemetry.AttemptDuration.Record(
+                        Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                        telemetryTags);
                     shouldFallBack = true;
                     break;
                 }
 
                 if (failure is not null)
                 {
-                    attemptActivity?.SetStatus(ActivityStatusCode.Error, failure.Message);
+                    attemptActivity?.SetStatus(ActivityStatusCode.Error);
                     attemptActivity?.SetTag("error.type", failure.GetType().FullName);
                     await _memory.RecordFailureAsync(
                         endpoint.EndpointId,
@@ -304,6 +319,10 @@ public class LlmRouter(
                         UnavailableUntil: unavailableUntil));
 
                     lastFailure = failure;
+                    RouterTelemetry.Failures.Add(1, telemetryTags);
+                    RouterTelemetry.AttemptDuration.Record(
+                        Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                        telemetryTags);
 
                     // Never reissue after meaningful output has been streamed,
                     // and stop once the shared deadline has passed. Reasoning
@@ -352,7 +371,10 @@ public class LlmRouter(
             }
 
             if (shouldFallBack)
+            {
+                RouterTelemetry.Fallbacks.Add(1, telemetryTags);
                 continue;
+            }
 
             // The stream ended without a content or tool-call event (for
             // example a reasoning-only response followed by its usage and
@@ -371,6 +393,9 @@ public class LlmRouter(
                 Outcome: LlmRouterAttemptOutcome.Succeeded,
                 Duration: Stopwatch.GetElapsedTime(started)));
             attemptActivity?.SetStatus(ActivityStatusCode.Ok);
+            RouterTelemetry.AttemptDuration.Record(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                telemetryTags);
 
             yield return DiagnosticsEvent(attempts);
             yield break;

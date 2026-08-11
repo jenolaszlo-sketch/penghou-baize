@@ -51,6 +51,7 @@ public interface ILlmRouter
     /// </summary>
     /// <param name="model">The model's registration name.</param>
     /// <returns>The resolved endpoint.</returns>
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
     ResolvedEndpoint Resolve(string model);
 
     /// <summary>Asynchronously resolves the endpoint currently preferred for a model.</summary>
@@ -64,6 +65,7 @@ public interface ILlmRouter
     /// </summary>
     /// <param name="strategy">The capability the request is targeting.</param>
     /// <returns>The resolved endpoint.</returns>
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
     ResolvedEndpoint Resolve(ModelStrategy strategy);
 
     /// <summary>Asynchronously resolves the endpoint currently preferred for a strategy.</summary>

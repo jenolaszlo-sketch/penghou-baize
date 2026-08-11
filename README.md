@@ -24,11 +24,19 @@ small domain surface — no provider SDK types leak into your application.
 | `Penghou.Baize.Batch` | Provider-neutral native batch planning and aggregate coordination |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
 | `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` adapter |
+| `Penghou.Baize.Diagnostics` | Opt-in bounded HTTP request/response capture for troubleshooting |
 
 The core, provider clients, router, batch coordinator, Extensions.AI adapter,
 and repair tools support .NET 8. Provider-neutral tools additionally target
 .NET 9 and .NET 10 so applications can stay on their host framework without
 giving up schema-aware recovery.
+
+On .NET 8, `Penghou.Baize.Tools` uses a reflection-based JSON Schema exporter
+covering ordinary objects, collections, dictionaries, required members, and
+descriptions. Applications targeting .NET 9 or later automatically use the
+richer built-in `System.Text.Json.Schema` exporter, which provides better
+support for advanced serialization and schema scenarios. No configuration or
+code change is required when upgrading the application's target framework.
 
 ## Install
 
@@ -184,6 +192,21 @@ tolerant-recovery, and winning-strategy diagnostics are available through
 document that still mismatches the supplied schema is reported but is not
 applied to the response.
 
+For router-created clients, repair can instead be enabled as an opt-in
+decorator:
+
+```csharp
+services.AddLlmRouting(configuration);
+services.AddLlmStructuredOutputRepair();
+```
+
+Schema-constrained responses are buffered until their complete JSON document
+can be validated and repaired. The resulting stream and collected
+`LlmResponse` carry `ContentWasRepaired`, `ContentRepairAttempts`, and detailed
+diagnostics. Ordinary chat, schema-less JSON, and tool-only requests keep their
+normal streaming behavior. Provider clients remain strict when this decorator
+is not registered.
+
 ## Native batch inference
 
 `Penghou.Baize.Batch` groups requests by configured endpoint and exposes the
@@ -214,7 +237,14 @@ var status = await batches.WaitForCompletionAsync(
     new BatchWaitOptions
     {
         PollInterval = TimeSpan.FromSeconds(10),
-        Timeout = TimeSpan.FromHours(24)
+        MaxPollInterval = TimeSpan.FromMinutes(1),
+        BackoffFactor = 1.5,
+        JitterRatio = 0.1,
+        MaxTransientFailures = 3,
+        Timeout = TimeSpan.FromHours(24),
+        Progress = new Progress<BatchPollingUpdate>(update =>
+            Console.WriteLine($"Poll {update.PollNumber}: " +
+                $"{update.Status?.State} {update.Error}"))
     });
 var results = await batches.GetResultsAsync(handle);
 ```
@@ -224,7 +254,11 @@ colons; select a provider explicitly with `BaizeBatchRequest.CreateForProvider`
 or the record's separate `Provider` property. Provider handles are validated so
 they cannot accidentally be used with another provider adapter. Baize does not
 currently provide durable workflow orchestration; applications should persist
-the returned `ProviderBatchHandle` if polling must survive a process restart.
+the returned `BaizeBatchHandle` if polling must survive a process restart, then
+pass that deserialized handle back to `WaitForCompletionAsync`,
+`GetResultsAsync`, or `CancelAsync`. Status and result calls for physical parts
+run concurrently. Polling honors provider retry guidance, applies bounded
+backoff and jitter, and retries only transient availability/rate-limit errors.
 
 ## Routing
 
@@ -330,12 +364,46 @@ services.AddSingleton<ISecretProvider, ConfigurationSecretProvider>();
 services.AddLlmRouting(configuration);
 ```
 
+The same options can be bound from the default `Baize:Diagnostics` section:
+
+```csharp
+services.AddBaizeHttpDiagnostics(configuration);
+```
+
+```json
+{
+  "Baize": {
+    "Diagnostics": {
+      "Enabled": false,
+      "DirectoryPath": "logs/baize/http",
+      "MaxBodyBytes": 524288,
+      "MaxRetainedSessions": 100
+    }
+  }
+}
+```
+
 Register the custom provider before `AddLlmRouting`; Baize uses
 `TryAddSingleton` so it will not replace an application-provided
 implementation. A remote secret provider should return `null` when a name is
 unknown and honor the supplied cancellation token. Baize fails endpoint
 construction with a message naming the unresolved secret, without logging its
 value.
+
+Credential and provider construction are deferred so configuration reloads do
+not block DI threads. Applications that prefer startup validation can warm all
+endpoints without sending an inference request:
+
+```csharp
+var router = provider.GetRequiredService<ILlmRouter>();
+var validation = await router.ValidateEndpointsAsync();
+
+foreach (var endpoint in validation.Endpoints.Where(result => !result.Succeeded))
+    Console.Error.WriteLine($"{endpoint.EndpointId}: {endpoint.Error}");
+```
+
+This resolves secrets and constructs chat and advertised native-batch clients.
+It does not transmit prompts or test model inference.
 
 Assembly discovery accepts assembly identities, never file paths. The package
 must be referenced by the application so it is present in the output and its
@@ -452,7 +520,7 @@ endpoint instead of blindly taking the first registered one:
 
 ```csharp
 var memory = provider.GetRequiredService<ILlmRouterMemory>();
-var endpoint = router.Resolve(ModelStrategy.StructuredOutput);
+var endpoint = await router.ResolveAsync(ModelStrategy.StructuredOutput);
 
 await memory.RecordCallAsync(endpoint.EndpointId);
 await memory.RecordFailureAsync(
@@ -460,9 +528,12 @@ await memory.RecordFailureAsync(
     LlmFailureCategory.StructuredOutputMismatch);
 ```
 
-`Resolve` returns the `ResolvedEndpoint` the router would currently pick - its
+`ResolveAsync` returns the `ResolvedEndpoint` the router would currently pick - its
 stable `EndpointId`, the logical model name, and provider key - so applications
 know where a stream is going and can attribute quality events correctly.
+The synchronous `Resolve` overloads remain for source compatibility but are
+obsolete because custom router-memory implementations may perform asynchronous
+I/O.
 Routing memory and cooldowns are keyed by endpoint id, so two endpoints of the
 same logical model keep separate stats (give them distinct `Id` values in
 configuration; an explicit id also keeps stats stable across renames or
@@ -561,6 +632,10 @@ are mapped in both directions.
 
 Clients and routed attempts emit `Activity` spans and request, failure,
 latency, and token metrics from the `Penghou.Baize` instrumentation source.
+Endpoint validation, deterministic JSON repair, batch submission/waiting,
+adaptive polling, and transient batch failures use the same source. Tags are
+limited to operation, provider, model, endpoint, outcome, and error type;
+Baize does not attach prompts, responses, schemas, or credentials.
 Register that source with OpenTelemetry in the host application:
 
 ```csharp
@@ -568,6 +643,88 @@ services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddSource(BaizeTelemetry.InstrumentationName))
     .WithMetrics(metrics => metrics.AddMeter(BaizeTelemetry.InstrumentationName));
 ```
+
+Configuration reloads build a complete immutable routing runtime before one
+atomic swap. The router, model lookup, endpoint validator, strategy chains, and
+request limits therefore move to the same configuration version together;
+in-flight requests continue on the snapshot with which they started.
+
+### Troubleshooting captures
+
+`Penghou.Baize.Diagnostics` provides the raw transport evidence needed when a
+provider changes its streaming format, returns malformed JSON, or produces an
+unexpected tool call. Installing the package does not enable capture. Register
+it explicitly and set `Enabled`:
+
+```csharp
+using Penghou.Baize.Diagnostics;
+
+services.AddLogging();
+services.AddBaizeHttpDiagnostics(options =>
+{
+    options.Enabled = true;
+    options.DirectoryPath = "logs/baize/http";
+    options.MaxBodyBytes = 512 * 1024;
+    options.MaxRetainedSessions = 100;
+    options.CaptureRequestBody = true;
+    options.CaptureResponseBody = true;
+});
+services.AddLlmRouting(configuration);
+```
+
+Each call creates correlated `.request.log`, `.response.log`, and bounded
+`.response.raw` files. Responses are copied incrementally while the provider
+client consumes the stream, so diagnostics do not require buffering the model
+response. Authorization, cookie, API-key headers, and common credential query
+parameters are always redacted. Request and response bodies can nevertheless
+contain prompts, generated content, personal data, tool arguments, or inline
+media. Keep the directory private and enable capture only while troubleshooting.
+
+Capture failures are warning logs and do not break inference by default. Set
+`ContinueOnCaptureError` to `false` when a diagnostic artifact is mandatory.
+`FlushEachResponseChunk` improves crash investigations at a throughput cost.
+Relative directories are resolved from `AppContext.BaseDirectory`.
+
+The package emits structured debug/warning logs and the following instruments
+through `BaizeTelemetry.InstrumentationName` without putting body content in
+logs, spans, or metric tags:
+
+- `llm.http.capture` activities;
+- `baize.diagnostics.sessions` and `baize.diagnostics.failures` counters;
+- captured-byte and truncated-body counters;
+- capture-duration histograms.
+
+The router also logs deferred provider construction, endpoint validation, and
+configuration reload outcomes. Invalid reloads retain the last good atomic
+routing snapshot and increment `baize.router.configuration.reload_failures`.
+Configured provider-module discovery emits `llm.provider.module.load` spans
+and load/failure/duration metrics, which makes missing or incompatible plugin
+assemblies visible during integration-test startup.
+
+### Live provider tests
+
+`Penghou.Baize.IntegrationTests.slnx` is deliberately separate from the main
+solution and CI workflow. It sends real requests and uses the same public
+logging, telemetry, routing, secret-provider, and HTTP diagnostics setup that
+applications use. Configure one provider/model explicitly:
+
+```powershell
+$env:BAIZE_RUN_LIVE_TESTS = "1"
+$env:BAIZE_LIVE_PROVIDER = "Gemini"
+$env:BAIZE_LIVE_MODEL = "your-gemini-model"
+$env:GEMINI_API_KEY = "your-key"
+
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release
+```
+
+Supported provider values are `OpenAi`, `Claude`, `Gemini`, and `Ollama`.
+Use `BAIZE_LIVE_BASE_URL` for compatible gateways or local servers and
+`BAIZE_LIVE_SECRET_NAME` when the credential has a different environment
+variable name. Set `BAIZE_LIVE_TEST_TOOLS=1` to additionally run the native
+tool-call contract test. The tests print Baize activities and metrics and keep
+the correlated raw transport artifacts under
+`tests/Penghou.Baize.IntegrationTests/bin/.../artifacts/live-diagnostics` by
+default. Without `BAIZE_RUN_LIVE_TESTS=1`, every live test is skipped.
 
 ## License
 

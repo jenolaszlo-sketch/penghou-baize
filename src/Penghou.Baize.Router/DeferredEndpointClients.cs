@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Penghou.Baize.Router;
 
@@ -8,8 +10,12 @@ namespace Penghou.Baize.Router;
 /// </summary>
 internal sealed class DeferredEndpointClients(
     ILlmClientProvider provider,
+    string endpointId,
+    string model,
+    ILogger? logger,
     Func<Task<LlmClientProviderContext>> contextFactory)
 {
+    private readonly ILogger _logger = logger ?? NullLogger.Instance;
     private readonly object _gate = new();
     private Task<LlmClientProviderContext>? _context;
     private Task<ILlmClient>? _chatClient;
@@ -31,13 +37,72 @@ internal sealed class DeferredEndpointClients(
             task => Reset(ref _batchClient, task),
             cancellationToken);
 
-    private async Task<ILlmClient> CreateChatClientAsync() =>
-        provider.CreateClient(await GetContextAsync());
+    private async Task<ILlmClient> CreateChatClientAsync()
+    {
+        _logger.LogDebug(
+            "Constructing Baize chat client for endpoint {EndpointId}, provider " +
+            "{Provider}, model {Model}",
+            endpointId,
+            provider.Key.Value,
+            model);
+        try
+        {
+            var client = provider.CreateClient(await GetContextAsync());
+            _logger.LogInformation(
+                "Constructed Baize chat client for endpoint {EndpointId}, provider " +
+                "{Provider}, model {Model}",
+                endpointId,
+                provider.Key.Value,
+                model);
+            return client;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                "Failed to construct Baize chat client for endpoint {EndpointId}, " +
+                "provider {Provider}, model {Model}, error type {ErrorType}",
+                endpointId,
+                provider.Key.Value,
+                model,
+                exception.GetType().FullName);
+            throw;
+        }
+    }
 
-    private async Task<IBaizeBatchClient> CreateBatchClientAsync() =>
-        provider.CreateBatchClient(await GetContextAsync()) ??
-        throw new InvalidOperationException(
-            $"Provider '{provider.Key}' declares native batch support but returned no batch client.");
+    private async Task<IBaizeBatchClient> CreateBatchClientAsync()
+    {
+        _logger.LogDebug(
+            "Constructing Baize batch client for endpoint {EndpointId}, provider " +
+            "{Provider}, model {Model}",
+            endpointId,
+            provider.Key.Value,
+            model);
+        try
+        {
+            var client = provider.CreateBatchClient(await GetContextAsync()) ??
+                throw new InvalidOperationException(
+                    $"Provider '{provider.Key}' declares native batch support but " +
+                    "returned no batch client.");
+            _logger.LogInformation(
+                "Constructed Baize batch client for endpoint {EndpointId}, provider " +
+                "{Provider}, model {Model}",
+                endpointId,
+                provider.Key.Value,
+                model);
+            return client;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                "Failed to construct Baize batch client for endpoint {EndpointId}, " +
+                "provider {Provider}, model {Model}, error type {ErrorType}",
+                endpointId,
+                provider.Key.Value,
+                model,
+                exception.GetType().FullName);
+            throw;
+        }
+    }
 
     private Task<LlmClientProviderContext> GetContextAsync() =>
         AwaitAndResetOnFailureAsync(

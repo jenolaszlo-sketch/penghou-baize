@@ -63,9 +63,17 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
         using var activity = BaizeTelemetry.Activities.StartActivity(
             "llm.stream",
             ActivityKind.Client);
+        activity?.SetTag("gen_ai.operation.name", "chat");
+        activity?.SetTag("gen_ai.provider.name", Metadata.Provider);
         activity?.SetTag("gen_ai.request.model", Model);
         activity?.SetTag("gen_ai.request.tool_count", request.Tools.Count);
-        BaizeTelemetry.Requests.Add(1, new KeyValuePair<string, object?>("model", Model));
+        var telemetryTags = new TagList
+        {
+            { "gen_ai.operation.name", "chat" },
+            { "gen_ai.provider.name", Metadata.Provider },
+            { "gen_ai.request.model", Model }
+        };
+        BaizeTelemetry.Requests.Add(1, telemetryTags);
 
         try
         {
@@ -145,9 +153,9 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 if (evt.Usage is { } usage)
                 {
                     if (usage.PromptTokens is { } input)
-                        BaizeTelemetry.InputTokens.Add(input);
+                        BaizeTelemetry.InputTokens.Add(input, telemetryTags);
                     if (usage.CompletionTokens is { } output)
-                        BaizeTelemetry.OutputTokens.Add(output);
+                        BaizeTelemetry.OutputTokens.Add(output, telemetryTags);
                 }
 
                 yield return evt;
@@ -162,17 +170,19 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
         {
             BaizeTelemetry.Duration.Record(
                 Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                new KeyValuePair<string, object?>("model", Model));
+                telemetryTags);
         }
     }
 
     private void RecordFailure(Activity? activity, Exception exception)
     {
-        activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+        activity?.SetStatus(ActivityStatusCode.Error);
         activity?.SetTag("error.type", exception.GetType().FullName);
         BaizeTelemetry.Failures.Add(
             1,
-            new KeyValuePair<string, object?>("model", Model),
+            new KeyValuePair<string, object?>("gen_ai.operation.name", "chat"),
+            new KeyValuePair<string, object?>("gen_ai.provider.name", Metadata.Provider),
+            new KeyValuePair<string, object?>("gen_ai.request.model", Model),
             new KeyValuePair<string, object?>("error.type", exception.GetType().Name));
     }
 

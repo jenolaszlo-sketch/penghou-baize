@@ -117,7 +117,9 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
     /// </summary>
     /// <param name="model">The model's registration name.</param>
     /// <returns>The resolved endpoint.</returns>
-    public ResolvedEndpoint Resolve(string model) => _inner.Resolve(model);
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
+    public ResolvedEndpoint Resolve(string model) =>
+        ResolveAsync(model).GetAwaiter().GetResult();
 
     /// <inheritdoc />
     public Task<ResolvedEndpoint> ResolveAsync(
@@ -131,7 +133,9 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
     /// </summary>
     /// <param name="strategy">The capability the request is targeting.</param>
     /// <returns>The resolved endpoint.</returns>
-    public ResolvedEndpoint Resolve(ModelStrategy strategy) => _inner.Resolve(strategy);
+    [Obsolete("Use ResolveAsync to avoid blocking asynchronous router memory.")]
+    public ResolvedEndpoint Resolve(ModelStrategy strategy) =>
+        ResolveAsync(strategy).GetAwaiter().GetResult();
 
     /// <inheritdoc />
     public Task<ResolvedEndpoint> ResolveAsync(

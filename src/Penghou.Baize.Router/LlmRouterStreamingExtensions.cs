@@ -86,6 +86,9 @@ public static class LlmRouterStreamingExtensions
         LlmUsage? usage = null;
         LlmProviderDiagnostics? diagnostics = null;
         LlmRouterDiagnostics? routerDiagnostics = null;
+        bool contentWasRepaired = false;
+        IReadOnlyList<LlmRepairAttempt>? contentRepairAttempts = null;
+        LlmJsonRepairDiagnostics? contentRepairDiagnostics = null;
         string? finishReason = null;
         var toolCallBuilders = new SortedDictionary<int, ToolCallBuilder>();
 
@@ -251,6 +254,15 @@ public static class LlmRouterStreamingExtensions
 
             if (evt.RouterDiagnostics is not null)
                 routerDiagnostics = evt.RouterDiagnostics;
+
+            if (evt.ContentWasRepaired)
+                contentWasRepaired = true;
+
+            if (evt.ContentRepairAttempts is not null)
+                contentRepairAttempts = evt.ContentRepairAttempts;
+
+            if (evt.ContentRepairDiagnostics is not null)
+                contentRepairDiagnostics = evt.ContentRepairDiagnostics;
         }
 
         var toolCalls = toolCallBuilders.Values
@@ -268,10 +280,13 @@ public static class LlmRouterStreamingExtensions
             ToolCalls: toolCalls,
             Diagnostics: diagnostics,
             RouterDiagnostics: routerDiagnostics,
+            ContentWasRepaired: contentWasRepaired,
+            ContentRepairAttempts: contentRepairAttempts,
             ReasoningContinuation: reasoningContinuation,
             ContentContinuation: contentContinuation)
         {
-            Parts = MaterializeParts()
+            Parts = MaterializeParts(),
+            ContentRepairDiagnostics = contentRepairDiagnostics
         };
     }
 

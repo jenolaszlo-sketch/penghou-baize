@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Penghou.Nuwa.Extensions;
 using Penghou.Nuwa;
 
@@ -27,10 +28,26 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
         services.AddJsonRepair(configure);
-        services.AddSingleton<IContentToolCallExtractor, ContentToolCallExtractor>();
-        services.AddSingleton<ILlmResponseNormalizer, LlmResponseNormalizer>();
-        services.AddSingleton<ILlmStructuredOutputRepairer, LlmStructuredOutputRepairer>();
+        services.TryAddSingleton<IContentToolCallExtractor, ContentToolCallExtractor>();
+        services.TryAddSingleton<ILlmResponseNormalizer, LlmResponseNormalizer>();
+        services.TryAddSingleton<ILlmStructuredOutputRepairer, LlmStructuredOutputRepairer>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Adds deterministic structured-output repair to clients created by
+    /// <c>AddLlmRouting</c>. Schema-constrained responses are buffered until
+    /// they can be validated and repaired; other requests keep streaming.
+    /// </summary>
+    public static IServiceCollection AddLlmStructuredOutputRepair(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddLlmTools();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<ILlmClientDecorator,
+                StructuredOutputRepairingLlmClientDecorator>());
         return services;
     }
 }

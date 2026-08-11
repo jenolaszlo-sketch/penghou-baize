@@ -9,6 +9,7 @@
     <Project Path="src/Penghou.Baize.Batch/Penghou.Baize.Batch.csproj" />
     <Project Path="src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj" />
     <Project Path="src/Penghou.Baize.Extensions.AI/Penghou.Baize.Extensions.AI.csproj" />
+    <Project Path="src/Penghou.Baize.Diagnostics/Penghou.Baize.Diagnostics.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj" />
@@ -21,5 +22,6 @@
     <Project Path="tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Batch.Tests/Penghou.Baize.Batch.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Extensions.AI.Tests/Penghou.Baize.Extensions.AI.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Diagnostics.Tests/Penghou.Baize.Diagnostics.Tests.csproj" />
   </Folder>
 </Solution>

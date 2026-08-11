@@ -115,6 +115,15 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage-extensions-ai/
           /p:CoverletOutputFormat=cobertura
 
+      - name: Test and coverage (Diagnostics)
+        run: >
+          dotnet test tests/Penghou.Baize.Diagnostics.Tests/Penghou.Baize.Diagnostics.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-diagnostics/
+          /p:CoverletOutputFormat=cobertura
+
       - name: Validate packages
         run: dotnet pack Penghou.Baize.slnx --configuration Release --no-build --output artifacts
 
@@ -132,4 +141,5 @@ jobs:
             coverage-batch/
             coverage-tools/
             coverage-extensions-ai/
+            coverage-diagnostics/
           if-no-files-found: error

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Penghou.Baize;
 using Penghou.Baize.Router.Configuration;
@@ -49,24 +50,18 @@ public static class ServiceCollectionExtensions
             ReliabilityEndpointSelectionPolicy>();
         services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
-        services.AddSingleton(sp =>
-            new LlmRoutingMonitor(ResolveOptionsMonitor(sp, section)));
-        services.AddSingleton<ReloadingLlmModelLookup>(sp =>
-            new ReloadingLlmModelLookup(
-                sp.GetRequiredService<LlmRoutingMonitor>().Options,
-                sp));
+        services.AddSingleton(sp => new ReloadingLlmRoutingState(
+            ResolveOptionsMonitor(sp, section),
+            sp,
+            sp.GetRequiredService<ILlmRouterMemory>(),
+            sp.GetRequiredService<ILlmEndpointSelectionPolicy>(),
+            sp.GetService<ILogger<ReloadingLlmRoutingState>>()));
         services.AddSingleton<ILlmModelLookup>(sp =>
-            sp.GetRequiredService<ReloadingLlmModelLookup>());
-
+            sp.GetRequiredService<ReloadingLlmRoutingState>());
         services.AddSingleton<ILlmRouter>(sp =>
-        {
-            var memory = sp.GetRequiredService<ILlmRouterMemory>();
-            return new ReloadingLlmRouter(
-                sp.GetRequiredService<LlmRoutingMonitor>().Options,
-                sp.GetRequiredService<ILlmModelLookup>(),
-                memory,
-                sp.GetService<ILlmEndpointSelectionPolicy>());
-        });
+            sp.GetRequiredService<ReloadingLlmRoutingState>());
+        services.AddSingleton<ILlmEndpointValidator>(sp =>
+            sp.GetRequiredService<ReloadingLlmRoutingState>());
 
         return services;
     }
@@ -76,12 +71,21 @@ public static class ServiceCollectionExtensions
     /// <param name="options">The routing options to build the lookup from.</param>
     /// <returns>The built lookup.</returns>
     internal static ILlmModelLookup BuildLookup(IServiceProvider sp, LlmRoutingOptions options)
+        => BuildRoutingLookup(sp, options).Lookup;
+
+    internal static BuiltRoutingLookup BuildRoutingLookup(
+        IServiceProvider sp,
+        LlmRoutingOptions options)
     {
         var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
         var secrets = sp.GetRequiredService<ISecretProvider>();
         var providers = sp.GetService<ILlmClientProviderRegistry>()
             ?? new LlmClientProviderRegistry(
                 sp.GetService<IEnumerable<ILlmClientProvider>>() ?? []);
+        var decorators =
+            sp.GetService<IEnumerable<ILlmClientDecorator>>()?.ToArray() ?? [];
+        var providerLogger = sp.GetService<ILoggerFactory>()?
+            .CreateLogger("Penghou.Baize.Router.Provider");
         var defaults = new Dictionary<string, Func<ILlmClient>>(StringComparer.Ordinal);
         var byProvider =
             new Dictionary<(string Model, LlmProviderKey Provider), Func<ILlmClient>>();
@@ -92,6 +96,7 @@ public static class ServiceCollectionExtensions
             new Dictionary<string, Func<IBaizeBatchClient>>(StringComparer.Ordinal);
         var endpointsByModel =
             new Dictionary<string, List<ResolvedEndpoint>>(StringComparer.Ordinal);
+        var runtimeEndpoints = new List<DeferredEndpointRuntime>();
 
         foreach (var model in options.Models)
         {
@@ -111,6 +116,9 @@ public static class ServiceCollectionExtensions
                     provider);
                 var deferred = new DeferredEndpointClients(
                     provider,
+                    id,
+                    providerModel,
+                    providerLogger,
                     () => CreateProviderContextAsync(
                         httpClientFactory,
                         secrets,
@@ -118,7 +126,7 @@ public static class ServiceCollectionExtensions
                         model.Name,
                         endpoint,
                         capabilities));
-                var client = new DeferredLlmClient(
+                ILlmClient client = new DeferredLlmClient(
                     deferred,
                     capabilities,
                     new LlmClientMetadata(
@@ -128,6 +136,15 @@ public static class ServiceCollectionExtensions
                             ? endpointUri
                             : null,
                         id));
+
+                foreach (var decorator in decorators)
+                {
+                    client = decorator.Decorate(client) ??
+                        throw new InvalidOperationException(
+                            $"LLM client decorator '{decorator.GetType().FullName}' " +
+                            "returned null.");
+                }
+
                 Func<ILlmClient> factory = () => client;
 
                 if (!usedIds.Add(id))
@@ -152,6 +169,12 @@ public static class ServiceCollectionExtensions
                     batchByEndpointId[id] = () => batchClient;
                 }
                 endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ProviderKey));
+                runtimeEndpoints.Add(new DeferredEndpointRuntime(
+                    id,
+                    provider.Key.Value,
+                    providerModel,
+                    deferred,
+                    capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch)));
 
                 // The first endpoint registered for a name wins as the
                 // plain-name default.
@@ -162,17 +185,19 @@ public static class ServiceCollectionExtensions
             endpointsByModel[model.Name] = endpoints;
         }
 
-        return new LlmModelLookup(
-            defaults,
-            byProvider,
-            providersByModel.ToDictionary(
-                kv => kv.Key,
-                kv => (IReadOnlyList<LlmProviderKey>)kv.Value),
-            byEndpointId,
-            endpointsByModel.ToDictionary(
-                kv => kv.Key,
-                kv => (IReadOnlyList<ResolvedEndpoint>)kv.Value),
-            batchByEndpointId);
+        return new BuiltRoutingLookup(
+            new LlmModelLookup(
+                defaults,
+                byProvider,
+                providersByModel.ToDictionary(
+                    kv => kv.Key,
+                    kv => (IReadOnlyList<LlmProviderKey>)kv.Value),
+                byEndpointId,
+                endpointsByModel.ToDictionary(
+                    kv => kv.Key,
+                    kv => (IReadOnlyList<ResolvedEndpoint>)kv.Value),
+                batchByEndpointId),
+            runtimeEndpoints);
     }
 
     /// <summary>
