@@ -62,6 +62,8 @@ public sealed record LlmRequestRequirements
         {
             return Fail("structured output is required", out reason);
         }
+        if (ToolCalling && StructuredOutput && !capabilities.ToolsWithStructuredOutput)
+            return Fail("tools combined with structured output are required", out reason);
 
         if (Thinking is { Mode: LlmThinkingMode.Enabled } thinking)
         {

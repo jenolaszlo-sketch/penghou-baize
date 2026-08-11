@@ -217,6 +217,29 @@ public sealed class OpenAiChatClientTests
     }
 
     [Fact]
+    public async Task StreamAsync_MapsSchemaLessJsonResponseFormat()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"id":"chatcmpl-test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"{}"},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gpt-4o-mini");
+
+        await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Return JSON")],
+                responseFormat: LlmResponseFormat.Json()),
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        document.RootElement.GetProperty("response_format")
+            .GetProperty("type").GetString().Should().Be("json_object");
+    }
+
+    [Fact]
     public async Task StreamAsync_DeepSeekDialectEnablesThinkingOnConservativeDefaults()
     {
         var handler = new RecordingHandler(

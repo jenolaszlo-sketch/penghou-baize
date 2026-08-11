@@ -935,9 +935,13 @@ public sealed class GeminiChatClientTests
             services.BuildServiceProvider();
         var models = provider.GetRequiredService<ILlmModelLookup>();
 
-        models.GetClient("gemini-alias")
-            .Should()
-            .BeOfType<GeminiChatClient>();
+        var metadata = models.GetClient("gemini-alias")
+            .Should().BeAssignableTo<ILlmClientMetadataProvider>()
+            .Subject.Metadata;
+        metadata.Provider.Should().Be("Gemini");
+        metadata.Model.Should().Be("gemini-2.0-flash");
+        metadata.Endpoint.Should().Be(
+            new Uri("https://generativelanguage.googleapis.com"));
     }
 
     [Fact]
@@ -1136,6 +1140,31 @@ public sealed class GeminiChatClientTests
             .GetString().Should().Be("application/json");
         generationConfig.GetProperty("responseSchema")
             .ValueKind.Should().Be(JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task StreamAsync_MapsSchemaLessJsonWithoutResponseSchema()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gemini-2.5-flash");
+
+        await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Return JSON")],
+                responseFormat: LlmResponseFormat.Json()),
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var config = document.RootElement.GetProperty("generationConfig");
+        config.GetProperty("responseMimeType").GetString()
+            .Should().Be("application/json");
+        config.TryGetProperty("responseSchema", out _).Should().BeFalse();
     }
 
     [Fact]

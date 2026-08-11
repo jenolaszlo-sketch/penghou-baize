@@ -84,6 +84,15 @@ public static class LlmRequestValidator
                 "but the request specifies a response format.");
         }
 
+        if (request.Tools.Count > 0 &&
+            request.ResponseFormat is not null &&
+            !capabilities.ToolsWithStructuredOutput)
+        {
+            throw new LlmRequestValidationException(
+                $"Endpoint '{model}' does not support combining tools with " +
+                "structured output, but the request specifies both.");
+        }
+
         if (request.ThinkingConfig is { Mode: LlmThinkingMode.Enabled } &&
             !capabilities.Thinking)
         {

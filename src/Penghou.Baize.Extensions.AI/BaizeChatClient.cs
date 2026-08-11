@@ -19,7 +19,11 @@ public sealed class BaizeChatClient : IChatClient
         string? modelId = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
-        _metadata = new ChatClientMetadata(providerName, providerUri, modelId);
+        var clientMetadata = (client as ILlmClientMetadataProvider)?.Metadata;
+        _metadata = new ChatClientMetadata(
+            providerName ?? clientMetadata?.Provider,
+            providerUri ?? clientMetadata?.Endpoint,
+            modelId ?? clientMetadata?.Model);
     }
 
     /// <inheritdoc />
@@ -43,13 +47,17 @@ public sealed class BaizeChatClient : IChatClient
         await foreach (var item in _client.StreamAsync(request, cancellationToken))
         {
             if (item.Delta is { } text)
-                yield return new ChatResponseUpdate(ChatRole.Assistant, text);
+                yield return Decorate(
+                    new ChatResponseUpdate(ChatRole.Assistant, text),
+                    item);
 
             if (item.ReasoningContent is { } reasoning)
             {
-                yield return new ChatResponseUpdate(
-                    ChatRole.Assistant,
-                    [new TextReasoningContent(reasoning)]);
+                yield return Decorate(
+                    new ChatResponseUpdate(
+                        ChatRole.Assistant,
+                        [new TextReasoningContent(reasoning)]),
+                    item);
             }
 
             if (item.ToolCallDelta is { } delta)
@@ -68,39 +76,87 @@ public sealed class BaizeChatClient : IChatClient
 
             if (item.Usage is { } usage)
             {
-                yield return new ChatResponseUpdate(
-                    ChatRole.Assistant,
-                    [new UsageContent(new UsageDetails
-                    {
-                        InputTokenCount = usage.PromptTokens,
-                        OutputTokenCount = usage.CompletionTokens,
-                        TotalTokenCount = usage.TotalTokens
-                    })]);
+                yield return Decorate(
+                    new ChatResponseUpdate(
+                        ChatRole.Assistant,
+                        [new UsageContent(new UsageDetails
+                        {
+                            InputTokenCount = usage.PromptTokens,
+                            OutputTokenCount = usage.CompletionTokens,
+                            TotalTokenCount = usage.TotalTokens
+                        })]),
+                    item);
             }
 
             if (item.FinishReason is { } finishReason)
             {
-                yield return new ChatResponseUpdate
+                foreach (var call in MaterializeToolCalls(toolCalls))
+                    yield return Decorate(call, item);
+                toolCalls.Clear();
+
+                yield return Decorate(new ChatResponseUpdate
                 {
                     Role = ChatRole.Assistant,
                     FinishReason = new ChatFinishReason(finishReason)
-                };
+                }, item);
+            }
+
+            if (item.Diagnostics is not null ||
+                item.RateLimit is not null ||
+                item.RouterDiagnostics is not null)
+            {
+                yield return Decorate(
+                    new ChatResponseUpdate { Role = ChatRole.Assistant },
+                    item);
             }
         }
 
+        foreach (var call in MaterializeToolCalls(toolCalls))
+            yield return Decorate(call);
+    }
+
+    private IReadOnlyList<ChatResponseUpdate> MaterializeToolCalls(
+        IReadOnlyDictionary<int, ToolCallBuilder> toolCalls)
+    {
+        var updates = new List<ChatResponseUpdate>(toolCalls.Count);
         foreach (var (_, call) in toolCalls.OrderBy(pair => pair.Key))
         {
             var arguments = string.IsNullOrWhiteSpace(call.Arguments.ToString())
                 ? new Dictionary<string, object?>()
                 : JsonSerializer.Deserialize<Dictionary<string, object?>>(
                     call.Arguments.ToString()) ?? [];
-            yield return new ChatResponseUpdate(
+            updates.Add(new ChatResponseUpdate(
                 ChatRole.Assistant,
                 [new FunctionCallContent(
                     call.Id ?? Guid.NewGuid().ToString("N"),
                     call.Name ?? string.Empty,
-                    arguments)]);
+                    arguments)]));
         }
+
+        return updates;
+    }
+
+    private ChatResponseUpdate Decorate(
+        ChatResponseUpdate update,
+        LlmStreamEvent? raw = null)
+    {
+        update.ModelId = _metadata.DefaultModelId;
+        update.RawRepresentation = raw;
+
+        if (raw is not null)
+        {
+            var properties = new AdditionalPropertiesDictionary();
+            if (raw.Diagnostics is not null)
+                properties["baize.provider_diagnostics"] = raw.Diagnostics;
+            if (raw.RouterDiagnostics is not null)
+                properties["baize.router_diagnostics"] = raw.RouterDiagnostics;
+            if (raw.RateLimit is not null)
+                properties["baize.rate_limit"] = raw.RateLimit;
+            if (properties.Count > 0)
+                update.AdditionalProperties = properties;
+        }
+
+        return update;
     }
 
     /// <inheritdoc />
@@ -146,10 +202,11 @@ public sealed class BaizeChatClient : IChatClient
                 tool.Description ?? string.Empty,
                 tool.JsonSchema.GetRawText()))
             .ToList();
-        var responseFormat = options?.ResponseFormat is ChatResponseFormatJson json &&
-            json.Schema is { } schema
+        var responseFormat = options?.ResponseFormat is ChatResponseFormatJson json
+            ? json.Schema is { } schema
                 ? LlmResponseFormat.JsonSchema(schema.GetRawText())
-                : null;
+                : LlmResponseFormat.Json()
+            : null;
 
         return new LlmRequest(
             messages,
@@ -189,11 +246,19 @@ public sealed class BaizeChatClient : IChatClient
                 new LlmToolResult(
                     result.CallId,
                     callNames.GetValueOrDefault(result.CallId) ?? string.Empty,
-                    JsonSerializer.Serialize(result.Result),
+                    SerializeToolResult(result.Result),
                     result.Exception is null)),
             _ => throw new NotSupportedException(
                 $"Microsoft.Extensions.AI content '{content.GetType().Name}' is not supported by Baize.")
         };
+
+    private static string SerializeToolResult(object? result) => result switch
+    {
+        null => "null",
+        string value => value,
+        JsonElement json => json.GetRawText(),
+        _ => JsonSerializer.Serialize(result)
+    };
 
     private static LlmMediaContent ToMedia(
         string mediaType,

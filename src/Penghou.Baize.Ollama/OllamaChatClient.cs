@@ -38,7 +38,7 @@ public sealed class OllamaChatClient : LlmClientBase
         string apiKey,
         string baseUrl,
         LlmEndpointCapabilities capabilities)
-        : base(model, httpClientFactory, apiKey, capabilities)
+        : base(model, httpClientFactory, apiKey, capabilities, "Ollama")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
@@ -128,9 +128,11 @@ public sealed class OllamaChatClient : LlmClientBase
             Options = options,
             Format = request.ResponseFormat is null
                 ? null
-                : ParseJsonElement(
-                    request.ResponseFormat.Schema,
-                    "response format schema")
+                : request.ResponseFormat.Schema is null
+                    ? "json"
+                    : ParseJsonElement(
+                        request.ResponseFormat.Schema,
+                        "response format schema")
         };
     }
 

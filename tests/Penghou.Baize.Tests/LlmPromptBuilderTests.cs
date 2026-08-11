@@ -22,7 +22,7 @@ public sealed class LlmPromptBuilderTests
     }
 
     [Fact]
-    public void Build_StructuredOutputWithTools_Throws()
+    public void Build_PreservesToolsAndStructuredResponseFormat()
     {
         var builder = new LlmPromptBuilder
         {
@@ -34,11 +34,10 @@ public sealed class LlmPromptBuilderTests
             ResponseFormat = LlmResponseFormat.JsonSchema("""{"type":"object"}""")
         };
 
-        var action = () => builder.Build(ModelStrategy.StructuredOutput);
+        var request = builder.Build(ModelStrategy.StructuredOutput);
 
-        action.Should()
-            .Throw<InvalidOperationException>()
-            .WithMessage("*mutually exclusive*");
+        request.Tools.Should().ContainSingle();
+        request.ResponseFormat.Should().NotBeNull();
     }
 
     [Fact]
@@ -55,16 +54,14 @@ public sealed class LlmPromptBuilderTests
     }
 
     [Fact]
-    public void Build_NonStructuredOutputWithResponseFormat_Throws()
+    public void Build_PreservesResponseFormatForAnyRoutingStrategy()
     {
-        var action = () => new LlmPromptBuilder
+        var request = new LlmPromptBuilder
         {
             Messages = TestMessage,
             ResponseFormat = LlmResponseFormat.JsonSchema("""{"type":"object"}""")
         }.Build(ModelStrategy.ToolCall);
 
-        action.Should()
-            .Throw<InvalidOperationException>()
-            .WithMessage("*only valid for*");
+        request.ResponseFormat.Should().NotBeNull();
     }
 }

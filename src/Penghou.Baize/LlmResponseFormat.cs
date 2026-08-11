@@ -22,4 +22,7 @@ public sealed class LlmResponseFormat
     /// <returns>A response format requesting schema-compliant JSON.</returns>
     public static LlmResponseFormat JsonSchema(string schemaJson) =>
         new("json_schema", schemaJson);
+
+    /// <summary>Requests valid JSON without constraining it to a schema.</summary>
+    public static LlmResponseFormat Json() => new("json_object", null);
 }

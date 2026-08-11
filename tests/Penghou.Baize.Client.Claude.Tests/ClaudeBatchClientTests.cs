@@ -116,7 +116,7 @@ public sealed class ClaudeBatchClientTests
 
         await action.Should()
             .ThrowAsync<LlmRequestValidationException>()
-            .WithMessage("*ambiguous and not supported*");
+            .WithMessage("*does not support combining tools with structured output*");
 
         handler.Requests.Should().BeEmpty();
     }

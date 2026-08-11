@@ -43,7 +43,7 @@ public sealed class ClaudeChatClient : LlmClientBase
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         ClaudeThinkingStyle thinkingStyle = ClaudeThinkingStyle.Adaptive)
-        : base(model, httpClientFactory, apiKey, capabilities)
+        : base(model, httpClientFactory, apiKey, capabilities, "Claude")
     {
         _thinkingStyle = thinkingStyle;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');

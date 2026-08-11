@@ -3,8 +3,10 @@ namespace Penghou.Baize.Batch;
 /// <summary>Default one-shot aggregate batch coordinator.</summary>
 public sealed class BaizeBatchCoordinator(
     IBaizeBatchPlanner planner,
-    IBaizeBatchClientResolver resolver) : IBaizeBatchCoordinator
+    IBaizeBatchClientResolver resolver,
+    TimeProvider? timeProvider = null) : IBaizeBatchCoordinator
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     /// <inheritdoc />
     public async Task<BaizeBatchHandle> SubmitAsync(
         BaizeBatchSubmission submission,
@@ -86,6 +88,49 @@ public sealed class BaizeBatchCoordinator(
     }
 
     /// <inheritdoc />
+    public async Task<BaizeBatchStatus> WaitForCompletionAsync(
+        BaizeBatchHandle handle,
+        BatchWaitOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var effectiveOptions = options ?? new BatchWaitOptions();
+        ValidateWaitOptions(effectiveOptions);
+        var started = _timeProvider.GetUtcNow();
+
+        while (true)
+        {
+            var status = await GetStatusAsync(handle, cancellationToken);
+            if (IsTerminal(status.State))
+                return status;
+
+            if (effectiveOptions.Timeout is { } timeout)
+            {
+                var remaining = timeout - (_timeProvider.GetUtcNow() - started);
+                if (remaining <= TimeSpan.Zero)
+                {
+                    throw new TimeoutException(
+                        $"Logical batch '{handle.LogicalBatchId}' did not complete " +
+                        $"within {timeout}.");
+                }
+
+                await Task.Delay(
+                    remaining < effectiveOptions.PollInterval
+                        ? remaining
+                        : effectiveOptions.PollInterval,
+                    _timeProvider,
+                    cancellationToken);
+            }
+            else
+            {
+                await Task.Delay(
+                    effectiveOptions.PollInterval,
+                    _timeProvider,
+                    cancellationToken);
+            }
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<BaizeBatchResultSet> GetResultsAsync(
         BaizeBatchHandle handle,
         CancellationToken cancellationToken = default)
@@ -137,6 +182,16 @@ public sealed class BaizeBatchCoordinator(
     }
 
     /// <inheritdoc />
+    public async Task<BaizeBatchResultSet> WaitForResultsAsync(
+        BaizeBatchHandle handle,
+        BatchWaitOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        await WaitForCompletionAsync(handle, options, cancellationToken);
+        return await GetResultsAsync(handle, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task CancelAsync(
         BaizeBatchHandle handle,
         CancellationToken cancellationToken = default)
@@ -165,6 +220,21 @@ public sealed class BaizeBatchCoordinator(
         if (handle.Parts.Count == 0)
             throw new ArgumentException("Logical batch handle has no physical parts.", nameof(handle));
     }
+
+    private static void ValidateWaitOptions(BatchWaitOptions options)
+    {
+        if (options.PollInterval <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(options), "PollInterval must be positive.");
+        if (options.Timeout is { } timeout && timeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be positive when set.");
+    }
+
+    private static bool IsTerminal(BaizeBatchState state) => state is
+        BaizeBatchState.Completed or
+        BaizeBatchState.PartiallyCompleted or
+        BaizeBatchState.Failed or
+        BaizeBatchState.Cancelled or
+        BaizeBatchState.Expired;
 
     private static BaizeBatchState AggregateState(IEnumerable<BaizeBatchState> states)
     {

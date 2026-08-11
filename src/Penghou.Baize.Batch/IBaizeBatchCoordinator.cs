@@ -1,8 +1,8 @@
 namespace Penghou.Baize.Batch;
 
 /// <summary>
-/// Performs one-shot operations across the physical provider batches in a
-/// logical batch. It does not poll, persist, schedule, or retry workflows.
+/// Coordinates operations across the physical provider batches in a logical
+/// batch. It does not persist, schedule, or retry workflows.
 /// </summary>
 public interface IBaizeBatchCoordinator
 {
@@ -16,9 +16,21 @@ public interface IBaizeBatchCoordinator
         BaizeBatchHandle handle,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Polls until every physical batch reaches a terminal state.</summary>
+    Task<BaizeBatchStatus> WaitForCompletionAsync(
+        BaizeBatchHandle handle,
+        BatchWaitOptions? options = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Retrieves and correlates results from all physical batches.</summary>
     Task<BaizeBatchResultSet> GetResultsAsync(
         BaizeBatchHandle handle,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Waits for completion and then retrieves correlated results.</summary>
+    Task<BaizeBatchResultSet> WaitForResultsAsync(
+        BaizeBatchHandle handle,
+        BatchWaitOptions? options = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Requests cancellation of every physical batch.</summary>

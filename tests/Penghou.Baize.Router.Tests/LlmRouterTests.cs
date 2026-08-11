@@ -664,6 +664,51 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public async Task Router_DirectRequest_SelectsEndpointSupportingToolsWithStructuredOutput()
+    {
+        var separateOnly = new CapabilityClient(
+            "wrong",
+            new LlmEndpointCapabilities
+            {
+                NativeToolCalling = true,
+                NativeStructuredOutput = true
+            });
+        var combined = new CapabilityClient(
+            "combined",
+            new LlmEndpointCapabilities
+            {
+                NativeToolCalling = true,
+                NativeStructuredOutput = true,
+                ToolsWithStructuredOutput = true
+            });
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model"] = () => separateOnly
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model", ApiStyle.OpenAi)] = () => separateOnly,
+                [("model", ApiStyle.Gemini)] = () => combined
+            });
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>());
+        var request = new LlmRequest(
+            [new LlmMessage("user", "emit")],
+            tools: [new LlmTool("emit", "Emit", """{"type":"object"}""")],
+            responseFormat: LlmResponseFormat.JsonSchema(
+                """{"type":"object"}"""));
+
+        var response = await router.CompleteStreamingAsync(
+            "model",
+            request,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("combined");
+    }
+
+    [Fact]
     public async Task Router_FallsBackOnlyOnAvailabilityFailure()
     {
         var badRequestClient = new ThrowingClient(
@@ -1255,12 +1300,13 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
-    public void BuildLookup_ResolvesSecretsThroughRegisteredProvider()
+    public async Task BuildLookup_ResolvesSecretsThroughRegisteredProvider()
     {
         var stub = new RecordingSecretProvider("sk-stub");
         var sp = new StubServiceProvider(new Dictionary<Type, object>
         {
-            [typeof(IHttpClientFactory)] = new TestHttpClientFactory(new HttpClient()),
+            [typeof(IHttpClientFactory)] = new TestHttpClientFactory(
+                new HttpClient(new ModelEchoHandler())),
             [typeof(ISecretProvider)] = stub
         });
         var options = new LlmRoutingOptions
@@ -1284,7 +1330,16 @@ public sealed class LlmRouterTests
 
         var lookup = ServiceCollectionExtensions.BuildLookup(sp, options);
 
-        lookup.GetClient("m").Should().NotBeNull();
+        var client = lookup.GetClient("m");
+        stub.RequestedNames.Should().BeEmpty(
+            "credential resolution is deferred until the endpoint is used");
+
+        await foreach (var _ in client.StreamAsync(
+                           new LlmRequest([new LlmMessage("user", "hello")]),
+                           TestContext.Current.CancellationToken))
+        {
+        }
+
         stub.RequestedNames.Should().Contain("TEST_LLM_KEY");
     }
 
@@ -1324,7 +1379,7 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
-    public void BuildLookup_ThrowsWhenRegisteredSecretIsMissing()
+    public async Task BuildLookup_ThrowsWhenRegisteredSecretIsMissing()
     {
         var sp = new StubServiceProvider(new Dictionary<Type, object>
         {
@@ -1338,14 +1393,22 @@ public sealed class LlmRouterTests
                 new LlmModelOptions
                 {
                     Name = "m",
-                    Endpoints = [new LlmEndpointOptions { ApiStyle = ApiStyle.OpenAi, ApiKeySecretName = "MISSING_KEY" }]
+                    Endpoints = [new LlmEndpointOptions { ApiStyle = ApiStyle.Ollama, ApiKeySecretName = "MISSING_KEY" }]
                 }
             ]
         };
 
-        var action = () => ServiceCollectionExtensions.BuildLookup(sp, options);
+        var lookup = ServiceCollectionExtensions.BuildLookup(sp, options);
+        var action = async () =>
+        {
+            await foreach (var _ in lookup.GetClient("m").StreamAsync(
+                               new LlmRequest([new LlmMessage("user", "hello")]),
+                               TestContext.Current.CancellationToken))
+            {
+            }
+        };
 
-        action.Should().Throw<InvalidOperationException>()
+        await action.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*MISSING_KEY*");
     }
 
@@ -1843,6 +1906,22 @@ public sealed class LlmRouterTests
     {
         public LlmEndpointCapabilities Capabilities { get; } =
             new() { NativeToolCalling = true, ParallelToolCalls = true };
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield return new LlmStreamEvent(Delta: content);
+            yield return new LlmStreamEvent(FinishReason: "stop");
+        }
+    }
+
+    private sealed class CapabilityClient(
+        string content,
+        LlmEndpointCapabilities capabilities) : ILlmClient
+    {
+        public LlmEndpointCapabilities Capabilities { get; } = capabilities;
 
         public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
             LlmRequest request,

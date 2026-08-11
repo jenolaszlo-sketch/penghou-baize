@@ -100,6 +100,13 @@ internal static class ClaudeMessageRequestMapper
                 "response format is ambiguous and not supported. Request " +
                 "either tools or structured output, not both.");
         }
+
+        if (request.ResponseFormat is { Schema: null })
+        {
+            throw new LlmRequestValidationException(
+                "Claude structured output requires a JSON schema; plain JSON " +
+                "mode is not supported by this adapter.");
+        }
     }
 
     /// <summary>

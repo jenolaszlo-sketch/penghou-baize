@@ -50,17 +50,27 @@ public class LlmRouter(
     /// <param name="builder">Builds the request for the stream.</param>
     /// <param name="cancellationToken">Propagates notification that streaming should be cancelled.</param>
     /// <returns>The canonical stream events.</returns>
-    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+    public IAsyncEnumerable<LlmStreamEvent> StreamAsync(
         string model,
         ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return StreamAsync(model, builder.Build(ModelStrategy.Auto), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        string model,
+        LlmRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (_gate is not null)
             await _gate.WaitAsync(cancellationToken);
 
         try
         {
-            var request = builder.Build(ModelStrategy.Auto);
             var candidates = await ResolveOrderedAsync(model, request, cancellationToken);
 
             await foreach (var evt in StreamThroughAsync(candidates, request, cancellationToken))
@@ -83,17 +93,27 @@ public class LlmRouter(
     /// <param name="builder">Builds the request for the stream.</param>
     /// <param name="cancellationToken">Propagates notification that streaming should be cancelled.</param>
     /// <returns>The canonical stream events.</returns>
-    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+    public IAsyncEnumerable<LlmStreamEvent> StreamAsync(
         ModelStrategy strategy,
         ILlmPromptBuilder builder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return StreamAsync(strategy, builder.Build(strategy), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        ModelStrategy strategy,
+        LlmRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (_gate is not null)
             await _gate.WaitAsync(cancellationToken);
 
         try
         {
-            var request = builder.Build(strategy);
             var candidates = await ResolveOrderedAsync(strategy, request, cancellationToken);
 
             await foreach (var evt in StreamThroughAsync(candidates, request, cancellationToken))
@@ -115,6 +135,12 @@ public class LlmRouter(
     public ResolvedEndpoint Resolve(string model)
         => ResolveOrderedAsync(model, null, CancellationToken.None).GetAwaiter().GetResult().First();
 
+    /// <inheritdoc />
+    public async Task<ResolvedEndpoint> ResolveAsync(
+        string model,
+        CancellationToken cancellationToken = default) =>
+        (await ResolveOrderedAsync(model, null, cancellationToken)).First();
+
     /// <summary>
     /// The endpoint the router would currently use for a strategy, chosen
     /// from the fallback chain's endpoints by least-failing history.
@@ -127,6 +153,12 @@ public class LlmRouter(
     /// </exception>
     public ResolvedEndpoint Resolve(ModelStrategy strategy)
         => ResolveOrderedAsync(strategy, null, CancellationToken.None).GetAwaiter().GetResult().First();
+
+    /// <inheritdoc />
+    public async Task<ResolvedEndpoint> ResolveAsync(
+        ModelStrategy strategy,
+        CancellationToken cancellationToken = default) =>
+        (await ResolveOrderedAsync(strategy, null, cancellationToken)).First();
 
     private async Task<IReadOnlyList<ResolvedEndpoint>> ResolveOrderedAsync(
         string model,

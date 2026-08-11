@@ -14,6 +14,24 @@ namespace Penghou.Baize.Ollama.Tests;
 public sealed class OllamaChatClientTests
 {
     [Fact]
+    public async Task StreamAsync_MapsSchemaLessJsonFormat()
+    {
+        var handler = new RecordingHandler(
+            """{"model":"qwen","message":{"role":"assistant","content":"{}"},"done":true,"done_reason":"stop"}""");
+        var client = CreateClient(handler, "qwen");
+
+        await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Return JSON")],
+                responseFormat: LlmResponseFormat.Json()),
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        document.RootElement.GetProperty("format").GetString()
+            .Should().Be("json");
+    }
+
+    [Fact]
     public async Task StreamAsync_MapsNativeToolCallAndUsage()
     {
         var handler = new RecordingHandler(
@@ -348,13 +366,15 @@ public sealed class OllamaChatClientTests
             services.BuildServiceProvider();
         var models = provider.GetRequiredService<ILlmModelLookup>();
 
-        models.GetClient("qwen-native")
-            .Should()
-            .BeOfType<OllamaChatClient>();
+        var client = models.GetClient("qwen-native");
+        var metadata = client.Should()
+            .BeAssignableTo<ILlmClientMetadataProvider>().Subject.Metadata;
+        metadata.Provider.Should().Be("Ollama");
+        metadata.Model.Should().Be("qwen2.5-coder:7b");
+        metadata.Endpoint.Should().Be(new Uri("http://ollama:11434"));
 
         models.GetClient("qwen-native", ApiStyle.Ollama)
-            .Should()
-            .BeOfType<OllamaChatClient>();
+            .Should().BeSameAs(client);
     }
 
     [Fact]

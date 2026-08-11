@@ -13,10 +13,12 @@ namespace Penghou.Baize.Router;
 /// </summary>
 public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
 {
-    private readonly IServiceProvider _services;
+    private readonly ILlmModelLookup _lookup;
     private readonly ILlmRouterMemory _memory;
+    private readonly ILlmEndpointSelectionPolicy? _selectionPolicy;
     private readonly IOptionsMonitor<LlmRoutingOptions> _options;
     private readonly IDisposable? _subscription;
+    private readonly IDisposable? _ownedLookup;
     private volatile LlmRouter _inner;
 
     /// <summary>Initializes a router that tracks an options monitor.</summary>
@@ -27,10 +29,41 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         IOptionsMonitor<LlmRoutingOptions> options,
         IServiceProvider services,
         ILlmRouterMemory memory)
+        : this(
+            options,
+            new ReloadingLlmModelLookup(options, services),
+            memory,
+            services.GetService<ILlmEndpointSelectionPolicy>(),
+            ownsLookup: true)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a router over a shared reloading model lookup. This is the
+    /// DI path used by <c>AddLlmRouting</c>, ensuring lookup and router calls
+    /// observe the same endpoint snapshot.
+    /// </summary>
+    public ReloadingLlmRouter(
+        IOptionsMonitor<LlmRoutingOptions> options,
+        ILlmModelLookup lookup,
+        ILlmRouterMemory memory,
+        ILlmEndpointSelectionPolicy? selectionPolicy = null)
+        : this(options, lookup, memory, selectionPolicy, ownsLookup: false)
+    {
+    }
+
+    private ReloadingLlmRouter(
+        IOptionsMonitor<LlmRoutingOptions> options,
+        ILlmModelLookup lookup,
+        ILlmRouterMemory memory,
+        ILlmEndpointSelectionPolicy? selectionPolicy,
+        bool ownsLookup)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        _selectionPolicy = selectionPolicy;
+        _ownedLookup = ownsLookup ? lookup as IDisposable : null;
 
         _inner = Build(options.CurrentValue);
         _subscription = options.OnChange(OnOptionsChanged);
@@ -50,6 +83,13 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         CancellationToken cancellationToken = default)
         => _inner.StreamAsync(model, builder, cancellationToken);
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        string model,
+        LlmRequest request,
+        CancellationToken cancellationToken = default)
+        => _inner.StreamAsync(model, request, cancellationToken);
+
     /// <summary>
     /// Streams a completion for a strategy, using the endpoint the router
     /// would currently pick from the strategy's fallback chain.
@@ -64,6 +104,13 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
         CancellationToken cancellationToken = default)
         => _inner.StreamAsync(strategy, builder, cancellationToken);
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        ModelStrategy strategy,
+        LlmRequest request,
+        CancellationToken cancellationToken = default)
+        => _inner.StreamAsync(strategy, request, cancellationToken);
+
     /// <summary>
     /// The endpoint the router would currently use for a model, chosen from
     /// the model's configured endpoints by least-failing history.
@@ -71,6 +118,12 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
     /// <param name="model">The model's registration name.</param>
     /// <returns>The resolved endpoint.</returns>
     public ResolvedEndpoint Resolve(string model) => _inner.Resolve(model);
+
+    /// <inheritdoc />
+    public Task<ResolvedEndpoint> ResolveAsync(
+        string model,
+        CancellationToken cancellationToken = default) =>
+        _inner.ResolveAsync(model, cancellationToken);
 
     /// <summary>
     /// The endpoint the router would currently use for a strategy, chosen
@@ -80,8 +133,18 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
     /// <returns>The resolved endpoint.</returns>
     public ResolvedEndpoint Resolve(ModelStrategy strategy) => _inner.Resolve(strategy);
 
+    /// <inheritdoc />
+    public Task<ResolvedEndpoint> ResolveAsync(
+        ModelStrategy strategy,
+        CancellationToken cancellationToken = default) =>
+        _inner.ResolveAsync(strategy, cancellationToken);
+
     /// <summary>Releases the options subscription.</summary>
-    public void Dispose() => _subscription?.Dispose();
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        _ownedLookup?.Dispose();
+    }
 
     private void OnOptionsChanged(LlmRoutingOptions options, string? name)
     {
@@ -93,17 +156,16 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
 
     private LlmRouter Build(LlmRoutingOptions options)
     {
-        var lookup = ServiceCollectionExtensions.BuildLookup(_services, options);
         var strategyLookup = options.StrategyFallbacks.ToDictionary(
             kv => kv.Key,
             kv => (IReadOnlyList<string>)kv.Value.AsReadOnly());
 
         return new LlmRouter(
-            lookup,
+            _lookup,
             strategyLookup,
             _memory,
             maxPendingRequests: options.MaxPendingRequests,
             requestTimeout: options.RequestTimeout,
-            selectionPolicy: _services.GetService<ILlmEndpointSelectionPolicy>());
+            selectionPolicy: _selectionPolicy);
     }
 }

@@ -153,6 +153,23 @@ public sealed class BatchPlannerTests
     }
 
     [Fact]
+    public void Plan_SelectsLaterEndpointThatSupportsNativeBatch()
+    {
+        var (lookup, resolver) = Build(
+            ("gpt", ApiStyle.OpenAi, BatchCapabilities.None),
+            ("gpt", ApiStyle.Claude, BatchCapabilities.NativeBatch));
+        var planner = new BatchPlanner(lookup, resolver);
+
+        var plan = planner.Plan(new BaizeBatchSubmission(
+        [
+            Request("1", "gpt", "hello")
+        ]));
+
+        plan.Groups.Should().ContainSingle()
+            .Which.EndpointId.Should().Be("gpt:Claude");
+    }
+
+    [Fact]
     public void Plan_EmptySubmission_Throws()
     {
         var (lookup, resolver) = Build(("gpt", ApiStyle.OpenAi, BatchCapabilities.NativeBatch));

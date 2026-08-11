@@ -23,6 +23,23 @@ public static class LlmRouterStreamingExtensions
         CancellationToken cancellationToken = default)
         => CollectAsync(router.StreamAsync(model, builder, cancellationToken), onDelta);
 
+    /// <summary>Streams a canonical request for a model and collects it.</summary>
+    public static Task<LlmResponse> CompleteStreamingAsync(
+        this ILlmRouter router,
+        string model,
+        LlmRequest request,
+        Action<string>? onDelta = null,
+        CancellationToken cancellationToken = default)
+        => CollectAsync(router.StreamAsync(model, request, cancellationToken), onDelta);
+
+    /// <summary>Streams a canonical request for a model and collects it.</summary>
+    public static Task<LlmResponse> CompleteStreamingAsync(
+        this ILlmRouter router,
+        string model,
+        LlmRequest request,
+        CancellationToken cancellationToken)
+        => CollectAsync(router.StreamAsync(model, request, cancellationToken), null);
+
     /// <summary>Streams a completion for a strategy and collects it into a response.</summary>
     /// <param name="router">The router to stream through.</param>
     /// <param name="strategy">The capability the request is targeting.</param>
@@ -37,6 +54,23 @@ public static class LlmRouterStreamingExtensions
         Action<string>? onDelta = null,
         CancellationToken cancellationToken = default)
         => CollectAsync(router.StreamAsync(strategy, builder, cancellationToken), onDelta);
+
+    /// <summary>Streams a canonical request for a strategy and collects it.</summary>
+    public static Task<LlmResponse> CompleteStreamingAsync(
+        this ILlmRouter router,
+        ModelStrategy strategy,
+        LlmRequest request,
+        Action<string>? onDelta = null,
+        CancellationToken cancellationToken = default)
+        => CollectAsync(router.StreamAsync(strategy, request, cancellationToken), onDelta);
+
+    /// <summary>Streams a canonical request for a strategy and collects it.</summary>
+    public static Task<LlmResponse> CompleteStreamingAsync(
+        this ILlmRouter router,
+        ModelStrategy strategy,
+        LlmRequest request,
+        CancellationToken cancellationToken)
+        => CollectAsync(router.StreamAsync(strategy, request, cancellationToken), null);
 
     private static async Task<LlmResponse> CollectAsync(
         IAsyncEnumerable<LlmStreamEvent> stream,

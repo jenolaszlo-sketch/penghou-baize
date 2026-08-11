@@ -44,7 +44,7 @@ public sealed class OpenAiChatClient : LlmClientBase
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         OpenAiDialect dialect = OpenAiDialect.Standard)
-        : base(model, httpClientFactory, apiKey, BoostForDialect(capabilities, dialect))
+        : base(model, httpClientFactory, apiKey, BoostForDialect(capabilities, dialect), "OpenAi")
     {
         _dialect = dialect;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');

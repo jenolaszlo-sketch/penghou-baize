@@ -132,31 +132,39 @@ public sealed class BatchPlanner : IBaizeBatchPlanner
                 $"'{request.Model}'.");
         }
 
-        ResolvedEndpoint selected;
+        var candidates = string.IsNullOrWhiteSpace(request.Provider)
+            ? endpoints
+            : endpoints
+                .Where(endpoint => endpoint.Provider == new LlmProviderKey(request.Provider!))
+                .ToArray();
 
-        if (!string.IsNullOrWhiteSpace(request.Provider))
+        if (candidates.Count == 0)
         {
-            var provider = new LlmProviderKey(request.Provider!);
-            ResolvedEndpoint? match = endpoints
-                .Where(endpoint => endpoint.Provider == provider)
-                .Cast<ResolvedEndpoint?>()
-                .FirstOrDefault();
+            throw new BatchPlanException(
+                $"Request '{request.Id}' model '{request.Model}' has no endpoint " +
+                $"for provider '{request.Provider}'.");
+        }
 
-            if (match is null)
+        var selected = candidates.FirstOrDefault(endpoint =>
+            _resolver.TryGetClient(endpoint.EndpointId, out var candidate) &&
+            candidate.Capabilities.HasFlag(BatchCapabilities.NativeBatch));
+
+        if (string.IsNullOrEmpty(selected.EndpointId))
+        {
+            if (candidates.Count == 1)
             {
                 throw new BatchPlanException(
-                    $"Request '{request.Id}' model '{request.Model}' has no " +
-                    $"endpoint for provider '{request.Provider}'.");
+                    $"Request '{request.Id}' routes to endpoint " +
+                    $"'{candidates[0].EndpointId}' which does not support " +
+                    "native batching.");
             }
 
-            selected = match.Value;
-        }
-        else
-        {
-            // Default route: the model's first registered endpoint. Live
-            // failover state is intentionally ignored so planning stays
-            // deterministic and replayable.
-            selected = endpoints[0];
+            var qualifier = string.IsNullOrWhiteSpace(request.Provider)
+                ? string.Empty
+                : $" for provider '{request.Provider}'";
+            throw new BatchPlanException(
+                $"Request '{request.Id}' model '{request.Model}' has no " +
+                $"native-batch-capable endpoint{qualifier}.");
         }
 
         return (selected.EndpointId, selected.Provider.Value, request.Model);

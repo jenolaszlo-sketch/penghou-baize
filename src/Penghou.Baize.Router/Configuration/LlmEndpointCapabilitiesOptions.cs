@@ -16,6 +16,9 @@ public sealed class LlmEndpointCapabilitiesOptions
     /// <summary>Whether the endpoint can return multiple tool calls per response.</summary>
     public bool? ParallelToolCalls { get; init; }
 
+    /// <summary>Whether tools and structured output can be combined.</summary>
+    public bool? ToolsWithStructuredOutput { get; init; }
+
     /// <summary>Whether the endpoint natively constrains the output shape.</summary>
     public bool? NativeStructuredOutput { get; init; }
 

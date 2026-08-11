@@ -76,6 +76,47 @@ public sealed class BaizeBatchCoordinatorTests
         exception.Which.PartialHandle.Parts[0].BatchId.Should().Be("accepted");
     }
 
+    [Fact]
+    public async Task WaitForResults_PollsUntilTerminalThenFetchesResults()
+    {
+        var request = new LlmRequest([new LlmMessage("user", "hello")]);
+        var plan = new BatchPlan(
+            "logical",
+            [
+                new ProviderBatchGroup(
+                    "endpoint", "OpenAi", "model",
+                    [new BaizeBatchItem("one", request)])
+            ]);
+        var batchClient = new StubBatchClient(
+            "OpenAi",
+            requestId: "one",
+            statuses: [BaizeBatchState.Pending, BaizeBatchState.Running,
+                BaizeBatchState.Completed]);
+        var coordinator = new BaizeBatchCoordinator(
+            new StubPlanner(plan),
+            new BatchClientResolver(
+                new Dictionary<string, IBaizeBatchClient>
+                {
+                    ["endpoint"] = batchClient
+                }));
+        var handle = await coordinator.SubmitAsync(
+            new BaizeBatchSubmission([new BaizeBatchRequest("one", request)]),
+            TestContext.Current.CancellationToken);
+
+        var results = await coordinator.WaitForResultsAsync(
+            handle,
+            new BatchWaitOptions
+            {
+                PollInterval = TimeSpan.FromMilliseconds(1),
+                Timeout = TimeSpan.FromSeconds(2)
+            },
+            TestContext.Current.CancellationToken);
+
+        batchClient.GetStatusCalls.Should().Be(3);
+        results.Results.Should().ContainSingle()
+            .Which.RequestId.Should().Be("one");
+    }
+
     private sealed class StubPlanner(BatchPlan plan) : IBaizeBatchPlanner
     {
         public BatchPlan Plan(BaizeBatchSubmission submission) => plan;
@@ -86,23 +127,28 @@ public sealed class BaizeBatchCoordinatorTests
         private readonly string _batchId;
         private readonly string? _requestId;
         private readonly Exception? _failure;
+        private readonly Queue<BaizeBatchState> _statuses;
 
         public StubBatchClient(
             string providerId,
             string batchId = "batch",
             string? requestId = null,
-            Exception? failure = null)
+            Exception? failure = null,
+            IEnumerable<BaizeBatchState>? statuses = null)
         {
             ProviderId = providerId;
             _batchId = batchId;
             _requestId = requestId;
             _failure = failure;
+            _statuses = new Queue<BaizeBatchState>(
+                statuses ?? [BaizeBatchState.Completed]);
         }
 
         public string ProviderId { get; }
         public BatchCapabilities Capabilities =>
             BatchCapabilities.NativeBatch | BatchCapabilities.Cancellation;
         public BatchSubmissionOptions? LastOptions { get; private set; }
+        public int GetStatusCalls { get; private set; }
 
         public Task<ProviderBatchHandle> SubmitAsync(
             IReadOnlyList<BaizeBatchItem> items,
@@ -117,8 +163,16 @@ public sealed class BaizeBatchCoordinatorTests
 
         public Task<ProviderBatchStatus> GetStatusAsync(
             ProviderBatchHandle handle,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProviderBatchStatus(BaizeBatchState.Completed, Completed: 1));
+            CancellationToken cancellationToken = default)
+        {
+            GetStatusCalls++;
+            var state = _statuses.Count > 1
+                ? _statuses.Dequeue()
+                : _statuses.Peek();
+            return Task.FromResult(new ProviderBatchStatus(
+                state,
+                Completed: state == BaizeBatchState.Completed ? 1 : null));
+        }
 
         public Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
             ProviderBatchHandle handle,

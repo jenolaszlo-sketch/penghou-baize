@@ -20,6 +20,12 @@ public sealed record LlmEndpointCapabilities
     public bool ParallelToolCalls { get; init; }
 
     /// <summary>
+    /// Whether ordinary tools and a structured response format can be requested
+    /// in the same call. This is separate from supporting each feature alone.
+    /// </summary>
+    public bool ToolsWithStructuredOutput { get; init; }
+
+    /// <summary>
     /// Whether the endpoint natively constrains the output shape (for example
     /// a <c>response_format</c>, <c>response_schema</c> or <c>format</c>
     /// parameter).

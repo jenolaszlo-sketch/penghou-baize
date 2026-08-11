@@ -167,7 +167,7 @@ public sealed class ClaudeChatClientTests
 
         await action.Should()
             .ThrowAsync<LlmRequestValidationException>()
-            .WithMessage("*combining ordinary tool calls with a response format*");
+            .WithMessage("*does not support combining tools with structured output*");
     }
 
     [Fact]

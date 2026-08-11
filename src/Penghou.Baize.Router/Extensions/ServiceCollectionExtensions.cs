@@ -49,19 +49,23 @@ public static class ServiceCollectionExtensions
             ReliabilityEndpointSelectionPolicy>();
         services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
+        services.AddSingleton(sp =>
+            new LlmRoutingMonitor(ResolveOptionsMonitor(sp, section)));
+        services.AddSingleton<ReloadingLlmModelLookup>(sp =>
+            new ReloadingLlmModelLookup(
+                sp.GetRequiredService<LlmRoutingMonitor>().Options,
+                sp));
         services.AddSingleton<ILlmModelLookup>(sp =>
-            new ReloadingLlmModelLookup(ResolveOptionsMonitor(sp, section), sp));
-        services.AddSingleton<IReadOnlyDictionary<ModelStrategy, IReadOnlyList<string>>>(_ =>
-            options.StrategyFallbacks.ToDictionary(
-                kv => kv.Key,
-                kv => (IReadOnlyList<string>)kv.Value.AsReadOnly()
-            ).AsReadOnly());
+            sp.GetRequiredService<ReloadingLlmModelLookup>());
 
         services.AddSingleton<ILlmRouter>(sp =>
         {
             var memory = sp.GetRequiredService<ILlmRouterMemory>();
-            var monitor = ResolveOptionsMonitor(sp, section);
-            return new ReloadingLlmRouter(monitor, sp, memory);
+            return new ReloadingLlmRouter(
+                sp.GetRequiredService<LlmRoutingMonitor>().Options,
+                sp.GetRequiredService<ILlmModelLookup>(),
+                memory,
+                sp.GetService<ILlmEndpointSelectionPolicy>());
         });
 
         return services;
@@ -98,15 +102,33 @@ public static class ServiceCollectionExtensions
             foreach (var endpoint in model.Endpoints)
             {
                 var provider = providers.GetRequiredProvider(endpoint.ProviderKey);
-                var context = CreateProviderContext(
-                    httpClientFactory,
-                    secrets,
-                    provider,
-                    model.Name,
-                    endpoint,
-                    options.Profiles);
-                Func<ILlmClient> factory = () => provider.CreateClient(context);
                 var id = endpoint.Id ?? $"{model.Name}:{endpoint.ProviderKey}";
+                var providerModel = endpoint.ProviderModel ?? model.Name;
+                var baseUrl = endpoint.BaseUrl ?? provider.DefaultBaseUrl;
+                var capabilities = ResolveCapabilities(
+                    endpoint,
+                    options.Profiles,
+                    provider);
+                var deferred = new DeferredEndpointClients(
+                    provider,
+                    () => CreateProviderContextAsync(
+                        httpClientFactory,
+                        secrets,
+                        provider,
+                        model.Name,
+                        endpoint,
+                        capabilities));
+                var client = new DeferredLlmClient(
+                    deferred,
+                    capabilities,
+                    new LlmClientMetadata(
+                        provider.Key.Value,
+                        providerModel,
+                        Uri.TryCreate(baseUrl, UriKind.Absolute, out var endpointUri)
+                            ? endpointUri
+                            : null,
+                        id));
+                Func<ILlmClient> factory = () => client;
 
                 if (!usedIds.Add(id))
                 {
@@ -122,16 +144,12 @@ public static class ServiceCollectionExtensions
                 providerKeys.Add(endpoint.ProviderKey);
                 byEndpointId[id] = factory;
 
-                if (context.Capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch))
+                if (capabilities.Batch.HasFlag(BatchCapabilities.NativeBatch))
                 {
-                    batchByEndpointId[id] = () =>
-                    {
-                        var batchClient = provider.CreateBatchClient(context) ??
-                            throw new InvalidOperationException(
-                                $"Provider '{provider.Key}' declares native batch support " +
-                                $"for endpoint '{id}' but returned no batch client.");
-                        return new EndpointBoundBatchClient(id, batchClient);
-                    };
+                    var batchClient = new EndpointBoundBatchClient(
+                        id,
+                        new DeferredBatchClient(deferred, capabilities.Batch));
+                    batchByEndpointId[id] = () => batchClient;
                 }
                 endpoints.Add(new ResolvedEndpoint(id, model.Name, endpoint.ProviderKey));
 
@@ -175,18 +193,17 @@ public static class ServiceCollectionExtensions
             (options, _) => TryValidate(options, out _));
     }
 
-    private static LlmClientProviderContext CreateProviderContext(
+    private static async Task<LlmClientProviderContext> CreateProviderContextAsync(
         IHttpClientFactory httpClientFactory,
         ISecretProvider secrets,
         ILlmClientProvider provider,
         string modelName,
         LlmEndpointOptions endpoint,
-        IReadOnlyDictionary<string, LlmEndpointCapabilitiesOptions> profiles)
+        LlmEndpointCapabilities capabilities)
     {
-        var apiKey = ResolveApiKeyAsync(modelName, endpoint, secrets).GetAwaiter().GetResult();
+        var apiKey = await ResolveApiKeyAsync(modelName, endpoint, secrets);
         var providerModel = endpoint.ProviderModel ?? modelName;
         var baseUrl = endpoint.BaseUrl ?? provider.DefaultBaseUrl;
-        var capabilities = ResolveCapabilities(endpoint, profiles, provider);
         var settings = ResolveProviderSettings(endpoint);
 
         return new LlmClientProviderContext(
@@ -242,6 +259,8 @@ public static class ServiceCollectionExtensions
                 overrides.NativeToolCalling ?? defaults.NativeToolCalling,
             ParallelToolCalls =
                 overrides.ParallelToolCalls ?? defaults.ParallelToolCalls,
+            ToolsWithStructuredOutput =
+                overrides.ToolsWithStructuredOutput ?? defaults.ToolsWithStructuredOutput,
             NativeStructuredOutput =
                 overrides.NativeStructuredOutput ?? defaults.NativeStructuredOutput,
             StructuredOutputViaTool =
@@ -292,6 +311,8 @@ public static class ServiceCollectionExtensions
                 top.NativeToolCalling ?? baseOptions.NativeToolCalling,
             ParallelToolCalls =
                 top.ParallelToolCalls ?? baseOptions.ParallelToolCalls,
+            ToolsWithStructuredOutput =
+                top.ToolsWithStructuredOutput ?? baseOptions.ToolsWithStructuredOutput,
             NativeStructuredOutput =
                 top.NativeStructuredOutput ?? baseOptions.NativeStructuredOutput,
             StructuredOutputViaTool =

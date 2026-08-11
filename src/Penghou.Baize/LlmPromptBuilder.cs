@@ -27,28 +27,14 @@ public sealed class LlmPromptBuilder : ILlmPromptBuilder
     public LlmThinkingConfig? ThinkingConfig { get; set; }
 
     /// <summary>
-    /// Builds a request for the given <paramref name="strategy"/>. Throws when
-    /// tools are configured for <see cref="ModelStrategy.StructuredOutput"/>,
-    /// since no provider can juxtapose tool calls with a structured response
-    /// format.
+    /// Builds a request for the given <paramref name="strategy"/>. The strategy
+    /// is a routing hint only; endpoint capability validation decides which
+    /// feature combinations can be transmitted.
     /// </summary>
     /// <param name="strategy">The capability the request is targeting.</param>
     /// <returns>The built request.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// When <paramref name="strategy"/> is <see cref="ModelStrategy.StructuredOutput"/>
-    /// and <see cref="Tools"/> is not empty, or a <see cref="ResponseFormat"/> is set
-    /// for any strategy other than <see cref="ModelStrategy.StructuredOutput"/>.
-    /// </exception>
     public LlmRequest Build(ModelStrategy strategy)
     {
-        if (strategy == ModelStrategy.StructuredOutput && Tools.Count > 0)
-            throw new InvalidOperationException(
-                "Tools cannot be combined with StructuredOutput: a structured response format and tool calling are mutually exclusive.");
-
-        if (strategy != ModelStrategy.StructuredOutput && ResponseFormat is not null)
-            throw new InvalidOperationException(
-                $"ResponseFormat is only valid for the {nameof(ModelStrategy.StructuredOutput)} strategy.");
-
         return new LlmRequest(
             Messages,
             Temperature,

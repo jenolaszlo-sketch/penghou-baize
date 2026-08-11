@@ -30,7 +30,7 @@ public sealed class ProviderPluginTests
     }
 
     [Fact]
-    public void AddLlmRouting_LoadsConfiguredProviderAssemblyByName()
+    public async Task AddLlmRouting_LoadsConfiguredProviderAssemblyByName()
     {
         var configuration = Configuration(
             assembly: "Penghou.Baize.TestProvider",
@@ -45,15 +45,24 @@ public sealed class ProviderPluginTests
             .GetRequiredService<ILlmModelLookup>()
             .GetClient("custom-model", new LlmProviderKey("CUSTOM-TEST"));
 
-        var customClient = client.Should().BeOfType<TestLlmClient>().Subject;
-        customClient.Model.Should().Be("provider-model");
-        customClient.BaseUrl.Should().Be("https://custom-provider.example/v1");
-        customClient.Settings.Should().Contain("Mode", "strict");
-        customClient.Capabilities.NativeToolCalling.Should().BeTrue();
+        client.Capabilities.NativeToolCalling.Should().BeTrue();
+        var metadata = client.Should()
+            .BeAssignableTo<ILlmClientMetadataProvider>().Subject.Metadata;
+        metadata.Provider.Should().Be("custom-test");
+        metadata.Model.Should().Be("provider-model");
+        metadata.Endpoint.Should().Be(new Uri("https://custom-provider.example/v1"));
+
+        var events = new List<LlmStreamEvent>();
+        await foreach (var item in client.StreamAsync(
+                           new LlmRequest([new LlmMessage("user", "hello")]),
+                           TestContext.Current.CancellationToken))
+            events.Add(item);
+
+        events.Should().Contain(item => item.Delta == "custom-provider");
     }
 
     [Fact]
-    public void AddLlmRouting_DiscoversAllPublicProvidersWhenTypeIsOmitted()
+    public async Task AddLlmRouting_DiscoversAllPublicProvidersWhenTypeIsOmitted()
     {
         var configuration = Configuration(
             assembly: "Penghou.Baize.TestProvider",
@@ -64,9 +73,15 @@ public sealed class ProviderPluginTests
         services.AddLlmRouting(configuration);
 
         using var serviceProvider = services.BuildServiceProvider();
-        serviceProvider.GetRequiredService<ILlmModelLookup>()
-            .GetClient("custom-model", "custom-test")
-            .Should().BeOfType<TestLlmClient>();
+        var client = serviceProvider.GetRequiredService<ILlmModelLookup>()
+            .GetClient("custom-model", "custom-test");
+        var events = new List<LlmStreamEvent>();
+        await foreach (var item in client.StreamAsync(
+                           new LlmRequest([new LlmMessage("user", "hello")]),
+                           TestContext.Current.CancellationToken))
+            events.Add(item);
+
+        events.Should().Contain(item => item.Delta == "custom-provider");
     }
 
     [Fact]

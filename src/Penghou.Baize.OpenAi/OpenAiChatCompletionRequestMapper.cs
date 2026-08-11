@@ -57,26 +57,32 @@ internal static class OpenAiChatCompletionRequestMapper
                             $"tool schema '{t.Name}'")
                     }
                 }).ToList(),
-            ResponseFormat = request.ResponseFormat is null
-                ? null
-                : new
-                {
-                    type = "json_schema",
-                    json_schema = new
-                    {
-                        name = "response",
-                        schema = ParseJsonElement(
-                            request.ResponseFormat.Schema,
-                            "response format schema"),
-                        strict = true
-                    }
-                },
+            ResponseFormat = MapResponseFormat(request.ResponseFormat),
             ReasoningEffort = request.ThinkingConfig is null || request.ThinkingConfig.Mode != LlmThinkingMode.Enabled
                 ? null
                 : MapThinkingEffort(request.ThinkingConfig.Effort),
             Thinking = MapThinkingToggle(dialect, request.ThinkingConfig)
         };
     }
+
+    private static object? MapResponseFormat(LlmResponseFormat? format) =>
+        format switch
+        {
+            null => null,
+            { Type: "json_object" } => new { type = "json_object" },
+            _ => new
+            {
+                type = "json_schema",
+                json_schema = new
+                {
+                    name = "response",
+                    schema = ParseJsonElement(
+                        format.Schema,
+                        "response format schema"),
+                    strict = true
+                }
+            }
+        };
 
     private static object? MapThinkingToggle(
         OpenAiDialect dialect,

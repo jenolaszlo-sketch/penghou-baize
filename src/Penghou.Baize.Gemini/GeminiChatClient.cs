@@ -39,7 +39,7 @@ public sealed class GeminiChatClient : LlmClientBase
         string apiKey,
         string baseUrl,
         LlmEndpointCapabilities capabilities)
-        : base(model, httpClientFactory, apiKey, capabilities)
+        : base(model, httpClientFactory, apiKey, capabilities, "Gemini")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
         ArgumentNullException.ThrowIfNull(httpClientFactory);

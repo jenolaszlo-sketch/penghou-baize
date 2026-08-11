@@ -25,9 +25,10 @@ small domain surface — no provider SDK types leak into your application.
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
 | `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` adapter |
 
-The core, provider clients, and router target `net8.0` and `net10.0`.
-`Penghou.Baize.Tools` targets `net9.0` and `net10.0` because its schema
-generation uses the `System.Text.Json.Schema` APIs introduced in .NET 9.
+The core, provider clients, router, batch coordinator, Extensions.AI adapter,
+and repair tools support .NET 8. Provider-neutral tools additionally target
+.NET 9 and .NET 10 so applications can stay on their host framework without
+giving up schema-aware recovery.
 
 ## Install
 
@@ -121,6 +122,20 @@ foreach (var call in response.ToolCalls)
     Console.WriteLine($"{call.Name}: {call.ArgumentsJson}");
 ```
 
+Routing strategies are selection hints, not request shapes. Applications that
+already have a canonical request can route it directly without rebuilding it
+or pretending it belongs to a particular strategy:
+
+```csharp
+var request = new LlmRequest(messages, tools: tools);
+var response = await router.CompleteStreamingAsync("deepseek", request);
+```
+
+Tools and structured output may be requested together, but only endpoints that
+explicitly advertise `ToolsWithStructuredOutput` are eligible. Supporting
+tool calls and structured output separately does not imply that their provider
+API supports the combination.
+
 The deltas themselves (index, id/name on the first fragment, incremental
 arguments) are still observable on the raw stream for progress UI:
 
@@ -194,7 +209,13 @@ var handle = await batches.SubmitAsync(new BaizeBatchSubmission(
         new LlmRequest([new LlmMessage("user", "Summarize this")]),
         Model: "gpt-batch")
 ]));
-var status = await batches.GetStatusAsync(handle);
+var status = await batches.WaitForCompletionAsync(
+    handle,
+    new BatchWaitOptions
+    {
+        PollInterval = TimeSpan.FromSeconds(10),
+        Timeout = TimeSpan.FromHours(24)
+    });
 var results = await batches.GetResultsAsync(handle);
 ```
 
@@ -229,7 +250,8 @@ configured module form lets the router discover a third-party
       "qwen-tools": {
         "NativeToolCalling": true,
         "ParallelToolCalls": true,
-        "NativeStructuredOutput": true
+        "NativeStructuredOutput": true,
+        "ToolsWithStructuredOutput": false
       }
     },
     "Models": [

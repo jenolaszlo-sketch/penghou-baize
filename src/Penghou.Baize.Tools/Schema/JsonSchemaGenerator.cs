@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+#if NET9_0_OR_GREATER
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
+#endif
 
 namespace Penghou.Baize.Tools.Schema;
 
@@ -13,8 +15,9 @@ namespace Penghou.Baize.Tools.Schema;
 /// anyOf/oneOf/allOf, both of which JsonSchemaExporter emits by default for
 /// nullable reference/value-type properties.
 /// </summary>
-public static class JsonSchemaGenerator
+public static partial class JsonSchemaGenerator
 {
+#if NET9_0_OR_GREATER
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -36,11 +39,18 @@ public static class JsonSchemaGenerator
         }
     };
 
+#endif
+
     /// <summary>Generates a JSON Schema for TResult and returns it as a JsonNode
     /// tree — useful when you need to inspect/compose the schema further, e.g. to
     /// derive a JsonSchemaExpectation for the repair pipeline.</summary>
+#if NET9_0_OR_GREATER
     public static JsonNode GenerateSchemaNode<T>() =>
         Options.GetTypeInfo(typeof(T)).GetJsonSchemaAsNode(ExporterOptions);
+#else
+    public static JsonNode GenerateSchemaNode<T>() =>
+        GenerateSchemaNodeForNet8(typeof(T));
+#endif
 
     /// <summary>Generates a JSON Schema for TResult as a wire-ready JSON string —
     /// used for LlmTool.InputSchemaJson / OpenAiFunctionTool.Parameters /
@@ -48,6 +58,7 @@ public static class JsonSchemaGenerator
     public static string GenerateSchemaJson<T>() =>
         GenerateSchemaNode<T>().ToJsonString();
 
+#if NET9_0_OR_GREATER
     private static void NormalizeNullableType(JsonObject obj)
     {
         if (obj["type"] is not JsonArray typeArray)
@@ -101,4 +112,5 @@ public static class JsonSchemaGenerator
             obj["description"] = description;
         }
     }
+#endif
 }

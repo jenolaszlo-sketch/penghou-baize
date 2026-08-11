@@ -20,6 +20,12 @@ public interface ILlmRouter
         ILlmPromptBuilder builder,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Streams an already-built canonical request through a named model.</summary>
+    IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        string model,
+        LlmRequest request,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Streams a completion for a strategy, using the endpoint the router
     /// would currently pick from the strategy's fallback chain.
@@ -33,6 +39,12 @@ public interface ILlmRouter
         ILlmPromptBuilder builder,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Streams an already-built canonical request through a strategy.</summary>
+    IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+        ModelStrategy strategy,
+        LlmRequest request,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// The endpoint the router would currently use for a model, chosen from
     /// the model's configured endpoints by least-failing history.
@@ -41,6 +53,11 @@ public interface ILlmRouter
     /// <returns>The resolved endpoint.</returns>
     ResolvedEndpoint Resolve(string model);
 
+    /// <summary>Asynchronously resolves the endpoint currently preferred for a model.</summary>
+    Task<ResolvedEndpoint> ResolveAsync(
+        string model,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// The endpoint the router would currently use for a strategy, chosen
     /// from the fallback chain's endpoints by least-failing history.
@@ -48,4 +65,9 @@ public interface ILlmRouter
     /// <param name="strategy">The capability the request is targeting.</param>
     /// <returns>The resolved endpoint.</returns>
     ResolvedEndpoint Resolve(ModelStrategy strategy);
+
+    /// <summary>Asynchronously resolves the endpoint currently preferred for a strategy.</summary>
+    Task<ResolvedEndpoint> ResolveAsync(
+        ModelStrategy strategy,
+        CancellationToken cancellationToken = default);
 }

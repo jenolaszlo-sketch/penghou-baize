@@ -163,7 +163,7 @@ internal static class GeminiMessageRequestMapper
                 ]
             };
 
-        var responseSchema = request.ResponseFormat is null
+        var responseSchema = request.ResponseFormat?.Schema is null
             ? (JsonElement?)null
             : ParseJsonElement(
                 request.ResponseFormat.Schema,
@@ -179,9 +179,7 @@ internal static class GeminiMessageRequestMapper
                 MaxOutputTokens = request.MaxTokens,
                 ResponseSchema = responseSchema,
                 ResponseMimeType =
-                    responseSchema is null
-                        ? null
-                        : "application/json",
+                    request.ResponseFormat is null ? null : "application/json",
                 ThinkingConfig = MapThinkingConfig(
                     model,
                     capabilities,

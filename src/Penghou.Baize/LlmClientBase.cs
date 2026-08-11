@@ -10,7 +10,7 @@ namespace Penghou.Baize;
 /// Base class for provider clients. Handles the shared HTTP streaming flow and
 /// delegates provider-specific request shaping and event parsing to subclasses.
 /// </summary>
-public abstract class LlmClientBase : ILlmClient
+public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
 {
     /// <summary>The provider model identifier used on the wire.</summary>
     protected readonly string Model;
@@ -24,21 +24,27 @@ public abstract class LlmClientBase : ILlmClient
     /// <summary>The declared capabilities of the endpoint, queryable via <see cref="ILlmClient.Capabilities"/>.</summary>
     public LlmEndpointCapabilities Capabilities { get; }
 
+    /// <inheritdoc />
+    public LlmClientMetadata Metadata { get; }
+
     /// <summary>Initializes a provider client.</summary>
     /// <param name="model">The provider model identifier.</param>
     /// <param name="httpClientFactory">The HTTP client factory used to create the streaming client.</param>
     /// <param name="apiKey">The API key used to authenticate, when any.</param>
     /// <param name="capabilities">The declared capabilities of the endpoint.</param>
+    /// <param name="provider">The provider name exposed through client metadata.</param>
     protected LlmClientBase(
         string model,
         IHttpClientFactory httpClientFactory,
         string apiKey,
-        LlmEndpointCapabilities capabilities)
+        LlmEndpointCapabilities capabilities,
+        string provider = "Unknown")
     {
         Model = model;
         HttpClientFactory = httpClientFactory;
         ApiKey = apiKey;
         Capabilities = capabilities;
+        Metadata = new LlmClientMetadata(provider, model);
     }
 
     /// <summary>
