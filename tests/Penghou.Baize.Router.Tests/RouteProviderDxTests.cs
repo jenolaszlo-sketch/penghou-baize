@@ -63,6 +63,32 @@ public sealed class RouteProviderDxTests
     }
 
     [Fact]
+    public async Task CustomRouteProvider_ReceivesRequestMetadata()
+    {
+        var endpoint = new ResolvedEndpoint(
+            "endpoint",
+            "model",
+            new LlmProviderKey("test"));
+        var lookup = Lookup(endpoint, new StubClient());
+        var routeProvider = new CapturingRouteProvider(endpoint);
+        var router = new LlmRouter(lookup, routeProvider);
+        var request = new LlmRequest(
+            [new LlmMessage("user", "hello")],
+            metadata: new Dictionary<string, object?>
+            {
+                ["acme.tenant-id"] = "tenant-a"
+            });
+
+        await router.ExplainModelAsync(
+            "model",
+            request,
+            TestContext.Current.CancellationToken);
+
+        routeProvider.Request.Should().BeSameAs(request);
+        routeProvider.Request!.Metadata["acme.tenant-id"].Should().Be("tenant-a");
+    }
+
+    [Fact]
     public void FluentRegistration_ValidatesTheSameOptionGraph()
     {
         var services = new ServiceCollection();
@@ -200,5 +226,25 @@ public sealed class RouteProviderDxTests
         public Task<LlmEndpointValidationReport> ValidateAsync(
             CancellationToken cancellationToken = default) =>
             Task.FromResult(report);
+    }
+
+    private sealed class CapturingRouteProvider(ResolvedEndpoint endpoint)
+        : ILlmRouteProvider
+    {
+        public LlmRequest? Request { get; private set; }
+
+        public ValueTask<LlmRouteResolution> ResolveAsync(
+            LlmRoutingContext context,
+            CancellationToken cancellationToken = default)
+        {
+            Request = context.Request;
+            var stats = new LlmEndpointStats(endpoint.EndpointId, 0, 0, 0, 0);
+            var explanation = new LlmRouteExplanation(
+                context.Target,
+                [endpoint.Model],
+                [new LlmRouteCandidateExplanation(endpoint, true, null, 0, stats)],
+                endpoint);
+            return ValueTask.FromResult(new LlmRouteResolution([endpoint], explanation));
+        }
     }
 }

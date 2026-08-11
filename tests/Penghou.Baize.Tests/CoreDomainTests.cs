@@ -13,6 +13,7 @@ public sealed class LlmRequestTests
         request.Tools.Should().BeEmpty();
         request.Temperature.Should().BeNull();
         request.MaxTokens.Should().BeNull();
+        request.Metadata.Should().BeEmpty();
     }
 
     [Fact]

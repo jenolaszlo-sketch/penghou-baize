@@ -64,4 +64,26 @@ public sealed class LlmPromptBuilderTests
 
         request.ResponseFormat.Should().NotBeNull();
     }
+
+    [Fact]
+    public void Build_PreservesRequestMetadataAsASnapshot()
+    {
+        var metadata = new Dictionary<string, object?>
+        {
+            ["acme.tenant-id"] = "tenant-a",
+            ["acme.low-cost"] = true
+        };
+        var builder = new LlmPromptBuilder
+        {
+            Messages = TestMessage,
+            Metadata = metadata
+        };
+
+        var request = builder.Build(ModelStrategy.Auto);
+        metadata.Clear();
+
+        request.Metadata.Should().HaveCount(2);
+        request.Metadata["acme.tenant-id"].Should().Be("tenant-a");
+        request.Metadata["acme.low-cost"].Should().Be(true);
+    }
 }

@@ -2,7 +2,7 @@ namespace Penghou.Baize;
 
 /// <summary>
 /// Default <see cref="ILlmPromptBuilder"/> that forwards the configured
-/// messages, temperature, token limit, tools, response format, and thinking
+/// messages, temperature, token limit, tools, response format, thinking, and metadata
 /// settings into a request. Tools and structured output are deliberately
 /// mutually exclusive because providers express that combination differently.
 /// </summary>
@@ -27,6 +27,13 @@ public sealed class LlmPromptBuilder : ILlmPromptBuilder
     public LlmThinkingConfig? ThinkingConfig { get; set; }
 
     /// <summary>
+    /// Host-neutral application context passed to routing and decorators, but
+    /// never serialized by provider clients.
+    /// </summary>
+    public IReadOnlyDictionary<string, object?> Metadata { get; set; } =
+        new Dictionary<string, object?>(StringComparer.Ordinal);
+
+    /// <summary>
     /// Builds a request for the given <paramref name="strategy"/>. The strategy
     /// is a routing hint only; endpoint capability validation decides which
     /// feature combinations can be transmitted.
@@ -41,6 +48,7 @@ public sealed class LlmPromptBuilder : ILlmPromptBuilder
             MaxTokens,
             tools: Tools,
             ResponseFormat,
-            ThinkingConfig);
+            ThinkingConfig,
+            Metadata);
     }
 }

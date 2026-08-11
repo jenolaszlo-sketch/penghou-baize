@@ -2,6 +2,12 @@
 
 Implement `ILlmRouteProvider` when the configured fallback chains are not enough—for example tenant-aware, residency-aware, budget-aware, or experiment routing. `LlmRouteProviderBase` provides access to the replaceable `ILlmRouterMemory` and helpers for endpoint statistics and cooldowns.
 
+Per-request policy inputs are available through
+`context.Request?.Metadata`. This keeps route providers independent from web
+frameworks and ambient context. Metadata is copied into `LlmRequest`, is never
+serialized by provider clients, must not contain secrets, and should use
+namespaced keys when published by reusable libraries.
+
 ```csharp
 public sealed class TenantRouteProvider(ILlmRouterMemory memory)
     : LlmRouteProviderBase(memory)

@@ -375,6 +375,25 @@ Use `StreamAsync("qwen", request)` to target a model registration and
 `StreamRouteAsync("low-cost", request)` to target a named chain. Routes select
 endpoints but do not alter the canonical request shape.
 
+Request-level application context can be passed to custom route providers
+without coupling Baize to ASP.NET, `AsyncLocal`, or another host:
+
+```csharp
+var request = new LlmRequest(
+    messages,
+    metadata: new Dictionary<string, object?>
+    {
+        ["acme.tenant-id"] = tenantId,
+        ["acme.residency"] = "eu",
+        ["acme.low-cost"] = true
+    });
+```
+
+The metadata map is copied when the request is created and is available as
+`LlmRoutingContext.Request.Metadata`. It is application context—not provider
+request data—and Baize clients never serialize it onto provider APIs. Do not
+store secrets in metadata; reusable libraries should namespace their keys.
+
 Every model needs a unique `Name` and at least one endpoint. `Provider` is a
 case-insensitive adapter key; built-in keys are `OpenAi`, `Claude`, `Ollama`,
 and `Gemini`, while packages can define their own. The older `ApiStyle`

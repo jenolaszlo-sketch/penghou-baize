@@ -9,6 +9,7 @@ public sealed record LlmRequest
     private readonly IReadOnlyList<LlmTool> _tools;
     private readonly LlmResponseFormat? _responseFormat;
     private readonly LlmThinkingConfig? _thinkingConfig;
+    private readonly IReadOnlyDictionary<string, object?> _metadata;
 
     /// <summary>Initializes a request.</summary>
     /// <param name="messages">The conversation messages.</param>
@@ -17,12 +18,17 @@ public sealed record LlmRequest
     /// <param name="tools">Tools available to the model, when any.</param>
     /// <param name="responseFormat">A requested response format, when any.</param>
     /// <param name="thinkingConfig">Extended-thinking configuration, when any.</param>
+    /// <param name="metadata">
+    /// Host-neutral application context made available to routing and
+    /// decorators. Provider clients must not serialize it onto wire requests.
+    /// </param>
     public LlmRequest(IReadOnlyList<LlmMessage> messages,
         double? temperature = null,
         int? maxTokens = null,
         IList<LlmTool>? tools = null,
         LlmResponseFormat? responseFormat = null,
-        LlmThinkingConfig? thinkingConfig = null)
+        LlmThinkingConfig? thinkingConfig = null,
+        IReadOnlyDictionary<string, object?>? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(messages);
         _messages = messages.ToArray();
@@ -31,6 +37,9 @@ public sealed record LlmRequest
         _tools = tools?.ToArray() ?? [];
         _responseFormat = responseFormat;
         _thinkingConfig = thinkingConfig;
+        _metadata = metadata is null
+            ? new Dictionary<string, object?>(StringComparer.Ordinal)
+            : new Dictionary<string, object?>(metadata, StringComparer.Ordinal);
     }
 
     /// <summary>The conversation messages.</summary>
@@ -50,4 +59,11 @@ public sealed record LlmRequest
 
     /// <summary>Extended-thinking configuration, when any.</summary>
     public LlmThinkingConfig? ThinkingConfig => _thinkingConfig;
+
+    /// <summary>
+    /// Host-neutral application context for routing, decorators, telemetry
+    /// enrichment, and cost attribution. It is not provider request data and
+    /// must not contain secrets. Reusable libraries should namespace keys.
+    /// </summary>
+    public IReadOnlyDictionary<string, object?> Metadata => _metadata;
 }
