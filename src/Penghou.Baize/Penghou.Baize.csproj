@@ -5,7 +5,6 @@
 
     <PackageId>Penghou.Baize</PackageId>
     <Title>Penghou Baize</Title>
-    <Version>0.2.0</Version>
     <Authors>Penghou.Baize contributors</Authors>
     <Description>Provider-agnostic chat-completion client model for .NET with streaming, tool calling, and usage diagnostics.</Description>
     <PackageTags>llm;chat;streaming;tool-calling;ai;openai;claude;ollama</PackageTags>

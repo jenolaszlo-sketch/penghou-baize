@@ -4,7 +4,6 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Penghou.Baize.Gemini</PackageId>
     <Title>Penghou Baize Gemini</Title>
-    <Version>0.2.0</Version>
     <Authors>Penghou.Baize contributors</Authors>
     <Description>Google Gemini chat client for the Penghou.Baize provider-agnostic model.</Description>
     <PackageTags>llm;chat;streaming;tool-calling;ai;gemini;google</PackageTags>

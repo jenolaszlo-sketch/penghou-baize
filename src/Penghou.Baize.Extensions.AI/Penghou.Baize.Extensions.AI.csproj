@@ -3,7 +3,6 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Penghou.Baize.Extensions.AI</PackageId>
     <Title>Penghou Baize Microsoft.Extensions.AI Adapter</Title>
-    <Version>0.2.0</Version>
     <Authors>Penghou.Baize contributors</Authors>
     <Description>Microsoft.Extensions.AI IChatClient interoperability for Penghou.Baize clients.</Description>
     <PackageTags>llm;chat;ai;microsoft.extensions.ai;interoperability</PackageTags>
