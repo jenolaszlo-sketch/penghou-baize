@@ -140,7 +140,7 @@ public sealed class RouteProviderDxTests
     {
         var builder = new LlmRoutingBuilder()
             .AddProfile("tools", capabilities => capabilities
-                .SupportsTools(parallel: true)
+                .SupportsTools(parallel: true, strictArguments: true)
                 .SupportsStructuredOutput(viaTool: true)
                 .SupportsThinking(
                     tokenBudget: 1024,
@@ -163,6 +163,7 @@ public sealed class RouteProviderDxTests
         var options = builder.Build();
         ServiceCollectionExtensions.TryValidate(options, out var error).Should().BeTrue(error);
         options.Profiles["tools"].ParallelToolCalls.Should().BeTrue();
+        options.Profiles["tools"].StrictToolArguments.Should().BeTrue();
         options.Profiles["tools"].ThinkingBudget.Should().Be(1024);
         options.Profiles["tools"].Batch.Should().Be(BatchCapabilities.NativeBatch);
         options.Models[0].Endpoints[0].ApiKeySecretName.Should().Be("API_KEY");

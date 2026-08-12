@@ -8,6 +8,8 @@ TestResults/
 *.nupkg
 *.snupkg
 logs/
+/artifacts/live-diagnostics/
+/coverage-local-*/
 .env
 .env.local
 .env.*.local

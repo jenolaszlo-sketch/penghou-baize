@@ -240,6 +240,146 @@ public sealed class OpenAiChatClientTests
     }
 
     [Fact]
+    public async Task StreamAsync_DeepSeekJsonModeAddsRequiredJsonInstruction()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(
+            handler,
+            "deepseek-chat",
+            ConservativeCapabilities,
+            dialect: OpenAiDialect.DeepSeek);
+
+        await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Return the result")],
+                responseFormat: LlmResponseFormat.Json()),
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var root = document.RootElement;
+        root.GetProperty("messages")[0].GetProperty("role")
+            .GetString().Should().Be("system");
+        root.GetProperty("messages")[0].GetProperty("content")
+            .GetString().Should().Contain("valid JSON");
+        root.GetProperty("response_format").GetProperty("type")
+            .GetString().Should().Be("json_object");
+    }
+
+    [Fact]
+    public async Task StreamAsync_DeepSeekSchemaUsesForcedSyntheticToolAndReturnsContent()
+    {
+        var handler = new RecordingHandler(
+            """
+            data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","function":{"name":"structured_output","arguments":"{\"answer\":"}}]},"finish_reason":null}]}
+
+            data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"ok\"}"}}]},"finish_reason":"tool_calls"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(
+            handler,
+            "deepseek-chat",
+            ConservativeCapabilities,
+            dialect: OpenAiDialect.DeepSeek);
+        var events = await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Return the answer")],
+                responseFormat: LlmResponseFormat.JsonSchema(
+                    """{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"]}""")),
+            TestContext.Current.CancellationToken));
+
+        string.Concat(events.Select(item => item.Delta))
+            .Should().Be("{\"answer\":\"ok\"}");
+        events.Should().OnlyContain(item => item.ToolCallDelta == null);
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        var root = document.RootElement;
+        root.TryGetProperty("response_format", out _).Should().BeFalse();
+        root.GetProperty("tools")[0].GetProperty("function")
+            .GetProperty("name").GetString().Should().Be("structured_output");
+        root.GetProperty("tool_choice").GetProperty("function")
+            .GetProperty("name").GetString().Should().Be("structured_output");
+        root.GetProperty("thinking").GetProperty("type")
+            .GetString().Should().Be("disabled");
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsExplicitThinkingWithDeepSeekSchemaFallback()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(
+            handler,
+            "deepseek-chat",
+            ConservativeCapabilities,
+            dialect: OpenAiDialect.DeepSeek);
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Return the answer")],
+            responseFormat: LlmResponseFormat.JsonSchema(
+                """{"type":"object"}"""),
+            thinkingConfig: new LlmThinkingConfig(LlmThinkingMode.Enabled));
+
+        var action = async () => await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        await action.Should().ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*cannot be combined with explicit thinking*");
+        handler.RequestBody.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StreamAsync_MapsStrictToolOnlyWhenExplicitlySupported()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(
+            handler,
+            "deepseek-chat",
+            ConservativeCapabilities with { StrictToolArguments = true },
+            dialect: OpenAiDialect.DeepSeek);
+        var tool = new LlmTool(
+            "lookup",
+            "Looks up a value",
+            """{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}""",
+            Strict: true);
+
+        await CollectAsync(client.StreamAsync(
+            new LlmRequest(
+                [new LlmMessage("user", "Look it up")],
+                tools: [tool]),
+            TestContext.Current.CancellationToken));
+
+        using var document = JsonDocument.Parse(handler.RequestBody!);
+        document.RootElement.GetProperty("tools")[0]
+            .GetProperty("function").GetProperty("strict")
+            .GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsStrictToolWhenCapabilityIsMissing()
+    {
+        var handler = new RecordingHandler("data: [DONE]\n\n");
+        var client = CreateClient(handler, "gpt-test", ConservativeCapabilities);
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Look it up")],
+            tools:
+            [
+                new LlmTool(
+                    "lookup",
+                    "Looks up a value",
+                    """{"type":"object"}""",
+                    Strict: true)
+            ]);
+
+        var action = async () => await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        await action.Should().ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*does not support strict tool arguments*");
+    }
+
+    [Fact]
     public async Task StreamAsync_DeepSeekDialectEnablesThinkingOnConservativeDefaults()
     {
         var handler = new RecordingHandler(

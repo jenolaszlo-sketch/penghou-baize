@@ -20,6 +20,12 @@ public sealed record LlmEndpointCapabilities
     public bool ParallelToolCalls { get; init; }
 
     /// <summary>
+    /// Whether the endpoint can enforce a tool's argument schema when
+    /// <see cref="LlmTool.Strict"/> is requested.
+    /// </summary>
+    public bool StrictToolArguments { get; init; }
+
+    /// <summary>
     /// Whether ordinary tools and a structured response format can be requested
     /// in the same call. This is separate from supporting each feature alone.
     /// </summary>

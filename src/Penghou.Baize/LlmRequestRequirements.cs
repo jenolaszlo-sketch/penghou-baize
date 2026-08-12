@@ -13,6 +13,9 @@ public sealed record LlmRequestRequirements
     /// <summary>Whether replayed history requires parallel tool calls.</summary>
     public bool ParallelToolCalls { get; init; }
 
+    /// <summary>Whether strict tool-argument schema enforcement is required.</summary>
+    public bool StrictToolArguments { get; init; }
+
     /// <summary>Whether structured output is required.</summary>
     public bool StructuredOutput { get; init; }
 
@@ -34,6 +37,7 @@ public sealed record LlmRequestRequirements
                 parts.Any(part => part is LlmToolCallContent or LlmToolResultContent),
             ParallelToolCalls = request.Messages.Any(message =>
                 message.Parts.Count(part => part is LlmToolCallContent) > 1),
+            StrictToolArguments = request.Tools.Any(tool => tool.Strict),
             StructuredOutput = request.ResponseFormat is not null,
             Thinking = request.ThinkingConfig,
             Content = parts
@@ -56,6 +60,8 @@ public sealed record LlmRequestRequirements
             return Fail("native tool calling is required", out reason);
         if (ParallelToolCalls && !capabilities.ParallelToolCalls)
             return Fail("parallel tool calls are required", out reason);
+        if (StrictToolArguments && !capabilities.StrictToolArguments)
+            return Fail("strict tool arguments are required", out reason);
         if (StructuredOutput &&
             !capabilities.NativeStructuredOutput &&
             !capabilities.StructuredOutputViaTool)

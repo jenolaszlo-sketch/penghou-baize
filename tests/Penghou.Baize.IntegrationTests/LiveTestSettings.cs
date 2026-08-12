@@ -6,7 +6,9 @@ internal sealed record LiveTestSettings(
     string Model,
     string? SecretName,
     string? BaseUrl,
-    string DiagnosticsDirectory)
+    string? Dialect,
+    string DiagnosticsDirectory,
+    TimeSpan HttpTimeout)
 {
     public static LiveTestSettings Load()
     {
@@ -38,13 +40,21 @@ internal sealed record LiveTestSettings(
         var diagnosticsDirectory =
             Environment.GetEnvironmentVariable("BAIZE_DIAGNOSTICS_DIRECTORY") ??
             Path.Combine(AppContext.BaseDirectory, "artifacts", "live-diagnostics");
+        var timeoutSeconds =
+            Environment.GetEnvironmentVariable("BAIZE_LIVE_HTTP_TIMEOUT_SECONDS") is { Length: > 0 } rawTimeout &&
+            int.TryParse(rawTimeout, out var parsedTimeout) &&
+            parsedTimeout > 0
+                ? parsedTimeout
+                : 300;
         return new LiveTestSettings(
             provider,
             assembly,
             model,
             secret,
             Environment.GetEnvironmentVariable("BAIZE_LIVE_BASE_URL"),
-            diagnosticsDirectory);
+            Environment.GetEnvironmentVariable("BAIZE_LIVE_DIALECT"),
+            diagnosticsDirectory,
+            TimeSpan.FromSeconds(timeoutSeconds));
     }
 
     public static bool ToolsEnabled

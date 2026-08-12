@@ -5,6 +5,7 @@ public sealed class LlmEndpointCapabilitiesBuilder
 {
     private bool? _tools;
     private bool? _parallelTools;
+    private bool? _strictToolArguments;
     private bool? _toolsWithStructuredOutput;
     private bool? _structuredOutput;
     private bool? _structuredOutputViaTool;
@@ -21,11 +22,13 @@ public sealed class LlmEndpointCapabilitiesBuilder
     public LlmEndpointCapabilitiesBuilder SupportsTools(
         bool enabled = true,
         bool parallel = false,
-        bool withStructuredOutput = false)
+        bool withStructuredOutput = false,
+        bool strictArguments = false)
     {
         _tools = enabled;
         _parallelTools = enabled && parallel;
         _toolsWithStructuredOutput = enabled && withStructuredOutput;
+        _strictToolArguments = enabled && strictArguments;
         return this;
     }
 
@@ -81,6 +84,7 @@ public sealed class LlmEndpointCapabilitiesBuilder
     {
         NativeToolCalling = _tools,
         ParallelToolCalls = _parallelTools,
+        StrictToolArguments = _strictToolArguments,
         ToolsWithStructuredOutput = _toolsWithStructuredOutput,
         NativeStructuredOutput = _structuredOutput,
         StructuredOutputViaTool = _structuredOutputViaTool,

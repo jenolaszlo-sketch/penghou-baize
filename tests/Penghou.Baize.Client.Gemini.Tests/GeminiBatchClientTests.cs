@@ -191,7 +191,7 @@ public sealed class GeminiBatchClientTests
             TestContext.Current.CancellationToken);
 
         handler.Requests[1].Method.Should().Be(HttpMethod.Get);
-        handler.Requests[1].Path.Should().Be("/v1beta/files/out");
+        handler.Requests[1].Path.Should().Be("/download/v1beta/files/out:download");
 
         results.Should().HaveCount(2);
 
@@ -207,6 +207,24 @@ public sealed class GeminiBatchClientTests
         failed.Error.FailureKind.Should().Be(LlmClientFailureKind.RateLimit);
         failed.Error.StatusCode.Should().Be(429);
         failed.Error.ProviderStatus.Should().Be("RESOURCE_EXHAUSTED");
+    }
+
+    [Fact]
+    public async Task GetResultsAsync_ParsesCurrentDirectResponsesFileShape()
+    {
+        var handler = new BatchRecordingHandler(
+            """{"name":"batches/123","done":true,"metadata":{"state":"BATCH_STATE_SUCCEEDED","output":{"responsesFile":"files/out"}},"response":{"responsesFile":"files/out"}}""",
+            """{"key":"req-1","response":{"candidates":[{"content":{"parts":[{"text":"Hello"}]},"finishReason":"STOP"}]}}""");
+        var client = CreateClient(handler);
+
+        var results = await client.GetResultsAsync(
+            new ProviderBatchHandle("Gemini", "batches/123"),
+            TestContext.Current.CancellationToken);
+
+        results.Should().ContainSingle();
+        results[0].RequestId.Should().Be("req-1");
+        results[0].Response!.Content.Should().Be("Hello");
+        handler.Requests[1].Path.Should().Be("/download/v1beta/files/out:download");
     }
 
     [Fact]

@@ -35,6 +35,10 @@ internal sealed class OpenAiChatCompletionRequest
     [JsonPropertyName("tools")]
     public List<OpenAiTool>? Tools { get; init; }
 
+    /// <summary>An explicitly selected tool, when one must be called.</summary>
+    [JsonPropertyName("tool_choice")]
+    public object? ToolChoice { get; init; }
+
     /// <summary>Structured output configuration for JSON-schema responses.</summary>
     [JsonPropertyName("response_format")]
     public object? ResponseFormat { get; init; }

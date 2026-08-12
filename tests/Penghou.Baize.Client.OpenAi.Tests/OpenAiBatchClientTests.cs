@@ -220,6 +220,23 @@ public sealed class OpenAiBatchClientTests
     }
 
     [Fact]
+    public async Task GetResultsAsync_RepackagesSyntheticStructuredOutputAsContent()
+    {
+        var handler = new BatchRecordingHandler(
+            """{"id":"batch-1","object":"batch","status":"completed","output_file_id":"file-out-1"}""",
+            """{"id":"batch_req_a","custom_id":"req-1","response":{"status_code":200,"body":{"choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"structured_output","arguments":"{\"answer\":\"ok\"}"}}]},"finish_reason":"tool_calls"}]}}}""");
+        var client = CreateClient(handler);
+
+        var results = await client.GetResultsAsync(
+            new ProviderBatchHandle("OpenAi", "batch-1"),
+            TestContext.Current.CancellationToken);
+
+        var response = results.Single().Response!;
+        response.Content.Should().Be("{\"answer\":\"ok\"}");
+        response.ToolCalls.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GetResultsAsync_ThrowsWhenNoOutputFileYet()
     {
         var handler = new BatchRecordingHandler(

@@ -32,37 +32,132 @@ internal static class OpenAiChatCompletionRequestMapper
         LlmRequest request,
         bool streaming)
     {
+        Validate(model, capabilities, dialect, request);
+        var usesSyntheticTool = OpenAiStructuredOutput.UsesSyntheticTool(
+            capabilities,
+            request);
+        var messages = request.Messages
+            .SelectMany(message => ToWireMessages(dialect, message))
+            .ToList();
+
+        if (dialect == OpenAiDialect.DeepSeek &&
+            request.ResponseFormat is { Type: "json_object" })
+        {
+            messages.Insert(0, new OpenAiChatMessage
+            {
+                Role = "system",
+                Content = "Return valid JSON only. Do not include Markdown or any text outside the JSON value."
+            });
+        }
+
         return new OpenAiChatCompletionRequest
         {
             Model = model,
-            Messages = request.Messages
-                .SelectMany(message => ToWireMessages(dialect, message))
-                .ToList(),
+            Messages = messages,
             Temperature = request.Temperature,
             MaxTokens = request.MaxTokens,
             Stream = streaming ? true : null,
             StreamOptions = streaming
                 ? new OpenAiStreamOptions { IncludeUsage = true }
                 : null,
-            Tools = !capabilities.NativeToolCalling
-                ? null
-                : request.Tools?.Select(t => new OpenAiTool
+            Tools = ToWireTools(capabilities, request, usesSyntheticTool),
+            ToolChoice = usesSyntheticTool
+                ? new
                 {
-                    Function = new OpenAiFunctionTool
-                    {
-                        Name = t.Name,
-                        Description = t.Description,
-                        Parameters = ParseJsonElement(
-                            t.InputSchemaJson,
-                            $"tool schema '{t.Name}'")
-                    }
-                }).ToList(),
-            ResponseFormat = MapResponseFormat(request.ResponseFormat),
+                    type = "function",
+                    function = new { name = OpenAiStructuredOutput.ToolName }
+                }
+                : null,
+            ResponseFormat = usesSyntheticTool
+                ? null
+                : MapResponseFormat(request.ResponseFormat),
             ReasoningEffort = request.ThinkingConfig is null || request.ThinkingConfig.Mode != LlmThinkingMode.Enabled
                 ? null
                 : MapThinkingEffort(request.ThinkingConfig.Effort),
-            Thinking = MapThinkingToggle(dialect, request.ThinkingConfig)
+            Thinking = usesSyntheticTool && dialect == OpenAiDialect.DeepSeek
+                ? new { type = "disabled" }
+                : MapThinkingToggle(dialect, request.ThinkingConfig)
         };
+    }
+
+    private static List<OpenAiTool>? ToWireTools(
+        LlmEndpointCapabilities capabilities,
+        LlmRequest request,
+        bool usesSyntheticTool)
+    {
+        var tools = new List<OpenAiTool>();
+
+        if (capabilities.NativeToolCalling)
+        {
+            tools.AddRange(request.Tools.Select(tool => new OpenAiTool
+            {
+                Function = new OpenAiFunctionTool
+                {
+                    Name = tool.Name,
+                    Description = tool.Description,
+                    Parameters = ParseJsonElement(
+                        tool.InputSchemaJson,
+                        $"tool schema '{tool.Name}'"),
+                    Strict = tool.Strict ? true : null
+                }
+            }));
+        }
+
+        if (usesSyntheticTool)
+        {
+            tools.Add(new OpenAiTool
+            {
+                Function = new OpenAiFunctionTool
+                {
+                    Name = OpenAiStructuredOutput.ToolName,
+                    Description = "Return a response matching the provided JSON schema",
+                    Parameters = ParseJsonElement(
+                        request.ResponseFormat!.Schema,
+                        "response format schema")
+                }
+            });
+        }
+
+        return tools.Count > 0 ? tools : null;
+    }
+
+    private static void Validate(
+        string model,
+        LlmEndpointCapabilities capabilities,
+        OpenAiDialect dialect,
+        LlmRequest request)
+    {
+        LlmRequestValidator.Validate(model, capabilities, request);
+
+        if (OpenAiStructuredOutput.UsesSyntheticTool(capabilities, request) &&
+            request.Tools.Count > 0)
+        {
+            throw new LlmRequestValidationException(
+                "This OpenAI-compatible endpoint emulates structured output " +
+                "with a synthetic tool, so ordinary tools and a response " +
+                "schema cannot be combined in one request.");
+        }
+
+        if (OpenAiStructuredOutput.UsesSyntheticTool(capabilities, request) &&
+            dialect == OpenAiDialect.DeepSeek &&
+            request.ThinkingConfig is { Mode: LlmThinkingMode.Enabled })
+        {
+            throw new LlmRequestValidationException(
+                "DeepSeek-style forced tool output cannot be combined with " +
+                "explicit thinking. Remove the thinking request or use plain " +
+                "JSON mode and validate the result locally.");
+        }
+
+        if (request.Tools.Any(tool =>
+                string.Equals(
+                    tool.Name,
+                    OpenAiStructuredOutput.ToolName,
+                    StringComparison.Ordinal)))
+        {
+            throw new LlmRequestValidationException(
+                $"Tool name '{OpenAiStructuredOutput.ToolName}' is reserved " +
+                "for tool-backed structured output.");
+        }
     }
 
     private static object? MapResponseFormat(LlmResponseFormat? format) =>

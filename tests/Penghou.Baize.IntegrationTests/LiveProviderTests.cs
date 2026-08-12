@@ -56,7 +56,10 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
             Assert.Skip("Set BAIZE_LIVE_TEST_THINKING=1 for the thinking test.");
 
         using var telemetry = new LiveTelemetryScope(output);
-        await using var provider = LiveClientFactory.Create(settings, tools: false);
+        await using var provider = LiveClientFactory.Create(
+            settings,
+            tools: false,
+            thinking: true);
         var router = provider.GetRequiredService<ILlmRouter>();
 
         var response = await router.CompleteStreamingAsync(
@@ -72,7 +75,11 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
 
         response.Content.Should().Contain("323");
         response.Usage.Should().NotBeNull();
-        response.Diagnostics.Should().NotBeNull();
+        response.RouterDiagnostics.Should().NotBeNull();
+        (response.Reasoning is { Length: > 0 } ||
+         response.Usage.ThinkingTokens is > 0).Should().BeTrue(
+            "an explicit thinking request should surface reasoning text or " +
+            "provider-reported thinking-token usage");
         output.WriteLine(
             $"Provider={settings.Provider} Model={settings.Model} " +
             $"Usage={response.Usage} Diagnostics={response.Diagnostics}");
@@ -222,7 +229,10 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
             Assert.Skip("Set BAIZE_LIVE_TEST_TOOLS=1 for tool tests.");
 
         using var telemetry = new LiveTelemetryScope(output);
-        await using var provider = LiveClientFactory.Create(settings, tools: true);
+        await using var provider = LiveClientFactory.Create(
+            settings,
+            tools: true,
+            parallelTools: true);
         var router = provider.GetRequiredService<ILlmRouter>();
         var tools = CreateParallelLookupTools();
         var messages = new List<LlmMessage>
@@ -298,7 +308,14 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
     {
         var settings = LiveTestSettings.Load();
         using var telemetry = new LiveTelemetryScope(output);
-        await using var provider = LiveClientFactory.Create(settings, tools: false);
+        await using var provider = LiveClientFactory.Create(
+            settings,
+            tools: false,
+            nativeStructuredOutput:
+                string.Equals(
+                    settings.Provider,
+                    "OpenAi",
+                    StringComparison.OrdinalIgnoreCase));
         var router = provider.GetRequiredService<ILlmRouter>();
         var response = await router.CompleteStreamingAsync(
             "live",

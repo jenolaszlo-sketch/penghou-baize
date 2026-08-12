@@ -42,6 +42,14 @@ public static class LlmRequestValidator
                 $"but the request declares {request.Tools.Count} tool(s).");
         }
 
+        if (request.Tools.Any(tool => tool.Strict) &&
+            !capabilities.StrictToolArguments)
+        {
+            throw new LlmRequestValidationException(
+                $"Endpoint '{model}' does not support strict tool arguments, " +
+                "but at least one tool requests strict schema enforcement.");
+        }
+
         var toolCallParts = request.Messages
             .SelectMany(message => message.Parts)
             .OfType<LlmToolCallContent>()

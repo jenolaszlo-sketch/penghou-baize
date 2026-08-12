@@ -44,29 +44,12 @@ public sealed class OpenAiChatClient : LlmClientBase
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         OpenAiDialect dialect = OpenAiDialect.Standard)
-        : base(model, httpClientFactory, apiKey, BoostForDialect(capabilities, dialect), "OpenAi")
+        : base(model, httpClientFactory, apiKey, OpenAiDialectPolicy.Apply(capabilities, dialect), "OpenAi")
     {
         _dialect = dialect;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _chatCompletionsUri = new Uri($"{normalizedBaseUrl}/chat/completions");
     }
-
-    /// <summary>
-    /// The OpenAI-compatible <c>thinking</c> toggle is only valid on DeepSeek
-    /// models (real OpenAI rejects the unknown parameter), so the endpoint's
-    /// <c>ThinkingDisable</c> capability is derived from the declared dialect:
-    /// true for <see cref="OpenAiDialect.DeepSeek"/>, false otherwise. Because
-    /// the conservative style defaults do not claim extended thinking, the
-    /// DeepSeek dialect also enables <see cref="LlmEndpointCapabilities.Thinking"/>:
-    /// declaring the dialect is itself an explicit opt-in. This keeps request
-    /// validation honest regardless of how the caller populated the flags.
-    /// </summary>
-    private static LlmEndpointCapabilities BoostForDialect(
-        LlmEndpointCapabilities capabilities,
-        OpenAiDialect dialect) =>
-        dialect == OpenAiDialect.DeepSeek
-            ? capabilities with { Thinking = true, ThinkingDisable = true }
-            : capabilities with { ThinkingDisable = false };
 
     /// <inheritdoc />
     protected override HttpRequestMessage CreateHttpRequest(LlmRequest request)
@@ -109,6 +92,7 @@ public sealed class OpenAiChatClient : LlmClientBase
         int? reasoningPartIndex = null;
         int? contentPartIndex = null;
         var toolPartIndices = new Dictionary<int, int>();
+        var syntheticToolIndices = new HashSet<int>();
 
         await foreach (var (_, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
@@ -199,6 +183,29 @@ public sealed class OpenAiChatClient : LlmClientBase
             {
                 foreach (var toolCallDelta in toolCallDeltas)
                 {
+                    if (string.Equals(
+                            toolCallDelta.Function?.Name,
+                            OpenAiStructuredOutput.ToolName,
+                            StringComparison.Ordinal))
+                    {
+                        syntheticToolIndices.Add(toolCallDelta.Index);
+                    }
+
+                    if (syntheticToolIndices.Contains(toolCallDelta.Index))
+                    {
+                        if (!string.IsNullOrEmpty(toolCallDelta.Function?.Arguments))
+                        {
+                            contentPartIndex ??= nextPartIndex++;
+                            yield return new LlmStreamEvent(
+                                Delta: toolCallDelta.Function.Arguments)
+                            {
+                                PartIndex = contentPartIndex
+                            };
+                        }
+
+                        continue;
+                    }
+
                     if (!toolPartIndices.TryGetValue(
                             toolCallDelta.Index,
                             out var toolPartIndex))

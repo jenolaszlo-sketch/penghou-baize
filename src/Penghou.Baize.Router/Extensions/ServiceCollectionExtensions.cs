@@ -329,6 +329,8 @@ public static class ServiceCollectionExtensions
                 overrides.NativeToolCalling ?? defaults.NativeToolCalling,
             ParallelToolCalls =
                 overrides.ParallelToolCalls ?? defaults.ParallelToolCalls,
+            StrictToolArguments =
+                overrides.StrictToolArguments ?? defaults.StrictToolArguments,
             ToolsWithStructuredOutput =
                 overrides.ToolsWithStructuredOutput ?? defaults.ToolsWithStructuredOutput,
             NativeStructuredOutput =
@@ -381,6 +383,8 @@ public static class ServiceCollectionExtensions
                 top.NativeToolCalling ?? baseOptions.NativeToolCalling,
             ParallelToolCalls =
                 top.ParallelToolCalls ?? baseOptions.ParallelToolCalls,
+            StrictToolArguments =
+                top.StrictToolArguments ?? baseOptions.StrictToolArguments,
             ToolsWithStructuredOutput =
                 top.ToolsWithStructuredOutput ?? baseOptions.ToolsWithStructuredOutput,
             NativeStructuredOutput =

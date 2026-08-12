@@ -31,6 +31,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     private readonly string _apiKey;
     private readonly Uri _uploadUri;
     private readonly Uri _createUri;
+    private readonly string _rootBase;
     private readonly string _versionedBase;
     private readonly string _apiVersion;
     private readonly LlmEndpointCapabilities _capabilities;
@@ -73,6 +74,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         var rootBase = includeVersionSegment
             ? normalizedBaseUrl
             : normalizedBaseUrl[..normalizedBaseUrl.LastIndexOf('/')];
+        _rootBase = rootBase;
 
         // Gemini's asynchronous batch and file APIs currently use v1beta,
         // even when a caller supplies a versioned chat base URL.
@@ -186,7 +188,11 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
                 LlmClientFailureKind.Protocol);
         }
 
-        var fileName = ReadNestedString(result, "output", "responsesFile");
+        // The long-running operation has used both response shapes in the
+        // wild: older/sample payloads wrap the destination in `output`, while
+        // current paid-tier v1beta responses expose `responsesFile` directly.
+        var fileName = ReadNestedString(result, "responsesFile") ??
+            ReadNestedString(result, "output", "responsesFile");
 
         if (fileName is not null)
         {
@@ -199,10 +205,14 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
 
         // Inline results are returned directly on the operation response.
         var inlined = ReadArray(
-            result,
-            "output",
-            "inlinedResponses",
-            "inlinedResponses");
+                result,
+                "inlinedResponses",
+                "inlinedResponses") ??
+            ReadArray(
+                result,
+                "output",
+                "inlinedResponses",
+                "inlinedResponses");
 
         if (inlined is not null)
         {
@@ -347,7 +357,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            new Uri($"{_versionedBase}/{fileName}?alt=media"));
+            new Uri($"{_rootBase}/download/{_apiVersion}/{fileName}:download?alt=media"));
 
         SetApiKey(request);
 

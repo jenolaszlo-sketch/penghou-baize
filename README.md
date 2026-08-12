@@ -52,6 +52,9 @@ code change is required when upgrading the application's target framework.
 - [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
 - [Coverage policy and package baselines](docs/coverage.md)
 - [Live provider compatibility matrix](docs/live-provider-compatibility.md)
+- [Live provider verification log](docs/live-provider-verification-log.md)
+- Provider guides: [DeepSeek](docs/providers/deepseek.md) and
+  [Gemini](docs/providers/gemini.md)
 - [Generation client roadmap](docs/roadmap-generation-client.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
@@ -908,10 +911,15 @@ provided by the shell or CI.
 Supported provider values are `OpenAi`, `Claude`, `Gemini`, and `Ollama`.
 Use `BAIZE_LIVE_BASE_URL` for compatible gateways or local servers and
 `BAIZE_LIVE_SECRET_NAME` when the credential has a different environment
-variable name. Set `BAIZE_LIVE_TEST_TOOLS=1` to additionally run the native
+variable name. Use `BAIZE_LIVE_DIALECT=DeepSeek` when exercising DeepSeek
+through the OpenAI-compatible provider so the request and reasoning stream use
+the correct dialect. Set `BAIZE_LIVE_TEST_TOOLS=1` to additionally run the native
 tool-call contract test. Set `BAIZE_LIVE_TEST_THINKING=1` to opt into the
 larger-budget thinking test; the baseline smoke test leaves provider thinking
 at its default and reserves enough output budget for thinking-first models.
+The live harness defaults its named HTTP client to a five-minute timeout;
+override it with `BAIZE_LIVE_HTTP_TIMEOUT_SECONDS` when testing especially
+slow or long-running models.
 Set `BAIZE_LIVE_TEST_BATCH=1` to opt into native batch submission and polling,
 which can run substantially longer than synchronous tests. The tests
 print Baize activities and metrics and keep

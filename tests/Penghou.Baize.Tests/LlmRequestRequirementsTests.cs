@@ -82,6 +82,22 @@ public sealed class LlmRequestRequirementsTests
     }
 
     [Fact]
+    public void From_StrictToolRequiresStrictArgumentCapability()
+    {
+        var request = new LlmRequest(
+            [new LlmMessage("user", "use it")],
+            tools: [new LlmTool("strict", "strict", "{}", Strict: true)]);
+
+        var requirements = LlmRequestRequirements.From(request);
+
+        requirements.StrictToolArguments.Should().BeTrue();
+        requirements.IsSatisfiedBy(
+            new LlmEndpointCapabilities { NativeToolCalling = true },
+            out var reason).Should().BeFalse();
+        reason.Should().Contain("strict tool arguments");
+    }
+
+    [Fact]
     public void From_RejectsNullRequest()
     {
         var action = () => LlmRequestRequirements.From(null!);

@@ -63,7 +63,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         _httpClientFactory = httpClientFactory;
         _apiKey = apiKey;
         _dialect = dialect;
-        _capabilities = capabilities;
+        _capabilities = OpenAiDialectPolicy.Apply(capabilities, dialect);
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _filesUri = new Uri($"{normalizedBaseUrl}/files");
         _batchesUri = new Uri($"{normalizedBaseUrl}/batches");
@@ -523,8 +523,17 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         var choice = completion.Choices![0];
         var message = choice.Message!;
 
+        var syntheticOutput = message.ToolCalls?
+            .FirstOrDefault(call => string.Equals(
+                call.Function.Name,
+                OpenAiStructuredOutput.ToolName,
+                StringComparison.Ordinal));
         var toolCalls = message.ToolCalls is { Count: > 0 }
             ? message.ToolCalls
+                .Where(call => !string.Equals(
+                    call.Function.Name,
+                    OpenAiStructuredOutput.ToolName,
+                    StringComparison.Ordinal))
                 .Select(call => new LlmToolCall(
                     call.Id,
                     call.Function.Name,
@@ -542,7 +551,8 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
                 completion.Usage.PromptCacheMissTokens);
 
         return new LlmResponse(
-            Content: ReadMessageText(message.Content),
+            Content: syntheticOutput?.Function.Arguments ??
+                ReadMessageText(message.Content),
             Reasoning: message.ReasoningContent,
             FinishReason: choice.FinishReason,
             Usage: usage,

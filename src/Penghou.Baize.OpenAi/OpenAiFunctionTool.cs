@@ -19,4 +19,8 @@ internal sealed class OpenAiFunctionTool
     /// <summary>The JSON Schema describing the function's parameters.</summary>
     [JsonPropertyName("parameters")]
     public required JsonElement Parameters { get; init; }
+
+    /// <summary>Whether the provider must enforce the parameter schema.</summary>
+    [JsonPropertyName("strict")]
+    public bool? Strict { get; init; }
 }

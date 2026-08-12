@@ -11,12 +11,18 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
 
 | Provider | Model | API | Baseline streaming | Native tools | Multi-turn tools | Parallel tools | Structured output | Image input | Audio input | Video input | PDF/file input | Image generation | Explicit thinking | Native batch | Last verified |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Gemini | `gemini-3.6-flash` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Blocked: GenerationClient and paid tier required | Not tested | Blocked: paid tier required | 2026-08-12 |
-| Gemini | `gemini-3.5-flash-lite` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Not tested | Pass | Not tested | 2026-08-12 |
-| Gemini | `gemini-3.5-flash` | Native `v1beta` | Pass | Pass | Pass | Blocked: quota/high demand | Pass | Pass | Pass | Pass | Pass | Not tested | Not tested | Not tested | 2026-08-12 |
-| Gemini | `gemini-3.1-flash-lite` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Not tested | Not tested | Not tested | 2026-08-12 |
+| Gemini | `gemini-3.6-flash` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Blocked: GenerationClient required | Pass | Pass | 2026-08-12 |
+| Gemini | `gemini-3.5-flash-lite` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Not tested | Pass | Pass | 2026-08-12 |
+| Gemini | `gemini-3.5-flash` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Not tested | Pass | Pass | 2026-08-12 |
+| Gemini | `gemini-3.1-flash-lite` | Native `v1beta` | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Not tested | Pass | Pass | 2026-08-12 |
 | Gemini | `gemini-2.5-flash-lite` | Native `v1beta` | Blocked: unavailable to new users | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | 2026-08-12 |
 | Gemini | `gemini-2.5-flash` | Native `v1beta` | Blocked: unavailable to new users | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | 2026-08-12 |
+| Gemini | `gemini-2.5-pro` | Native `v1beta` | Blocked: unavailable to new users | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | 2026-08-12 |
+| Gemini | `gemini-3.1-pro-preview` | Native `v1beta` | Pass | Unstable: malformed call | Pass | Unstable: malformed call | Pass | Pass | Pass | Pass | Pass | Blocked: GenerationClient required | Pass | Pass | 2026-08-12 |
+| DeepSeek | `deepseek-v4-flash` | OpenAI-compatible `/v1` with `DeepSeek` dialect | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
+| DeepSeek | `deepseek-v4-pro` | OpenAI-compatible `/v1` with `DeepSeek` dialect | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
+| DeepSeek | `deepseek-v4-flash` | Claude-compatible `/anthropic` | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
+| DeepSeek | `deepseek-v4-pro` | Claude-compatible `/anthropic` | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
 
 ## Gemini native API observations
 
@@ -24,7 +30,7 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
   `additionalProperties`. The Gemini adapter now removes that keyword only
   from the wire schema while retaining the canonical schema for strict local
   validation. Native tools and structured output both passed after adaptation.
-- The sequential tool contract passed on all four available tested models. Each selected an
+- The sequential tool contract passed on all five available tested models. Each selected an
   inventory lookup from three candidates, consumed the local result, calculated
   a restock amount of eight, called the restock tool, consumed its result, and
   returned the exact plan ID. Raw assistant parts were replayed between turns,
@@ -40,37 +46,55 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
   later isolated retry returned HTTP 503 after 78 seconds due to high demand.
   The complete contract therefore remains blocked rather than failed.
 - Both 2.5 Flash variants returned HTTP 404 stating that the model is no longer
-  available to new users. Their advertised model entries do not imply that a
-  newly created API project can invoke them.
+  available to new users. Paid access did not change this result, and 2.5 Pro
+  returned the same 404. The Models API still lists all three because they are
+  available through the newer Interactions API; discovery therefore does not
+  imply that the legacy `generateContent` endpoint accepted by Baize can invoke
+  them for a newly created project.
+- Gemini 3.1 Pro Preview passed baseline, structured output, explicit thinking,
+  the sequential two-stage tool workflow, all four multimodal input contracts,
+  and native batch. Its simple and parallel tool contracts each failed twice:
+  the provider returned `MALFORMED_FUNCTION_CALL` with an empty function call.
+  This is recorded as unstable preview-model generation rather than missing
+  tool support because the more complex sequential tool flow passed.
 - Thinking tokens share `maxOutputTokens` with visible text and function calls.
   A 128-token tool test spent 118 tokens thinking and ended with `MAX_TOKENS`
   before emitting a call. A 512-token budget completed successfully.
-- `thinkingBudget: 0` was rejected by `gemini-3.6-flash` with HTTP 400. Baize
-  therefore does not claim a universal Gemini thinking off-switch. The
-  baseline test uses provider-default thinking.
+- `thinkingBudget: 0` was rejected by `gemini-3.6-flash` with HTTP 400. The
+  Gemini adapter can encode that wire-level control, but an endpoint profile
+  for this model must narrow `ThinkingDisable` to `false`. The baseline test
+  uses provider-default thinking.
 - Live responses reported `modelVersion`, `responseId`, `serviceTier`, and
   `thoughtsTokenCount`; the Gemini client maps these into Baize usage and
   provider diagnostics.
-- Native batch upload and finalization succeeded and produced an `ACTIVE`
-  JSONL file, but batch creation returned `FAILED_PRECONDITION` on the free
-  tier. The 3.6 Flash pricing table lists Batch as unavailable on the free tier.
-  The current 3.5 Flash-Lite table advertises free Batch access, so that model
-  remains a separate candidate for a paced live batch test.
+- Native batch passed end to end on all five currently available tested
+  models after enabling paid access. Current v1beta operations expose
+  `response.responsesFile` directly and result files download through
+  `/download/v1beta/files/{id}:download`; both differed from the older shapes
+  represented by the original adapter tests. Baize now accepts both result
+  envelopes and uses the current download endpoint. Even a single-item batch
+  took roughly two to four minutes, so this API is appropriate for durable
+  asynchronous work rather than interactive latency.
+- Explicit low-effort thinking passed on all five available tested models. An
+  initial 3.6 Flash request returned no headers before .NET's default
+  100-second `HttpClient` timeout, while the isolated retry completed in two
+  seconds. The live harness now uses a configurable five-minute HTTP timeout
+  so transient slow reasoning is not misclassified as incompatibility.
 - Inline PNG input passed using the deterministic 128 by 128 solid-red fixture
   at `tests/Penghou.Baize.IntegrationTests/Assets/solid-red.png.base64`.
   Gemini returned the exact expected dominant color. The base64 wrapper keeps
   the binary PNG portable and reviewable while the test sends decoded bytes.
-- Inline WAV input passed on all four available tested models. The test constructs a small,
+- Inline WAV input passed on all five available tested models. The test constructs a small,
   deterministic mono PCM16 recording containing three separated tones and
   requires the model to distinguish audible tones from silence. A preliminary
   exact-count assertion produced inconsistent counts across model generations
   and was correctly removed as a model-quality benchmark rather than a client
   compatibility contract.
-- Inline AVI input passed on all four available tested models. The fixture is constructed in
+- Inline AVI input passed on all five available tested models. The fixture is constructed in
   memory without external media tools and contains six seconds of solid red,
   green, and blue sections. Requiring the exact chronological sequence checks
   temporal visual understanding rather than merely accepting video bytes.
-- Inline PDF input passed on all four available tested models through `LlmFileContent`. The
+- Inline PDF input passed on all five available tested models through `LlmFileContent`. The
   dependency-free fixture contains a reference code and two quantities; the
   exact response requires both extraction and a small calculation, confirming
   that the attachment content reached the model as a document.
@@ -78,43 +102,67 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
   represent generated binary artifacts, and silently discarding Gemini's image
   output would produce a false test result. The tagged test is reserved for the
   provider-neutral GenerationClient described in the generation roadmap.
-  Google's current Gemini pricing also lists both Gemini 3.1 Flash Image and
-  Gemini 3.1 Flash Lite Image as unavailable on the free tier.
+  Paid access removes the earlier tier constraint, but the missing canonical
+  binary-artifact response remains the architectural blocker.
 
-## Verification log
+## DeepSeek API-style observations
 
-| Date | Provider and model | Capability | Result | Evidence |
-| --- | --- | --- | --- | --- |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Baseline streaming | Pass | Exact `BAIZE_OK` response; finish reason `STOP` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Native tools | Pass | `echo_value` called once with schema-valid `value: baize-live` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Structured output | Pass | Schema-constrained JSON returned `value: baize-live` and `count: 3` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Native batch | Blocked | JSONL upload became `ACTIVE`; creation returned `FAILED_PRECONDITION` because Batch API is unavailable on the free tier |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Image input | Pass | Inline 128 by 128 PNG was identified as solid red; exact response `RED` |
-| 2026-08-12 | Gemini image generation | Image generation | Blocked | No provider call made: GenerationClient is not implemented and Gemini image-generation models require the paid tier |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Baseline streaming | Pass | Exact `BAIZE_OK` response contract passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Native tools | Pass | Schema-valid `echo_value` tool-call contract passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Structured output | Pass | Schema-constrained JSON contract passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Image input | Pass | Inline PNG dominant-color contract passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Explicit thinking | Pass | Explicit low-effort thinking returned the expected arithmetic result with usage and diagnostics |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Audio input | Pass | Inline PCM16 WAV with audible tones was distinguished from silence; exact response `TONES` |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Audio input | Pass | Inline PCM16 WAV with audible tones was distinguished from silence; exact response `TONES` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Video input | Pass | Inline RGB24 AVI color sections were ordered correctly; exact response `RED GREEN BLUE` |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Video input | Pass | Inline RGB24 AVI color sections were ordered correctly; exact response `RED GREEN BLUE` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | PDF/file input | Pass | Inline generated PDF was parsed correctly; exact extracted and calculated response `ORBIT-417 21` |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | PDF/file input | Pass | Inline generated PDF was parsed correctly; exact extracted and calculated response `ORBIT-417 21` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Multi-turn tools | Pass | Selected lookup, consumed result, calculated restock amount `8`, called restock, then returned exact plan ID `PLAN-9` |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Multi-turn tools | Pass | Selected lookup, consumed result, calculated restock amount `8`, called restock, then returned exact plan ID `PLAN-9` |
-| 2026-08-12 | Gemini `gemini-3.6-flash`, native `v1beta` | Parallel tools | Pass | Returned weather and exchange-rate calls in one response, consumed both results together, then returned exact combined answer `MNL 31C USD/PHP 57.25` |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Parallel tools | Pass | Returned weather and exchange-rate calls in one response, consumed both results together, then returned exact combined answer `MNL 31C USD/PHP 57.25` |
-| 2026-08-12 | Gemini `gemini-3.1-flash-lite`, native `v1beta` | Core contracts | Pass | Baseline, native tools, sequential tools, parallel tools, and structured output all passed |
-| 2026-08-12 | Gemini `gemini-3.1-flash-lite`, native `v1beta` | Multimodal inputs | Pass | Image, strengthened audio, video, and PDF/file contracts all passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash`, native `v1beta` | Core contracts except parallel follow-up | Pass | Baseline, native tools, sequential tools, and structured output passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash`, native `v1beta` | Parallel tools | Blocked | Initial response returned both calls; follow-up hit the five-request-per-minute quota, and isolated retry later returned HTTP 503 high demand |
-| 2026-08-12 | Gemini `gemini-3.5-flash`, native `v1beta` | Multimodal inputs | Pass | Image, strengthened audio, video, and PDF/file contracts all passed |
-| 2026-08-12 | Gemini `gemini-3.5-flash-lite`, native `v1beta` | Strengthened audio input | Pass | Inline PCM16 WAV with audible tones was distinguished from silence; exact response `TONES` |
-| 2026-08-12 | Gemini `gemini-3.1-flash-lite`, native `v1beta` | Strengthened audio input | Pass | Inline PCM16 WAV with audible tones was distinguished from silence; exact response `TONES` |
-| 2026-08-12 | Gemini `gemini-2.5-flash-lite`, native `v1beta` | Model availability | Blocked | API returned HTTP 404: model is no longer available to new users |
-| 2026-08-12 | Gemini `gemini-2.5-flash`, native `v1beta` | Model availability | Blocked | API returned HTTP 404: model is no longer available to new users |
+- Both V4 Flash and V4 Pro passed the same baseline streaming, single native
+  tool, sequential multi-turn tool, parallel tool, and explicit-thinking
+  contracts through the OpenAI-compatible and Claude-compatible APIs. This
+  confirms the tested behavior is not tied to only one Baize adapter.
+- The OpenAI-compatible endpoint is `https://api.deepseek.com/v1` and should
+  use the Baize `DeepSeek` dialect so thinking controls and reasoning content
+  use DeepSeek's wire shape. The Claude-compatible endpoint base is
+  `https://api.deepseek.com/anthropic`; using the ordinary DeepSeek base with
+  the Claude client produces a 404 at `/v1/messages`.
+- DeepSeek returned two independent tool calls in one response for both models
+  and both API styles. OpenAI provider defaults remain conservative, while the
+  explicit `DeepSeek` dialect now advertises the verified parallel-tool
+  behavior so replayed parallel turns pass routing validation.
+- OpenAI-compatible native JSON Schema output is not available for either
+  tested model. Both returned HTTP 400 with `This response_format type is
+  unavailable now` when sent `response_format.type = json_schema`. Baize now
+  uses capability-driven synthetic-tool output for DeepSeek's OpenAI dialect,
+  matching the Claude-compatible recovery. The complete schema contract passed
+  through this fallback for both V4 Flash and V4 Pro.
+- DeepSeek rejected a forced synthetic `tool_choice` while provider-default
+  thinking remained active. The adapter now disables thinking only for this
+  tool-backed schema request; ordinary and explicitly requested thinking calls
+  retain their existing behavior.
+- DeepSeek's documented OpenAI-compatible response mode is `json_object`, not
+  `json_schema`. Minimal live probes returned valid JSON with the expected
+  shape for both V4 Flash and V4 Pro. This mode guarantees syntactically valid
+  JSON, but callers must still describe the desired shape in the prompt and
+  validate it locally; it is not server-enforced JSON Schema output.
+- Ordinary tool definitions accept JSON Schema through OpenAI
+  `function.parameters` and Claude `input_schema`; the single, sequential, and
+  parallel tool contracts all exercised schema-shaped arguments successfully.
+  This should not be confused with DeepSeek's stricter server-enforced mode.
+- DeepSeek strict tool mode is a separate beta OpenAI-compatible feature. It
+  requires the `https://api.deepseek.com/beta` base and `strict: true` on every
+  function. Minimal live probes for both models returned one tool call matching
+  nested string-pattern, bounded-integer, enum, required-property, and
+  `additionalProperties: false` constraints.
+- The current beta validator did not exactly match the published schema subset:
+  it accepted `minLength` and a schema missing `additionalProperties: false`,
+  but rejected an optional declared property and rejected `oneOf`. Baize should
+  therefore expose strict mode explicitly and preserve the canonical schema;
+  it should not silently rewrite schemas based on a potentially stale subset.
+- Explicit thinking passed through both API styles and surfaced reasoning text.
+  The Claude-compatible response supplied usage but no provider-specific
+  diagnostics object; router diagnostics and HTTP diagnostics remained
+  available. Live contracts therefore treat provider diagnostics as optional.
+- Multimodal input, image generation, and native batch were not exercised. No
+  compatibility claim is made for those surfaces.
+
+See the provider-specific [DeepSeek setup and behavior guide](providers/deepseek.md).
+
+## Verification history
+
+The chronological evidence is maintained in the
+[live provider verification log](live-provider-verification-log.md). This page
+keeps the current compatibility claims and provider observations concise.
 
 ## Running a capability
 
@@ -144,16 +192,3 @@ Current capability names are:
 
 Omit `--filter` to run the complete live suite. Unselected tests make no
 provider requests and consume no model tokens.
-
-## Recording future runs
-
-After a live contract is run:
-
-1. Record the exact provider, model identifier, native or compatible API
-   style, API version, date, and capability.
-2. Record `Pass`, `Fail`, or `Blocked`; do not generalize the result to sibling
-   models without running them.
-3. Add wire-dialect or token-budget observations when they affect client
-   behavior.
-4. Keep credentials and raw sensitive payloads out of this document. Raw HTTP
-   diagnostics remain local and are ignored by source control.
