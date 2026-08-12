@@ -61,6 +61,7 @@ and provider-specific conclusions.
 | 2026-08-12 | Gemini `gemini-3.1-pro-preview`, native `v1beta` | Core contracts | Partial | Baseline, sequential tools, structured output, and explicit thinking passed; simple and parallel tools each returned provider `MALFORMED_FUNCTION_CALL` twice |
 | 2026-08-12 | Gemini `gemini-3.1-pro-preview`, native `v1beta` | Multimodal inputs | Pass | Image, audio, video, and PDF/file contracts all passed |
 | 2026-08-12 | Gemini `gemini-3.1-pro-preview`, native `v1beta` | Native batch | Pass | One-item durable batch completed in about four minutes and returned correlated `BAIZE_BATCH_OK` content |
+| 2026-08-12 | Gemini `gemini-3.1-flash-lite-image`, Interactions `v1beta` | Image generation provider probe | Pass | Paid request completed in about four seconds and returned a MIME-typed, non-empty, base64-decodable image artifact; GenerationClient remains unimplemented |
 
 ## Recording future runs
 

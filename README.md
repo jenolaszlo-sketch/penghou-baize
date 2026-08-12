@@ -893,7 +893,9 @@ dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter
 # PDF/file input only
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=FileInput"
 
-# Image generation only (currently reports skipped until GenerationClient is implemented)
+# Paid Gemini Interactions API image-generation probe
+$env:BAIZE_LIVE_TEST_IMAGE_GENERATION = "1"
+$env:BAIZE_LIVE_IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
 
 # Native batch only (when live batch coverage is enabled)
@@ -921,8 +923,12 @@ The live harness defaults its named HTTP client to a five-minute timeout;
 override it with `BAIZE_LIVE_HTTP_TIMEOUT_SECONDS` when testing especially
 slow or long-running models.
 Set `BAIZE_LIVE_TEST_BATCH=1` to opt into native batch submission and polling,
-which can run substantially longer than synchronous tests. The tests
-print Baize activities and metrics and keep
+which can run substantially longer than synchronous tests.
+Set `BAIZE_LIVE_TEST_IMAGE_GENERATION=1` to opt into the paid Gemini provider
+probe, with `BAIZE_LIVE_IMAGE_MODEL` selecting its image model. This probe
+validates the provider contract without claiming that `ILlmClient` can return
+binary artifacts; that portable surface remains planned for GenerationClient.
+The tests print Baize activities and metrics and keep
 the correlated raw transport artifacts under
 `tests/Penghou.Baize.IntegrationTests/bin/.../artifacts/live-diagnostics` by
 default. Without `BAIZE_RUN_LIVE_TESTS=1`, every live test is skipped.

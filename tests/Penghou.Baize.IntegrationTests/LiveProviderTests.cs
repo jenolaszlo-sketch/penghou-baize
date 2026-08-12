@@ -589,17 +589,6 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
         output.WriteLine($"Document=PDF Bytes={documentBytes.Length}");
     }
 
-    [Fact]
-    [Trait(LiveTestTraits.Category, LiveTestTraits.Live)]
-    [Trait(LiveTestTraits.Capability, LiveTestTraits.ImageGeneration)]
-    public void ImageGenerationSmokeTest_RequiresGenerationClient()
-    {
-        Assert.Skip(
-            "Image generation is reserved for the provider-neutral GenerationClient. " +
-            "ILlmClient cannot represent generated binary media, and Gemini image " +
-            "generation is unavailable on the free tier.");
-    }
-
     private static List<LlmTool> CreateInventoryTools() =>
     [
         new LlmTool(

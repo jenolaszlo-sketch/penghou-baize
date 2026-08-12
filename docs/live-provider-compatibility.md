@@ -19,6 +19,7 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
 | Gemini | `gemini-2.5-flash` | Native `v1beta` | Blocked: unavailable to new users | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | 2026-08-12 |
 | Gemini | `gemini-2.5-pro` | Native `v1beta` | Blocked: unavailable to new users | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | Not tested | 2026-08-12 |
 | Gemini | `gemini-3.1-pro-preview` | Native `v1beta` | Pass | Unstable: malformed call | Pass | Unstable: malformed call | Pass | Pass | Pass | Pass | Pass | Blocked: GenerationClient required | Pass | Pass | 2026-08-12 |
+| Gemini | `gemini-3.1-flash-lite-image` | Interactions `v1beta` | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Provider probe: Pass | Not tested | Not applicable | 2026-08-12 |
 | DeepSeek | `deepseek-v4-flash` | OpenAI-compatible `/v1` with `DeepSeek` dialect | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
 | DeepSeek | `deepseek-v4-pro` | OpenAI-compatible `/v1` with `DeepSeek` dialect | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
 | DeepSeek | `deepseek-v4-flash` | Claude-compatible `/anthropic` | Pass | Pass | Pass | Pass | Pass: tool-backed | Not tested | Not tested | Not tested | Not tested | Not tested | Pass | Not tested | 2026-08-12 |
@@ -98,12 +99,13 @@ provider, model, API style, and date shown. `Not tested` means no claim is made.
   dependency-free fixture contains a reference code and two quantities; the
   exact response requires both extraction and a small calculation, confirming
   that the attachment content reached the model as a document.
-- Image generation was not sent through `ILlmClient`. Its response types cannot
-  represent generated binary artifacts, and silently discarding Gemini's image
-  output would produce a false test result. The tagged test is reserved for the
-  provider-neutral GenerationClient described in the generation roadmap.
-  Paid access removes the earlier tier constraint, but the missing canonical
-  binary-artifact response remains the architectural blocker.
+- Paid image generation passed a provider-level contract probe using
+  `gemini-3.1-flash-lite-image` through `POST /v1beta/interactions`. The response
+  contained decodable image bytes and an image MIME type. The probe deliberately
+  bypasses `ILlmClient`: its response types cannot represent generated binary
+  artifacts, and silently discarding the image would produce a false result.
+  The provider-neutral surface remains the GenerationClient described in the
+  generation roadmap.
 
 ## DeepSeek API-style observations
 

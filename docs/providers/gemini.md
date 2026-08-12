@@ -70,6 +70,12 @@ client validates again before transmission. Image generation is deliberately
 not exposed through `ILlmClient`; it belongs to the planned GenerationClient,
 whose result can represent binary artifacts and long-running operations.
 
+A paid provider-level probe verified `gemini-3.1-flash-lite-image` through the
+Interactions API. `POST /v1beta/interactions` returned a MIME-typed, decodable
+binary image artifact. This is compatibility evidence for the planned Gemini
+GenerationClient provider; it is not a hidden image-output feature of the
+current chat client.
+
 ## Thinking controls
 
 Thinking behavior is model-specific. For example, live testing found that
@@ -100,4 +106,5 @@ Current Google references:
 
 - [Gemini models](https://ai.google.dev/gemini-api/docs/models)
 - [Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview)
+- [Gemini image generation](https://ai.google.dev/gemini-api/docs/image-generation)
 - [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing)

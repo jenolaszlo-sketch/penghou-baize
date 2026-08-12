@@ -84,6 +84,25 @@ internal sealed record LiveTestSettings(
         }
     }
 
+    public static bool ImageGenerationEnabled
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_IMAGE_GENERATION"));
+        }
+    }
+
+    public static string ImageGenerationModel
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return Environment.GetEnvironmentVariable("BAIZE_LIVE_IMAGE_MODEL") ??
+                   "gemini-3.1-flash-lite-image";
+        }
+    }
+
     private static string Required(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } value
             ? value
