@@ -460,8 +460,7 @@ public static class ServiceCollectionExtensions
                 return false;
             }
 
-            if (module.Assembly.IndexOfAny(
-                    [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0)
+            if (ProviderModuleLoader.IsAssemblyPath(module.Assembly))
             {
                 error =
                     $"Provider module '{module.Assembly}' must be an assembly name, not a path.";

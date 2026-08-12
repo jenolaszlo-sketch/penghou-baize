@@ -87,11 +87,13 @@ public sealed class ProviderPluginTests
         events.Should().Contain(item => item.Delta == "custom-provider");
     }
 
-    [Fact]
-    public void AddLlmRouting_RejectsProviderAssemblyPaths()
+    [Theory]
+    [InlineData(@".\plugins\Penghou.Baize.TestProvider.dll")]
+    [InlineData("./plugins/Penghou.Baize.TestProvider.dll")]
+    public void AddLlmRouting_RejectsProviderAssemblyPaths(string assemblyPath)
     {
         var configuration = Configuration(
-            assembly: ".\\plugins\\Penghou.Baize.TestProvider.dll",
+            assembly: assemblyPath,
             type: null);
         var services = new ServiceCollection();
 

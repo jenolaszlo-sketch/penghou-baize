@@ -76,8 +76,7 @@ internal static class ProviderModuleLoader
         if (string.IsNullOrWhiteSpace(module.Assembly))
             throw new InvalidOperationException("A provider module has no assembly name.");
 
-        if (module.Assembly.IndexOfAny(
-                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0)
+        if (IsAssemblyPath(module.Assembly))
         {
             throw new InvalidOperationException(
                 $"Provider module '{module.Assembly}' must be an assembly name, not a path.");
@@ -98,6 +97,9 @@ internal static class ProviderModuleLoader
                 exception);
         }
     }
+
+    internal static bool IsAssemblyPath(string assemblyName) =>
+        assemblyName.IndexOfAny(['/', '\\']) >= 0;
 
     private static IEnumerable<Type> ResolveProviderTypes(
         Assembly assembly,
