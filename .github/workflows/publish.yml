@@ -1,0 +1,72 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Pack
+        shell: bash
+        run: |
+          args=()
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            args+=(--property:PackageVersion="${GITHUB_REF_NAME#v}")
+          fi
+          for csproj in \
+            src/Penghou.Baize/Penghou.Baize.csproj \
+            src/Penghou.Baize.OpenAi/Penghou.Baize.OpenAi.csproj \
+            src/Penghou.Baize.Claude/Penghou.Baize.Claude.csproj \
+            src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj \
+            src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj \
+            src/Penghou.Baize.Router/Penghou.Baize.Router.csproj \
+            src/Penghou.Baize.Batch/Penghou.Baize.Batch.csproj \
+            src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj \
+            src/Penghou.Baize.Extensions.AI/Penghou.Baize.Extensions.AI.csproj \
+            src/Penghou.Baize.Diagnostics/Penghou.Baize.Diagnostics.csproj; do
+            dotnet pack "$csproj" \
+              --configuration Release \
+              --output ./artifacts \
+              "${args[@]}"
+          done
+
+      - name: NuGet login (OIDC -> temp API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages to NuGet
+        run: >
+          dotnet nuget push ./artifacts/*.nupkg
+          --source https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --skip-duplicate
+
+      - name: Push symbols to NuGet
+        run: >
+          dotnet nuget push ./artifacts/*.snupkg
+          --source https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --skip-duplicate
