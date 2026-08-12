@@ -202,6 +202,133 @@ public sealed class BaizeBatchCoordinatorTests
         rendezvous.Started.Should().Be(2);
     }
 
+    [Theory]
+    [InlineData(BaizeBatchState.Running, BaizeBatchState.Failed, BaizeBatchState.Running)]
+    [InlineData(BaizeBatchState.Cancelling, BaizeBatchState.Completed, BaizeBatchState.Cancelling)]
+    [InlineData(BaizeBatchState.Pending, BaizeBatchState.Pending, BaizeBatchState.Pending)]
+    [InlineData(BaizeBatchState.Pending, BaizeBatchState.Completed, BaizeBatchState.Running)]
+    [InlineData(BaizeBatchState.Failed, BaizeBatchState.Failed, BaizeBatchState.Failed)]
+    [InlineData(BaizeBatchState.Cancelled, BaizeBatchState.Cancelled, BaizeBatchState.Cancelled)]
+    [InlineData(BaizeBatchState.Expired, BaizeBatchState.Expired, BaizeBatchState.Expired)]
+    [InlineData(BaizeBatchState.Failed, BaizeBatchState.Completed, BaizeBatchState.PartiallyCompleted)]
+    public async Task GetStatus_AggregatesProviderStates(
+        BaizeBatchState firstState,
+        BaizeBatchState secondState,
+        BaizeBatchState expected)
+    {
+        var first = new StubBatchClient("OpenAi", statuses: [firstState]);
+        var second = new StubBatchClient("Claude", statuses: [secondState]);
+        var coordinator = new BaizeBatchCoordinator(
+            new StubPlanner(new BatchPlan("unused", [])),
+            new BatchClientResolver(
+                new Dictionary<string, IBaizeBatchClient>
+                {
+                    ["first"] = first,
+                    ["second"] = second
+                }));
+        var handle = new BaizeBatchHandle(
+            "logical",
+            [
+                new ProviderBatchPart("OpenAi", "a", "first", ["one"]),
+                new ProviderBatchPart("Claude", "b", "second", ["two"])
+            ]);
+
+        var status = await coordinator.GetStatusAsync(
+            handle,
+            TestContext.Current.CancellationToken);
+
+        status.State.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("poll")]
+    [InlineData("maximum")]
+    [InlineData("backoff-small")]
+    [InlineData("backoff-infinite")]
+    [InlineData("jitter-small")]
+    [InlineData("jitter-large")]
+    [InlineData("failures")]
+    [InlineData("timeout")]
+    public async Task WaitForCompletion_RejectsInvalidPollingOptions(string scenario)
+    {
+        var options = scenario switch
+        {
+            "poll" => new BatchWaitOptions { PollInterval = TimeSpan.Zero },
+            "maximum" => new BatchWaitOptions
+            {
+                PollInterval = TimeSpan.FromSeconds(2),
+                MaxPollInterval = TimeSpan.FromSeconds(1)
+            },
+            "backoff-small" => new BatchWaitOptions { BackoffFactor = 0.5 },
+            "backoff-infinite" => new BatchWaitOptions
+            {
+                BackoffFactor = double.PositiveInfinity
+            },
+            "jitter-small" => new BatchWaitOptions { JitterRatio = -0.1 },
+            "jitter-large" => new BatchWaitOptions { JitterRatio = 1.1 },
+            "failures" => new BatchWaitOptions { MaxTransientFailures = -1 },
+            "timeout" => new BatchWaitOptions { Timeout = TimeSpan.Zero },
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+        var client = new StubBatchClient("OpenAi");
+        var coordinator = new BaizeBatchCoordinator(
+            new StubPlanner(new BatchPlan("unused", [])),
+            new BatchClientResolver(
+                new Dictionary<string, IBaizeBatchClient>
+                {
+                    ["endpoint"] = client
+                }));
+        var handle = new BaizeBatchHandle(
+            "logical",
+            [new ProviderBatchPart("OpenAi", "batch", "endpoint", ["one"])]);
+
+        var action = () => coordinator.WaitForCompletionAsync(
+            handle,
+            options,
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<ArgumentOutOfRangeException>();
+        client.GetStatusCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Constructor_RejectsNonPositiveSubmissionConcurrency()
+    {
+        var action = () => new BaizeBatchCoordinator(
+            new StubPlanner(new BatchPlan("unused", [])),
+            new BatchClientResolver(new Dictionary<string, IBaizeBatchClient>()),
+            new BatchCoordinatorOptions { MaxConcurrentSubmissions = 0 });
+
+        action.Should().Throw<ArgumentOutOfRangeException>()
+            .WithMessage("*MaxConcurrentSubmissions*");
+    }
+
+    [Fact]
+    public async Task CancelAsync_ForwardsEveryPhysicalHandle()
+    {
+        var first = new StubBatchClient("OpenAi");
+        var second = new StubBatchClient("Claude");
+        var coordinator = new BaizeBatchCoordinator(
+            new StubPlanner(new BatchPlan("unused", [])),
+            new BatchClientResolver(
+                new Dictionary<string, IBaizeBatchClient>
+                {
+                    ["first"] = first,
+                    ["second"] = second
+                }));
+        var handle = new BaizeBatchHandle(
+            "logical",
+            [
+                new ProviderBatchPart("OpenAi", "a", "first", ["one"]),
+                new ProviderBatchPart("Claude", "b", "second", ["two"])
+            ]);
+
+        await coordinator.CancelAsync(handle, TestContext.Current.CancellationToken);
+
+        first.CancelCalls.Should().Be(1);
+        second.CancelCalls.Should().Be(1);
+    }
+
     private sealed class StubPlanner(BatchPlan plan) : IBaizeBatchPlanner
     {
         public BatchPlan Plan(BaizeBatchSubmission submission) => plan;
@@ -237,6 +364,7 @@ public sealed class BaizeBatchCoordinatorTests
             BatchCapabilities.NativeBatch | BatchCapabilities.Cancellation;
         public BatchSubmissionOptions? LastOptions { get; private set; }
         public int GetStatusCalls { get; private set; }
+        public int CancelCalls { get; private set; }
 
         public Task<ProviderBatchHandle> SubmitAsync(
             IReadOnlyList<BaizeBatchItem> items,
@@ -276,7 +404,11 @@ public sealed class BaizeBatchCoordinatorTests
 
         public Task CancelAsync(
             ProviderBatchHandle handle,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
+            CancellationToken cancellationToken = default)
+        {
+            CancelCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class ImmediateProgress<T>(Action<T> report) : IProgress<T>

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Xunit;
 
 namespace Penghou.Baize.Extensions.AI.Tests;
@@ -129,6 +130,201 @@ public sealed class BaizeChatClientTests
             .WhoseValue.Should().BeSameAs(diagnostics);
     }
 
+    [Fact]
+    public async Task Request_MapsInstructionsToolsSchemaAndMaximumReasoning()
+    {
+        using var schemaDocument = JsonDocument.Parse(
+            """{"type":"object","properties":{"city":{"type":"string"}}}""");
+        var schema = schemaDocument.RootElement.Clone();
+        var declaration = AIFunctionFactory.CreateDeclaration(
+            "lookup",
+            "Looks up a city",
+            schema);
+        var inner = new RecordingClient();
+        using var client = new BaizeChatClient(inner);
+
+        await foreach (var _ in client.GetStreamingResponseAsync(
+                           [new ChatMessage(ChatRole.User, "weather")],
+                           new ChatOptions
+                           {
+                               Instructions = "Be exact",
+                               Tools = [declaration],
+                               ResponseFormat = ChatResponseFormat.ForJsonSchema(schema),
+                               Reasoning = new ReasoningOptions
+                               {
+                                   Effort = ReasoningEffort.ExtraHigh
+                               }
+                           },
+                           TestContext.Current.CancellationToken))
+        {
+        }
+
+        inner.Request!.Messages[0].Role.Should().Be("system");
+        inner.Request.Messages[0].Parts.OfType<LlmTextContent>()
+            .Single().Text.Should().Be("Be exact");
+        inner.Request.Tools.Should().ContainSingle().Which.Should().BeEquivalentTo(
+            new LlmTool("lookup", "Looks up a city", schema.GetRawText()));
+        inner.Request.ResponseFormat!.Type.Should().Be("json_schema");
+        inner.Request.ResponseFormat.Schema.Should().Be(schema.GetRawText());
+        inner.Request.ThinkingConfig.Should().BeEquivalentTo(
+            new LlmThinkingConfig(
+                LlmThinkingMode.Enabled,
+                LlmThinkingEffort.Max));
+    }
+
+    [Fact]
+    public async Task Request_MapsInlineUriAndHostedMediaByTopLevelType()
+    {
+        var inner = new RecordingClient();
+        using var client = new BaizeChatClient(inner, "Gemini");
+        var hosted = new HostedFileContent("provider-file")
+        {
+            MediaType = "audio/wav",
+            Name = "voice.wav"
+        };
+        var message = new ChatMessage(
+            ChatRole.User,
+            [
+                new DataContent(new byte[] { 1 }, "audio/wav"),
+                new DataContent(new byte[] { 2 }, "video/mp4"),
+                new DataContent(new byte[] { 3 }, "application/pdf"),
+                new UriContent(new Uri("https://example.test/image.png"), "image/png"),
+                hosted
+            ]);
+
+        await foreach (var _ in client.GetStreamingResponseAsync(
+                           [message],
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        var parts = inner.Request!.Messages.Single().Parts;
+        parts[0].Should().BeOfType<LlmAudioContent>()
+            .Which.Source.Should().BeOfType<LlmInlineDataSource>();
+        parts[1].Should().BeOfType<LlmVideoContent>()
+            .Which.Source.Should().BeOfType<LlmInlineDataSource>();
+        parts[2].Should().BeOfType<LlmFileContent>()
+            .Which.Source.Should().BeOfType<LlmInlineDataSource>();
+        parts[3].Should().BeOfType<LlmImageContent>()
+            .Which.Source.Should().BeOfType<LlmUriSource>();
+        var hostedPart = parts[4].Should().BeOfType<LlmAudioContent>().Which;
+        hostedPart.Source.Should().BeOfType<LlmProviderFileSource>()
+            .Which.Provider.Should().Be(new LlmProviderKey("Gemini"));
+    }
+
+    [Fact]
+    public async Task Request_MapsToolResultShapesAndFailureState()
+    {
+        using var jsonDocument = JsonDocument.Parse("{\"value\":2}");
+        var failed = new FunctionResultContent("call-object", new { value = 3 })
+        {
+            Exception = new InvalidOperationException("failed")
+        };
+        var messages = new[]
+        {
+            new ChatMessage(
+                ChatRole.Assistant,
+                [
+                    new FunctionCallContent("call-null", "null_tool"),
+                    new FunctionCallContent("call-json", "json_tool"),
+                    new FunctionCallContent("call-object", "object_tool")
+                ]),
+            new ChatMessage(
+                ChatRole.Tool,
+                [
+                    new FunctionResultContent("call-null", null),
+                    new FunctionResultContent("call-json", jsonDocument.RootElement.Clone()),
+                    failed
+                ])
+        };
+        var inner = new RecordingClient();
+        using var client = new BaizeChatClient(inner);
+
+        await foreach (var _ in client.GetStreamingResponseAsync(
+                           messages,
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        var results = inner.Request!.Messages.SelectMany(message => message.Parts)
+            .OfType<LlmToolResultContent>()
+            .Select(content => content.Result)
+            .ToArray();
+        results.Should().HaveCount(3);
+        results[0].ToolName.Should().Be("null_tool");
+        results[0].Content.Should().Be("null");
+        results[1].Content.Should().Be("{\"value\":2}");
+        results[2].Content.Should().Be("{\"value\":3}");
+        results[2].Succeeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StreamingResponse_MaterializesPendingAndEmptyToolCallsAtEnd()
+    {
+        var inner = new RecordingClient(
+            new LlmStreamEvent(ToolCallDelta: new ToolCallDelta(
+                2, null, null, null)),
+            new LlmStreamEvent(ToolCallDelta: new ToolCallDelta(
+                1, "call-1", "lookup", null)));
+        using var client = new BaizeChatClient(inner, modelId: "adapter-model");
+
+        var updates = new List<ChatResponseUpdate>();
+        await foreach (var update in client.GetStreamingResponseAsync(
+                           [new ChatMessage(ChatRole.User, "weather")],
+                           cancellationToken: TestContext.Current.CancellationToken))
+            updates.Add(update);
+
+        var calls = updates.SelectMany(update => update.Contents)
+            .OfType<FunctionCallContent>()
+            .ToArray();
+        calls.Should().HaveCount(2);
+        calls[0].CallId.Should().Be("call-1");
+        calls[0].Name.Should().Be("lookup");
+        calls[0].Arguments.Should().BeEmpty();
+        calls[1].CallId.Should().NotBeNullOrWhiteSpace();
+        calls[1].Name.Should().BeEmpty();
+        updates.Should().OnlyContain(update => update.ModelId == "adapter-model");
+    }
+
+    [Fact]
+    public void GetService_RespectsKeysTypesMetadataAndNullGuards()
+    {
+        var inner = new RecordingClient();
+        using var client = new BaizeChatClient(inner, "Override", modelId: "override-model");
+
+        client.GetService(typeof(BaizeChatClient)).Should().BeSameAs(client);
+        client.GetService(typeof(ILlmClient)).Should().BeSameAs(inner);
+        client.GetService(typeof(ChatClientMetadata)).Should()
+            .BeOfType<ChatClientMetadata>()
+            .Which.ProviderName.Should().Be("Override");
+        client.GetService(typeof(ChatClientMetadata), "key").Should().BeNull();
+        client.GetService(typeof(IDisposable)).Should().BeSameAs(client);
+        client.GetService(typeof(IFormatProvider)).Should().BeNull();
+        FluentActions.Invoking(() => client.GetService(null!))
+            .Should().Throw<ArgumentNullException>();
+        FluentActions.Invoking(() => new BaizeChatClient(null!))
+            .Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task Request_RejectsUnsupportedExtensionsAiContent()
+    {
+        using var client = new BaizeChatClient(new RecordingClient());
+        var message = new ChatMessage(ChatRole.User, [new UnsupportedContent()]);
+
+        var action = async () =>
+        {
+            await foreach (var _ in client.GetStreamingResponseAsync(
+                               [message],
+                               cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        };
+
+        await action.Should().ThrowAsync<NotSupportedException>()
+            .WithMessage("*UnsupportedContent*");
+    }
+
     private sealed class RecordingClient(params LlmStreamEvent[] events)
         : ILlmClient, ILlmClientMetadataProvider
     {
@@ -149,4 +345,6 @@ public sealed class BaizeChatClientTests
             }
         }
     }
+
+    private sealed class UnsupportedContent : AIContent;
 }

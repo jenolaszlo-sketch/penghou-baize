@@ -38,7 +38,7 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage/
           /p:CoverletOutputFormat=cobertura
           '/p:Include=[Penghou.Baize]*'
-          /p:Threshold=55
+          /p:Threshold=80
           /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Claude)
@@ -110,7 +110,7 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage-batch/
           /p:CoverletOutputFormat=cobertura
           '/p:Include=[Penghou.Baize.Batch]*'
-          /p:Threshold=61
+          /p:Threshold=70
           /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Tools)
@@ -134,7 +134,7 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage-extensions-ai/
           /p:CoverletOutputFormat=cobertura
           '/p:Include=[Penghou.Baize.Extensions.AI]*'
-          /p:Threshold=62
+          /p:Threshold=83
           /p:ThresholdType=line%2cbranch
 
       - name: Test and coverage (Diagnostics)
@@ -146,7 +146,7 @@ jobs:
           /p:CoverletOutput=${{ github.workspace }}/coverage-diagnostics/
           /p:CoverletOutputFormat=cobertura
           '/p:Include=[Penghou.Baize.Diagnostics]*'
-          /p:Threshold=50
+          /p:Threshold=65
           /p:ThresholdType=line%2cbranch
 
       - name: Validate packages

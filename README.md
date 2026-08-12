@@ -11,6 +11,12 @@ Claude, Ollama, and Google Gemini. It exposes streaming, tool calling,
 multimodal input, native batch execution, usage, and diagnostics through one
 small domain surface — no provider SDK types leak into your application.
 
+Baize is deliberately a client and routing layer, not an agent framework or
+workflow engine. Generated-media and real-time APIs have different lifecycle
+requirements and are not forced into the chat response model. See
+[scope and boundaries](docs/scope-and-boundaries.md) for the current limits and
+planned client surfaces.
+
 ## Packages
 
 | Package | Purpose |
@@ -48,6 +54,7 @@ code change is required when upgrading the application's target framework.
 
 ## Documentation
 
+- [What Baize is—and is not](docs/scope-and-boundaries.md)
 - [Getting started and fluent routing](docs/getting-started.md)
 - [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
 - [Coverage policy and package baselines](docs/coverage.md)

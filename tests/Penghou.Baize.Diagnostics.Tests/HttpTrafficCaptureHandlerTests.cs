@@ -107,6 +107,132 @@ public sealed class HttpTrafficCaptureHandlerTests
     }
 
     [Fact]
+    public async Task ResponseDisposedBeforeEnd_RecordsPartialCaptureOutcome()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            await using var provider = CreateProvider(
+                directory,
+                enabled: true,
+                maxBodyBytes: 100,
+                new StubHandler("partial-response"));
+            using var response = await provider.GetRequiredService<IHttpClientFactory>()
+                .CreateClient("llm")
+                .GetAsync(
+                    "https://example.test/chat",
+                    HttpCompletionOption.ResponseHeadersRead,
+                    TestContext.Current.CancellationToken);
+            await using (var stream = await response.Content.ReadAsStreamAsync(
+                             TestContext.Current.CancellationToken))
+            {
+                var buffer = new byte[3];
+                (await stream.ReadAsync(
+                    buffer,
+                    TestContext.Current.CancellationToken)).Should().Be(3);
+            }
+
+            File.ReadAllText(Directory.GetFiles(directory, "*.response.raw").Single())
+                .Should().Be("par");
+            File.ReadAllText(Directory.GetFiles(directory, "*.response.log").Single())
+                .Should().Contain("Response stream outcome: disposed-before-end.")
+                .And.Contain("Captured bytes: 3.");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ResponseBodyNeverRead_RecordsOutcomeWithoutRawArtifact()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            await using var provider = CreateProvider(
+                directory,
+                enabled: true,
+                maxBodyBytes: 100,
+                new StubHandler("unread"));
+            using (var response = await provider.GetRequiredService<IHttpClientFactory>()
+                       .CreateClient("llm")
+                       .GetAsync(
+                           "https://example.test/chat",
+                           HttpCompletionOption.ResponseHeadersRead,
+                           TestContext.Current.CancellationToken))
+            {
+            }
+
+            File.ReadAllText(Directory.GetFiles(directory, "*.response.log").Single())
+                .Should().Contain("Response body was never read.");
+            Directory.GetFiles(directory, "*.response.raw").Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ResponseBodyCaptureDisabled_LeavesResponseReadableWithoutRawArtifact()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            await using var provider = CreateProvider(
+                directory,
+                enabled: true,
+                maxBodyBytes: 100,
+                new StubHandler("response"),
+                options => options.CaptureResponseBody = false);
+
+            using var response = await provider.GetRequiredService<IHttpClientFactory>()
+                .CreateClient("llm")
+                .GetAsync("https://example.test/chat", TestContext.Current.CancellationToken);
+            (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))
+                .Should().Be("response");
+
+            Directory.GetFiles(directory, "*.response.raw").Should().BeEmpty();
+            File.ReadAllText(Directory.GetFiles(directory, "*.response.log").Single())
+                .Should().Contain("[Response body capture disabled]")
+                .And.Contain("Response stream outcome: completed.");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RequestFailure_IsLoggedAndRethrown()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            await using var provider = CreateProvider(
+                directory,
+                enabled: true,
+                maxBodyBytes: 100,
+                new ThrowingHandler());
+
+            var action = () => provider.GetRequiredService<IHttpClientFactory>()
+                .CreateClient("llm")
+                .GetAsync("https://example.test/chat", TestContext.Current.CancellationToken);
+
+            await action.Should().ThrowAsync<HttpRequestException>()
+                .WithMessage("transport failed");
+            File.ReadAllText(Directory.GetFiles(directory, "*.response.log").Single())
+                .Should().Contain("HTTP request failed before a response was returned")
+                .And.Contain("transport failed");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CaptureSetupFailure_DoesNotBreakInferenceByDefault()
     {
         var path = Path.GetTempFileName();
@@ -210,6 +336,53 @@ public sealed class HttpTrafficCaptureHandlerTests
     }
 
     [Fact]
+    public async Task DiagnosticClientLogging_RecordsSafeStreamSummary()
+    {
+        var logs = new ConcurrentQueue<string>();
+        await using var provider = CreateDiagnosticProvider(logs);
+        var decorator = provider.GetServices<ILlmClientDecorator>().Single();
+        var client = decorator.Decorate(new SuccessfulClient());
+
+        await foreach (var _ in client.StreamAsync(
+                           new LlmRequest([new LlmMessage("user", "private-prompt")]),
+                           TestContext.Current.CancellationToken))
+        {
+        }
+
+        var combined = string.Join(Environment.NewLine, logs);
+        combined.Should().Contain("Completed Baize stream")
+            .And.Contain("events 3")
+            .And.Contain("content characters 6")
+            .And.Contain("reasoning characters 4")
+            .And.Contain("tool fragments 1")
+            .And.NotContain("secret")
+            .And.NotContain("private-prompt");
+    }
+
+    [Fact]
+    public async Task DiagnosticClientLogging_UsesNativeCompletionAndIsIdempotent()
+    {
+        var logs = new ConcurrentQueue<string>();
+        await using var provider = CreateDiagnosticProvider(logs);
+        var decorator = provider.GetServices<ILlmClientDecorator>().Single();
+        var inner = new CompletionClient();
+        var decorated = decorator.Decorate(inner);
+
+        decorator.Decorate(decorated).Should().BeSameAs(decorated);
+        var response = await ((ILlmCompletionClient)decorated).CompleteAsync(
+            new LlmRequest([new LlmMessage("user", "private-prompt")]),
+            TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("private-response");
+        inner.CompletionCalls.Should().Be(1);
+        inner.StreamCalls.Should().Be(0);
+        string.Join(Environment.NewLine, logs).Should()
+            .Contain("Completed Baize completion")
+            .And.NotContain("private-response")
+            .And.NotContain("private-prompt");
+    }
+
+    [Fact]
     public async Task Registration_IsIdempotent()
     {
         var directory = CreateTemporaryDirectory();
@@ -270,7 +443,8 @@ public sealed class HttpTrafficCaptureHandlerTests
         string directory,
         bool enabled,
         long maxBodyBytes,
-        HttpMessageHandler handler)
+        HttpMessageHandler handler,
+        Action<HttpTrafficCaptureOptions>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -280,9 +454,21 @@ public sealed class HttpTrafficCaptureHandlerTests
             options.DirectoryPath = directory;
             options.MaxBodyBytes = maxBodyBytes;
             options.MaxRetainedSessions = 10;
+            configure?.Invoke(options);
         });
         services.AddHttpClient("llm")
             .ConfigurePrimaryHttpMessageHandler(() => handler);
+        return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    private static ServiceProvider CreateDiagnosticProvider(
+        ConcurrentQueue<string> logs)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder
+            .SetMinimumLevel(LogLevel.Debug)
+            .AddProvider(new RecordingLoggerProvider(logs)));
+        services.AddBaizeHttpDiagnostics();
         return services.BuildServiceProvider(validateScopes: true);
     }
 
@@ -306,6 +492,14 @@ public sealed class HttpTrafficCaptureHandlerTests
             });
     }
 
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            throw new HttpRequestException("transport failed");
+    }
+
     private sealed class FailingClient : ILlmClient, ILlmClientMetadataProvider
     {
         public LlmEndpointCapabilities Capabilities { get; } = new();
@@ -323,6 +517,60 @@ public sealed class HttpTrafficCaptureHandlerTests
 #pragma warning disable CS0162
             yield break;
 #pragma warning restore CS0162
+        }
+    }
+
+    private sealed class SuccessfulClient : ILlmClient, ILlmClientMetadataProvider
+    {
+        public LlmEndpointCapabilities Capabilities { get; } = new();
+        public LlmClientMetadata Metadata { get; } =
+            new("Test", "model", EndpointId: "endpoint");
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [System.Runtime.CompilerServices.EnumeratorCancellation]
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+            yield return new LlmStreamEvent(Delta: "secret", ReasoningContent: "plan");
+            yield return new LlmStreamEvent(
+                ToolCallDelta: new ToolCallDelta(0, "call", "tool", "{}"));
+            yield return new LlmStreamEvent(
+                FinishReason: "stop",
+                Usage: new LlmUsage(2, 3, 5));
+        }
+    }
+
+    private sealed class CompletionClient :
+        ILlmClient,
+        ILlmCompletionClient,
+        ILlmClientMetadataProvider
+    {
+        public LlmEndpointCapabilities Capabilities { get; } = new();
+        public LlmClientMetadata Metadata { get; } =
+            new("Test", "model", EndpointId: "endpoint");
+        public int CompletionCalls { get; private set; }
+        public int StreamCalls { get; private set; }
+
+        public Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            CompletionCalls++;
+            return Task.FromResult(new LlmResponse(
+                "private-response",
+                FinishReason: "stop",
+                Usage: new LlmUsage(2, 3, 5)));
+        }
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [System.Runtime.CompilerServices.EnumeratorCancellation]
+            CancellationToken cancellationToken = default)
+        {
+            StreamCalls++;
+            await Task.Yield();
+            yield return new LlmStreamEvent(Delta: "stream");
         }
     }
 

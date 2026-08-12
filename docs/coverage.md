@@ -14,16 +14,16 @@ changes do not make the gate brittle.
 
 | Package | Line | Branch | Initial CI floor |
 |---|---:|---:|---:|
-| `Penghou.Baize` | 66.31% | 59.04% | 55% |
+| `Penghou.Baize` | 82.88% | 82.47% | 80% |
 | `Penghou.Baize.Claude` | 86.62% | 71.22% | 69% |
 | `Penghou.Baize.OpenAi` | 90.25% | 76.72% | 74% |
 | `Penghou.Baize.Ollama` | 91.74% | 79.06% | 77% |
 | `Penghou.Baize.Gemini` | 87.32% | 67.57% | 65% |
 | `Penghou.Baize.Router` | 82.14% | 73.86% | 72% |
-| `Penghou.Baize.Batch` | 86.01% | 63.59% | 61% |
+| `Penghou.Baize.Batch` | 89.55% | 73.30% | 70% |
 | `Penghou.Baize.Tools` | 86.25% | 67.24% | 65% |
-| `Penghou.Baize.Extensions.AI` | 73.97% | 64.42% | 62% |
-| `Penghou.Baize.Diagnostics` | 66.06% | 52.12% | 50% |
+| `Penghou.Baize.Extensions.AI` | 92.85% | 85.90% | 83% |
+| `Penghou.Baize.Diagnostics` | 76.92% | 67.55% | 65% |
 
 Each package is measured in isolation using a Coverlet `Include` filter. Its CI
 floor applies to both line and branch coverage. The common floor is based on the

@@ -10,6 +10,7 @@ TestResults/
 logs/
 /artifacts/live-diagnostics/
 /coverage-local-*/
+coverage-*/
 .env
 .env.local
 .env.*.local
