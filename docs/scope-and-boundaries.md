@@ -42,7 +42,7 @@ The intended client boundaries are:
 | --- | --- | --- |
 | `ILlmClient` | Request/response completion with optional server-to-client streaming, tools, structured output, and multimodal input | Available |
 | `IBaizeBatchClient` | Provider-native asynchronous batches of completion requests | Available |
-| GenerationClient | Generated image, audio, video, or other artifacts; may expose progress and operation handles | Planned |
+| `IGenerationClient` | Generated image, audio, video, or other artifacts; may expose progress and operation handles | Experimental — the OpenAI adapter implements image, image-edit, video, and speech generation; an in-process `IGenerationExecutor` routes and waits for requests |
 | Live client | Persistent bidirectional real-time sessions over transports such as WebSockets | Considering |
 | Embedding client | Vector generation for text and multimodal content | No Baize contract planned currently; prefer established .NET abstractions |
 
@@ -50,6 +50,22 @@ An API style is separate from a client surface. For example, Gemini's
 Interactions API can carry ordinary text completions and generated images, but
 those results should still be exposed through the appropriate provider-neutral
 contract rather than one overly broad response object.
+
+## Conversation media versus artifact generation
+
+Both `ILlmClient` and `IGenerationClient` carry media, but the caller intent is
+different:
+
+| Caller intent | Surface |
+| --- | --- |
+| Ask a model to look at, hear, or reason about media as conversation context | `ILlmClient` with image, audio, video, or file input content |
+| Create, edit, transform, upscale, or produce variations of an artifact | `IGenerationClient` |
+
+The distinction is independent of the provider wire protocol. A provider that
+generates images through a chat-shaped API (for example Gemini's Interactions
+API) still belongs on `IGenerationClient`; Baize does not return binary
+artifact results through `ILlmClient`. General multimodal chat content remains
+a first-class `ILlmClient` feature and is never marked obsolete.
 
 ## Composition is expected
 

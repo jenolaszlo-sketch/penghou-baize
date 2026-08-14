@@ -19,6 +19,8 @@ changes do not make the gate brittle.
 | `Penghou.Baize.OpenAi` | 90.25% | 76.72% | 74% |
 | `Penghou.Baize.Ollama` | 91.74% | 79.06% | 77% |
 | `Penghou.Baize.Gemini` | 87.32% | 67.57% | 65% |
+| `Penghou.Baize.Runway` | 96.55% | 88.57% | 86% |
+| `Penghou.Baize.Fal` | 97.01% | 97.10% | 90% |
 | `Penghou.Baize.Router` | 82.14% | 73.86% | 72% |
 | `Penghou.Baize.Batch` | 89.55% | 73.30% | 70% |
 | `Penghou.Baize.Tools` | 86.25% | 67.24% | 65% |

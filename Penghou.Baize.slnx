@@ -5,6 +5,8 @@
     <Project Path="src/Penghou.Baize.Claude/Penghou.Baize.Claude.csproj" />
     <Project Path="src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj" />
     <Project Path="src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj" />
+    <Project Path="src/Penghou.Baize.Runway/Penghou.Baize.Runway.csproj" />
+    <Project Path="src/Penghou.Baize.Fal/Penghou.Baize.Fal.csproj" />
     <Project Path="src/Penghou.Baize.Router/Penghou.Baize.Router.csproj" />
     <Project Path="src/Penghou.Baize.Batch/Penghou.Baize.Batch.csproj" />
     <Project Path="src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj" />
@@ -13,6 +15,7 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Penghou.Baize.QuickStart/Penghou.Baize.QuickStart.csproj" />
+    <Project Path="samples/Penghou.Baize.BestOfN/Penghou.Baize.BestOfN.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj" />
@@ -20,6 +23,8 @@
     <Project Path="tests/Penghou.Baize.Client.Ollama.Tests/Penghou.Baize.Client.Ollama.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Client.Gemini.Tests/Penghou.Baize.Client.Gemini.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Client.OpenAi.Tests/Penghou.Baize.Client.OpenAi.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.Runway.Tests/Penghou.Baize.Client.Runway.Tests.csproj" />
+    <Project Path="tests/Penghou.Baize.Client.Fal.Tests/Penghou.Baize.Client.Fal.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.TestProvider/Penghou.Baize.TestProvider.csproj" />
     <Project Path="tests/Penghou.Baize.Tools.Tests/Penghou.Baize.Tools.Tests.csproj" />

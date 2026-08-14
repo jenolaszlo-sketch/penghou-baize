@@ -89,6 +89,31 @@ jobs:
           /p:Threshold=65
           /p:ThresholdType=line%2cbranch
 
+      - name: Test and coverage (Runway)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.Runway.Tests/Penghou.Baize.Client.Runway.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-runway/
+          /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Runway]*'
+          /p:Threshold=86
+          /p:ThresholdType=line%2cbranch
+
+      - name: Test and coverage (Fal)
+        run: >
+          dotnet test tests/Penghou.Baize.Client.Fal.Tests/Penghou.Baize.Client.Fal.Tests.csproj
+          --configuration Release
+          --no-restore
+          /p:CollectCoverage=true
+          /p:CoverletOutput=${{ github.workspace }}/coverage-fal/
+          /p:CoverletOutputFormat=cobertura
+          '/p:Include=[Penghou.Baize.Fal]*'
+          /p:Threshold=90
+          /p:ThresholdType=line%2cbranch
+
+
       - name: Test and coverage (Router)
         run: >
           dotnet test tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj
@@ -162,6 +187,8 @@ jobs:
             coverage-openai/
             coverage-ollama/
             coverage-gemini/
+            coverage-runway/
+            coverage-fal/
             coverage-router/
             coverage-batch/
             coverage-tools/

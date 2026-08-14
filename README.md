@@ -25,11 +25,13 @@ planned client surfaces.
 | `Penghou.Baize.OpenAi` | OpenAI-compatible chat client (OpenAI, Azure, DeepSeek, ...) |
 | `Penghou.Baize.Claude` | Anthropic Claude chat client |
 | `Penghou.Baize.Ollama` | Ollama chat client |
-| `Penghou.Baize.Gemini` | Google Gemini chat client |
+| `Penghou.Baize.Gemini` | Google Gemini chat and image-generation client |
+| `Penghou.Baize.Runway` | Runway video-generation client (text-to-video, image-to-video, task polling) |
+| `Penghou.Baize.Fal` | fal.ai queue-based generation client (arbitrary model JSON, status/result/cancel) |
 | `Penghou.Baize.Router` | Provider-neutral, configuration-driven model routing and capability fallback |
 | `Penghou.Baize.Batch` | Provider-neutral native batch planning and aggregate coordination |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
-| `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` adapter |
+| `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` and experimental `IImageGenerator` adapters |
 | `Penghou.Baize.Diagnostics` | Opt-in bounded HTTP request/response capture for troubleshooting |
 
 The core, provider clients, router, batch coordinator, Extensions.AI adapter,
@@ -63,9 +65,11 @@ code change is required when upgrading the application's target framework.
 - Provider guides: [DeepSeek](docs/providers/deepseek.md) and
   [Gemini](docs/providers/gemini.md)
 - [Generation client roadmap](docs/roadmap-generation-client.md)
+- [Generation contract matrix](docs/generation-contract-matrix.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
 - [Runnable quick-start sample](samples/Penghou.Baize.QuickStart)
+- [Best-of-N generation sample](samples/Penghou.Baize.BestOfN)
 
 ## Quick start
 
@@ -765,6 +769,77 @@ The router continues to own execution, fallback safety, diagnostics, and
 memory updates. See the [custom route provider
 guide](docs/extensibility/custom-route-provider.md) for the complete contract.
 
+## Generation clients
+
+`IGenerationClient` (experimental) models artifact generation — images, video,
+audio — with an operation lifecycle that covers both immediate providers
+(submit → succeeded) and queued providers (submit → handle → poll). Provider
+packages register endpoints through their own `AddBaize*Generation` methods,
+which populate the shared registry; `IGenerationExecutor` then routes a request
+to a suitable endpoint, submits it once, polls with backoff, and returns the
+final assets:
+
+```csharp
+services.AddHttpClient();
+services.AddBaizeGeneration();
+services.AddBaizeOpenAiGeneration("image", options =>
+{
+    options.ApiKey = apiKey;
+    options.Model = "gpt-image-1";
+});
+
+var executor = provider.GetRequiredService<IGenerationExecutor>();
+var result = await executor.ExecuteAsync(new ImageGenerationRequest
+{
+    Prompt = "A simple flat icon of one blue circle.",
+    OutputFormat = "png"
+});
+var asset = result.Assets[0].Source; // inline bytes, URI, or provider file
+```
+
+Routing is capability-based (endpoints whose features satisfy the request) and
+the selection policy is replaceable. Submissions are made at most once:
+ambiguous submission outcomes surface as errors instead of being replayed into
+duplicate billable jobs, while only safe status reads are retried.
+
+For workloads larger than a single operation, `IGenerationBatchExecutor` turns
+one request plus a total count into concurrent chunks bounded by the endpoint's
+native candidate limit. It is queue-aware: every chunk is submitted in a first
+pass so a queued provider receives the whole batch up front, then the pinned
+handles are polled in concurrent waves until each reaches a terminal state, and
+it returns explicit partial results — every chunk's outcome plus the
+aggregated assets — so a quota-limited chunk never hides the successful
+candidates:
+
+```csharp
+var batcher = provider.GetRequiredService<IGenerationBatchExecutor>();
+var batch = await batcher.ExecuteAsync(new GenerationBatchRequest(
+    new ImageGenerationRequest { Prompt = "a flat logo" },
+    TotalCount: 12));
+batch.AllSucceeded; // false when any chunk failed
+batch.Assets;       // every successful candidate, in order
+```
+
+See the [best-of-N sample](samples/Penghou.Baize.BestOfN) for composition of
+batching with an application-level selection policy.
+
+Runway endpoints are genuinely queued: `AddBaizeRunwayGeneration` registers a
+client whose submission returns a task id (`Queued`), and the executor polls the
+task status (`PENDING` → `RUNNING` → `SUCCEEDED`) with progress until the output
+video URLs are ready. Text-to-video and image-to-video (first-frame image) are
+supported with provider-faithful `RunwayTextToVideoRequest` /
+`RunwayImageToVideoRequest` wire types for callers that want the raw protocol.
+
+fal.ai queue endpoints contrast with Runway on purpose: `AddBaizeFalGeneration`
+registers a client that submits arbitrary per-model JSON to the queue and
+returns a request id immediately, then polls `GET .../requests/{id}/status`
+until `COMPLETED` and fetches the model-specific result document separately.
+The queue reports a `position` rather than a progress fraction, output assets
+are storage-backed URLs harvested from the arbitrary result JSON, and
+cancellation uses `PUT .../requests/{id}/cancel`. The native
+`SubmitQueueAsync` posts any model-faithful `JsonObject` unchanged; the common
+`IGenerationClient` surface maps requests to a conventional fal payload.
+
 ## Microsoft.Extensions.AI
 
 `Penghou.Baize.Extensions.AI` adapts any `ILlmClient` to `IChatClient`, so
@@ -780,6 +855,16 @@ var response = await chatClient.GetResponseAsync("Hello");
 
 Text, usage, reasoning, tool calls/results, and supported multimodal content
 are mapped in both directions.
+
+The same package adapts a Baize `IGenerationClient` to the experimental
+`Microsoft.Extensions.AI.IImageGenerator` surface. Because the ecosystem
+contract is not yet stable, the adapter is experimental and never replaces the
+Baize-native generation contracts:
+
+```csharp
+IImageGenerator generator = new BaizeImageGenerator(genClient, "OpenAi");
+var image = await generator.GenerateAsync(new ImageGenerationRequest("an icon"));
+```
 
 ## Observability
 
@@ -905,6 +990,13 @@ $env:BAIZE_LIVE_TEST_IMAGE_GENERATION = "1"
 $env:BAIZE_LIVE_IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
 
+# OpenAI generation-client probe (text-to-image through IGenerationClient)
+$env:BAIZE_LIVE_PROVIDER = "OpenAi"
+$env:BAIZE_LIVE_MODEL = "gpt-4o"             # chat baseline model
+$env:BAIZE_LIVE_TEST_GENERATION = "1"
+$env:BAIZE_LIVE_GENERATION_MODEL = "gpt-image-1"
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
+
 # Native batch only (when live batch coverage is enabled)
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=Batch"
 ```
@@ -935,6 +1027,9 @@ Set `BAIZE_LIVE_TEST_IMAGE_GENERATION=1` to opt into the paid Gemini provider
 probe, with `BAIZE_LIVE_IMAGE_MODEL` selecting its image model. This probe
 validates the provider contract without claiming that `ILlmClient` can return
 binary artifacts; that portable surface remains planned for GenerationClient.
+Set `BAIZE_LIVE_TEST_GENERATION=1` to opt into the OpenAI generation-client
+probe, which drives the real `IGenerationClient` through DI with
+`BAIZE_LIVE_GENERATION_MODEL` selecting its image model (default `gpt-image-1`).
 The tests print Baize activities and metrics and keep
 the correlated raw transport artifacts under
 `tests/Penghou.Baize.IntegrationTests/bin/.../artifacts/live-diagnostics` by

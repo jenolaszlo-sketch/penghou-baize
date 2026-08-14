@@ -89,6 +89,31 @@ generation should be considered for obsolescence, and only when callers have a
 mechanical migration path. General multimodal chat content must not be marked
 obsolete.
 
+### Artifact-only chat API inventory
+
+This is the Phase 1 inventory of chat-shaped endpoints that exist solely to
+generate artifacts. It is reviewed whenever a provider package changes, and it
+stays current with the experimental generation adapters:
+
+- **No Baize provider chat client exposes artifact generation through
+  `ILlmClient`.** `OpenAiChatClient`, `ClaudeChatClient`, `GeminiChatClient`,
+  and `OllamaChatClient` are conversation-only.
+- **Gemini Interactions API image generation** (`POST /v1beta/interactions`
+  with image-capable models such as `gemini-3.1-flash-lite-image`) is reached
+  only through the opt-in live probe in
+  `tests/Penghou.Baize.IntegrationTests/GeminiGenerationProviderProbeTests.cs`,
+  never through a public `ILlmClient` member. It is compatibility evidence for
+  the future Gemini generation adapter and is deliberately not obsoleted.
+- **OpenAI image endpoints** (`/images/generations`, `/images/edits`) are
+  already exposed only through `OpenAiGenerationClient`, never through chat.
+- **OpenAI chat-capable image models** (for example `gpt-image-1`) are not
+  surfaced as chat; image generation is offered only through
+  `IGenerationClient`.
+
+Consequence: no existing chat member is obsolete and no migration is required
+yet. Chat-shaped artifact endpoints should move behind `IGenerationClient`
+when an adapter exists; general multimodal chat content stays on `ILlmClient`.
+
 ## Design principles
 
 ### Provider first, shared abstraction second
@@ -478,11 +503,24 @@ APIs create a compelling practical reason.
 
 ### Phase 1: preserve chat and define the boundary
 
+Status: complete. Chat behavior is unchanged and covered by the existing test
+suite. The boundary is documented in
+[scope and boundaries](scope-and-boundaries.md) and the inventory above
+records the artifact-only chat endpoints found today. No chat member was
+obsoleted.
+
 Keep current multimodal chat behavior working. Document the distinction between
 media used in conversation and explicit artifact generation. Inventory any
 chat APIs that exist solely to generate artifacts, but do not obsolete them yet.
 
 ### Phase 2: provider comparison and experimental contracts
+
+Status: contracts introduced; matrix in progress. The experimental
+request, operation, capability, and asset contracts live in
+`Penghou.Baize.Generation` and are exercised by the OpenAI adapter. The
+provider comparison is being recorded in the [generation contract
+matrix](generation-contract-matrix.md); OpenAI, Gemini (probe), Runway, and
+fal.ai are captured, with a second contrasting provider to follow.
 
 Create a contract matrix for generation-capable existing providers, Runway, and
 at least one contrasting provider. Record operation states, synchronous and
@@ -495,6 +533,12 @@ audio request types are initial candidates.
 
 ### Phase 3: generation through an existing provider
 
+Status: in progress. The OpenAI adapter implements image, image-edit, video,
+and speech generation with deterministic tests (77 passing on .NET 8 and 10).
+An opt-in live probe validates text-to-image through the real
+`IGenerationClient` (see the README live-test section). Still pending: more
+modalities in the live probe and first-class documentation.
+
 Implement `IGenerationClient` for one existing Baize provider. This validates
 explicit generation intent, synchronous completion, assets, errors, diagnostics,
 and capabilities without first designing around a workflow API.
@@ -504,6 +548,14 @@ default generation case.
 
 ### Phase 4: second existing provider and Extensions.AI adapter
 
+Status: complete. The Gemini generation client implements text-to-image and
+image-to-image through the Interactions API with deterministic and conformance
+tests (85 passing). The experimental `Microsoft.Extensions.AI.IImageGenerator`
+adapter (`BaizeImageGenerator` in `Penghou.Baize.Extensions.AI`) maps prompts,
+reference images, candidate counts, sizes, and output media types to Baize
+requests and back to `DataContent`/`UriContent`/`HostedFileContent`, with five
+deterministic tests.
+
 Implement a differently shaped existing provider where possible. Add an
 experimental `Microsoft.Extensions.AI.IImageGenerator` adapter while preserving
 Baize-native contracts for broader modalities.
@@ -511,6 +563,18 @@ Baize-native contracts for broader modalities.
 Compare both implementations before expanding the common surface.
 
 ### Phase 5: in-process executor and generation routing
+
+Status: complete. `IGenerationExecutor` and an in-process `GenerationExecutor`
+live in `Penghou.Baize.Generation` in the core package. The executor filters
+registered endpoints through `GenerationRequestValidator`, selects one via the
+replaceable `IGenerationRoutingPolicy` (deterministic first-fit default),
+submits exactly once, pins the handle, polls with backoff, reports provider
+progress, retries only safe status reads, and enforces a configurable timeout.
+`TimeoutExceeded` and `Canceled` were added to `GenerationErrorKind` so queued
+lifecycle outcomes are classified truthfully. Nine deterministic tests cover
+routing, immediate and queued completion, progress, transient status retries,
+timeout, failed/canceled operations, ambiguous submissions (never replayed),
+and DI registration.
 
 Add `IGenerationExecutor` with an in-process implementation. It should select an
 endpoint, submit once, pin the returned handle, poll with backoff, report
@@ -521,6 +585,23 @@ policy must remain replaceable. Unknown submission outcomes must be surfaced
 rather than retried blindly.
 
 ### Phase 6: provider-native Runway client
+
+Status: complete. `Penghou.Baize.Runway` implements text-to-video and
+image-to-video through the Runway Developer API (`/v1/text_to_video` and
+`/v1/image_to_video`) with provider-faithful `RunwayTextToVideoRequest`,
+`RunwayImageToVideoRequest`, `RunwayTask`, and `RunwayTaskCreateResponse` wire
+types. The `RunwayGenerationClient` adapts the asynchronous task lifecycle to
+`IGenerationClient`: creation returns a queued operation with a pinned handle,
+`GetAsync` polls `GET /v1/tasks/{id}` mapping `PENDING`/`THROTTLED`,
+`RUNNING`, `SUCCEEDED`, `FAILED`, and `CANCELLED` to lifecycle states with
+progress, cost, and failure-code metadata, and `CancelAsync` issues `DELETE
+/v1/tasks/{id}`. Image-to-video accepts URI and inline (data-URI) first frames;
+ratio, duration, seed, output format, audio, and negative-prompt parameters map
+from `VideoGenerationRequest`. An end-to-end executor test proves the genuinely
+queued, long-running path: the `IGenerationExecutor` submits once, polls a
+recorded `THROTTLED → RUNNING → SUCCEEDED` sequence, and reports progress. 35
+deterministic tests pass on .NET 8 and 10. Not yet wired: opt-in live tests and
+Runway upload-hosted files.
 
 Create `Penghou.Baize.Runway` with provider-faithful request and task types, then
 adapt it to `IGenerationClient`. Initial responsibilities are:
@@ -540,6 +621,33 @@ queued, long-running generation.
 
 ### Phase 7: logical generation batching
 
+Status: complete. Native candidate counts were already supported from Phase 3
+(the `Count` property, `GenerationFeature.MultipleCandidates`, and
+`MaximumCandidates`). On top of that, a logical batch executor
+(`IGenerationBatchExecutor`/`GenerationBatchExecutor` in the core package) now
+replicates a base request across a requested total count, splits it into chunks
+bounded by the endpoint's native `MaximumCandidates` (reusing native
+multiple-candidate submissions where supported, one-per-chunk otherwise), and
+is queue-aware: every chunk is submitted in a first pass with bounded
+concurrency so a queued provider receives the whole batch up front, then the
+pinned handles are polled in concurrent waves (reporting aggregate progress,
+retrying only safe status reads, and enforcing the executor timeout) until each
+reaches a terminal state; providers that return a terminal operation from
+submission skip the poll phase entirely. `GenerationBatchResult` exposes
+explicit partial results: every chunk's `Result`/`Error` plus aggregated
+`Assets` and `Errors`, so a quota-limited or transiently failing chunk never
+hides the successful candidates. Per-chunk submission is at most once (unknown
+submission outcomes are never replayed). Seventeen deterministic tests cover
+native-limit chunking, per-request chunking, single submissions, non-image
+requests, mixed partial failures, overall progress (including a terminal 1.0
+report), submit-all-before-poll ordering, assets across chunks, transient and
+non-retryable status-read failures, queued timeouts, no-endpoint routing,
+invalid inputs, and DI registration. A runnable best-of-N sample
+(`samples/Penghou.Baize.BestOfN`) generates twelve candidates through the batch
+executor, scores them with an application-level selection policy, and selects
+the best — keeping selection policy out of provider clients using an
+in-process client so it runs with no network or API key.
+
 Support native candidate counts first. Then add logical generation batching for
 larger workloads using bounded concurrency and explicit partial-result semantics.
 
@@ -548,6 +656,23 @@ batching, evaluation, and refinement compose cleanly without putting selection
 policy into provider clients.
 
 ### Phase 8: contrasting queued provider
+
+Status: complete. `Penghou.Baize.Fal` implements a fal.ai queue adapter
+(`POST {base}/{model}` for submission, `GET .../requests/{id}/status` for
+status, `GET .../requests/{id}` for the result document, and
+`PUT .../requests/{id}/cancel` for cancellation). It deliberately contrasts
+with Runway to stress the shared contracts: the input is arbitrary per-model
+JSON (Baize maps the common surface to a conventional fal payload and posts any
+model-faithful `JsonObject` unchanged through the native `SubmitQueueAsync`),
+the queue reports a `position` instead of a numeric fraction (surface via
+provider metadata, no numeric progress), output assets are storage-backed URLs
+extracted from an arbitrary result document by a shape-agnostic recursive walk,
+and cancellation uses a `PUT` verb rather than a `DELETE`. A `COMPLETED`
+status is followed by a separate result fetch, keeping submit/status/result
+separation explicit. Fifty-two deterministic client and executor/DI tests
+cover the queued lifecycle, error-document variants, content-type inference,
+capability gates, and operation recovery through `IGenerationExecutor`;
+measured package coverage is 97% line / 97% branch.
 
 Implement enough of fal.ai or Replicate to exercise another asynchronous or
 highly model-variable execution style. Use it to challenge cancellation,

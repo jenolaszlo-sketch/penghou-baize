@@ -72,9 +72,45 @@ whose result can represent binary artifacts and long-running operations.
 
 A paid provider-level probe verified `gemini-3.1-flash-lite-image` through the
 Interactions API. `POST /v1beta/interactions` returned a MIME-typed, decodable
-binary image artifact. This is compatibility evidence for the planned Gemini
+binary image artifact. This is compatibility evidence for the Gemini
 GenerationClient provider; it is not a hidden image-output feature of the
 current chat client.
+
+## Image generation
+
+`Penghou.Baize.Gemini` exposes Gemini image generation through
+`IGenerationClient` using the Interactions API. Register an endpoint with an
+image-capable model:
+
+```csharp
+services.AddHttpClient();
+services.AddBaizeGeminiGeneration("image", options =>
+{
+    options.ApiKey = apiKey;
+    options.Model = "gemini-3.1-flash-lite-image";
+    options.ImageSize = "1K";
+});
+```
+
+Then submit text-to-image or image-to-image requests through the keyed client:
+
+```csharp
+var client = provider.GetRequiredKeyedService<IGenerationClient>("image");
+
+var operation = await client.SubmitAsync(new ImageGenerationRequest
+{
+    Prompt = "A simple flat icon of one blue circle on a white background.",
+    AspectRatio = "1:1",
+    OutputFormat = "png"
+});
+```
+
+Image generation is synchronous: a completed interaction returns inline image
+assets. Image editing accepts inline or public-URL input images; inline inputs
+assume the configured `DefaultInputImageMimeType` (`image/png` by default)
+because the common request model carries no content type. Operation retrieval
+and cancellation are rejected before a provider call because the synchronous
+interaction path has no task lifecycle.
 
 ## Thinking controls
 

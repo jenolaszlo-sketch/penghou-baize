@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Penghou.Baize.Gemini\Penghou.Baize.Gemini.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Router\Penghou.Baize.Router.csproj" />
+    <ProjectReference Include="..\Penghou.Baize.Generation.TestShared\Penghou.Baize.Generation.TestShared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

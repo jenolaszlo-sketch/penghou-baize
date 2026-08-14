@@ -4,7 +4,7 @@
     <PackageId>Penghou.Baize.Extensions.AI</PackageId>
     <Title>Penghou Baize Microsoft.Extensions.AI Adapter</Title>
     <Authors>Penghou.Baize contributors</Authors>
-    <Description>Microsoft.Extensions.AI IChatClient interoperability for Penghou.Baize clients.</Description>
+    <Description>Microsoft.Extensions.AI IChatClient and experimental IImageGenerator interoperability for Penghou.Baize clients.</Description>
     <PackageTags>llm;chat;ai;microsoft.extensions.ai;interoperability</PackageTags>
     <RepositoryUrl>https://github.com/jenolaszlo-sketch/penghou-baize</RepositoryUrl>
     <PackageProjectUrl>https://github.com/jenolaszlo-sketch/penghou-baize</PackageProjectUrl>

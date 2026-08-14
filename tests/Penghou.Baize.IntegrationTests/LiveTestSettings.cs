@@ -103,6 +103,26 @@ internal sealed record LiveTestSettings(
         }
     }
 
+    public static bool GenerationEnabled
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return IsTrue(Environment.GetEnvironmentVariable("BAIZE_LIVE_TEST_GENERATION"));
+        }
+    }
+
+    public static string GenerationModel
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return Environment.GetEnvironmentVariable("BAIZE_LIVE_GENERATION_MODEL") ??
+                   Environment.GetEnvironmentVariable("BAIZE_LIVE_MODEL") ??
+                   "gpt-image-1";
+        }
+    }
+
     private static string Required(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } value
             ? value
