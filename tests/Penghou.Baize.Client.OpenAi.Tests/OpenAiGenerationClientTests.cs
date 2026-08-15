@@ -197,6 +197,7 @@ public sealed class OpenAiGenerationClientTests
         using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredKeyedService<IGenerationClient>("ep-1");
         client.Capabilities.Features.Should().HaveFlag(GenerationFeature.TextToImage);
+        client.Capabilities.Features.Should().HaveFlag(GenerationFeature.Cancellation);
 
         provider.GetRequiredService<IGenerationClientRegistry>()
             .Find("OpenAi", "ep-1").Should().BeSameAs(client);

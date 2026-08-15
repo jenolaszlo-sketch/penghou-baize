@@ -348,6 +348,7 @@ public sealed class FalGenerationClientTests
         operation.Progress.Should().BeNull();
         operation.ProviderMetadata.Should().Contain("status", "IN_QUEUE");
         operation.ProviderMetadata.Should().Contain("queue_position", 3);
+        operation.ProviderMetadata.Should().Contain("provider_id", "r-1");
     }
 
     [Fact]

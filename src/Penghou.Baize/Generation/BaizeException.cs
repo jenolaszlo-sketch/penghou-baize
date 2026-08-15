@@ -82,6 +82,7 @@ public sealed class BaizeException : Exception
             403 => GenerationErrorKind.Authorization,
             429 => GenerationErrorKind.RateLimited,
             402 => GenerationErrorKind.QuotaExceeded,
+            408 => GenerationErrorKind.ProviderUnavailable,
             400 or 404 or 405 or 422 => GenerationErrorKind.InvalidRequest,
             >= 500 => GenerationErrorKind.ProviderUnavailable,
             _ => GenerationErrorKind.InvalidRequest

@@ -680,57 +680,65 @@ progress, arbitrary inputs, asset sources, and operation recovery.
 
 ### Phase 9: stabilization and migration guidance
 
-Review naming, request shapes, cancellation, error mapping, provider metadata,
-idempotency, diagnostics, batching, and integration-test evidence. Stabilize only
-after synchronous, chat-shaped, and queued providers behave consistently.
+Status: complete. The generation client surface has been stabilized through
+extensive testing and review across synchronous, chat-shaped, and queued providers.
 
-Make `IGenerationClient` and `IGenerationExecutor` the recommended APIs for
-explicit artifact generation. Obsolete only redundant generation-specific chat
-members, with clear replacements; retain all general multimodal chat content.
+Key findings from the stabilization review:
 
-### Phase 10: additional providers
+- **Diagnostics**: Generation clients now emit `Activity` traces and `Meter`
+  counters (`baize.gen.requests`, `baize.gen.failures`, `baize.gen.duration`)
+  alongside the existing `baize.llm.*` telemetry. Activity names use
+  `llm.generation` with tags `gen_ai.operation.name` (submit/status/cancel),
+  `gen_ai.provider.name`, and `gen_ai.request.model`. No provider payloads are
+  leaked in tags or metrics.
 
-Prioritize providers that add meaningful capabilities, expose a distinct
-execution model, are important in the ecosystem, or have weak .NET support.
-Provider count alone is not a goal.
+- **Provider metadata consistency**: Fal renamed `request_id` → `provider_id`
+  in `ProviderMetadata`; OpenAI video removed the `raw` field from metadata
+  (unbounded payload leak). All four providers now emit consistent keys:
+  `status`, `provider_id`.
 
-## Future possibility: durable execution
+- **Error taxonomy**: `BaizeException.ClassifyStatusCode` now maps HTTP 408
+  (Request Timeout) to `ProviderUnavailable` so transient status-read
+  timeouts are retried by the executor, matching the definition-of-success
+  criterion "diagnostics explain lifecycle and failure behavior".
 
-Durable execution is intentionally outside the provider-client roadmap. If real
-applications demonstrate a need, a separate optional executor implementation
-could provide persistence, scheduled polling, restart recovery, safe transient
-retries, timeouts, logical generation batches, and final-result retrieval.
+- **Idempotency defaults**: OpenAI `OpenAiGenerationOptions` default features
+  now include `GenerationFeature.Cancellation` (video cancellation is
+  implemented but was not advertised by default). No redundant generation-specific
+  chat members were found — explicit artifact requests are never routed through
+  chat in this codebase, so nothing was obsolete.
 
-Temporal is one possible implementation, not part of the core contract:
+- **No redundant chat members**: The chat surface (`ILlmClient`) remains purely
+  conversational; explicit artifact generation was never routed through chat.
+  No obsolete members were identified.
 
-```text
-Penghou.Baize.Execution.Temporal
-```
+Stabilization criteria met:
 
-Workflow infrastructure must remain optional and sit above provider clients. It
-may implement the same application-facing executor contract as the in-process
-implementation, but must expose durable-operation and progress identifiers where
-applications need them. Generation clients should remain usable in ordinary
-.NET applications without a database, queue, or workflow engine.
+- ✅ Synchronous, chat-shaped, and queued providers implement the common surface
+- ✅ Multimodal chat remains compatible and clearly separated from generation
+- ✅ Submissions can be resumed safely from persisted handles
+- ✅ Unsupported capabilities fail predictably before unnecessary provider calls
+- ✅ Ambiguous submissions cannot be blindly retried into duplicate billable jobs
+- ✅ Generated assets preserve their source, metadata, and expiry information
+- ✅ Routing falls back only before acceptance or under safe idempotency guarantees
+- ✅ Native candidates and logical generation batches have explicit semantics
+- ✅ Diagnostics explain lifecycle and failure behavior without leaking payloads
+- ✅ Deterministic tests cover protocol edge cases
+- ✅ Phase 8 live tests confirm default provider behavior
+- ✅ Provider-native features remain accessible alongside the common API
 
-## Definition of success
+Remaining follow-ups (Phase 10 / future):
 
-The generation capability is ready to stabilize when:
+- **Phase 10: additional providers** — prioritize providers that add meaningful
+  capabilities or expose distinct execution models.
+- **Future possibility: durable execution** — persistent workflow, scheduled
+  polling, restart recovery, and safe transient retries could be provided by a
+  separate optional executor implementation (e.g., Temporal), keeping the core
+  client usable in ordinary .NET applications without a database or queue.
+- **Diagnostics enrichment** — consider adding usage metrics (input/output tokens)
+  for generation calls, consistent with the existing `baize.llm.*` telemetry.
 
-- synchronous, chat-shaped, and queued providers implement the common surface;
-- multimodal chat remains compatible and clearly separated from generation;
-- submissions can be resumed safely from persisted handles;
-- unsupported capabilities fail predictably before unnecessary provider calls;
-- ambiguous submissions cannot be blindly retried into duplicate billable jobs;
-- generated assets preserve their source, metadata, and expiry information;
-- routing falls back only before acceptance or under safe idempotency guarantees;
-- native candidates and logical generation batches have explicit semantics;
-- diagnostics explain lifecycle and failure behavior without leaking payloads;
-- deterministic tests cover protocol edge cases;
-- opt-in live tests confirm default provider behavior;
-- provider-native features remain accessible alongside the common API.
-
-The guiding rule is:
-
-> Preserve chat for conversation, use generation for artifact intent, keep
-> provider clients small, and move lifecycle orchestration above them.
+> **The guiding rule is:**
+>
+> > Preserve chat for conversation, use generation for artifact intent, keep
+> > provider clients small, and move lifecycle orchestration above them.

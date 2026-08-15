@@ -38,6 +38,7 @@ public sealed class OpenAiGenerationOptions
         GenerationFeature.TextToSpeech |
         GenerationFeature.MultipleCandidates |
         GenerationFeature.OperationRetrieval |
+        GenerationFeature.Cancellation |
         GenerationFeature.Progress;
 
     /// <summary>The maximum candidate count the endpoint accepts, when documented.</summary>

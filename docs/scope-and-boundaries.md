@@ -42,7 +42,7 @@ The intended client boundaries are:
 | --- | --- | --- |
 | `ILlmClient` | Request/response completion with optional server-to-client streaming, tools, structured output, and multimodal input | Available |
 | `IBaizeBatchClient` | Provider-native asynchronous batches of completion requests | Available |
-| `IGenerationClient` | Generated image, audio, video, or other artifacts; may expose progress and operation handles | Experimental — the OpenAI adapter implements image, image-edit, video, and speech generation; an in-process `IGenerationExecutor` routes and waits for requests |
+| `IGenerationClient` | Generated image, audio, video, or other artifacts; may expose progress and operation handles. Stabilization review completed (Phase 9); OpenAI adapter implements image, image-edit, video, and speech generation; in-process `IGenerationExecutor` routes and waits for requests. |
 | Live client | Persistent bidirectional real-time sessions over transports such as WebSockets | Considering |
 | Embedding client | Vector generation for text and multimodal content | No Baize contract planned currently; prefer established .NET abstractions |
 

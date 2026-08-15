@@ -30,4 +30,16 @@ public static class BaizeTelemetry
 
     internal static Histogram<double> Duration { get; } =
         Meter.CreateHistogram<double>("baize.llm.duration", "ms");
+
+    /// <summary>Generation submissions, status reads, and cancellations.</summary>
+    internal static Counter<long> GenerationRequests { get; } =
+        Meter.CreateCounter<long>("baize.gen.requests");
+
+    /// <summary>Generation calls that failed before acceptance or with a non-success HTTP response.</summary>
+    internal static Counter<long> GenerationFailures { get; } =
+        Meter.CreateCounter<long>("baize.gen.failures");
+
+    /// <summary>Duration of generation HTTP calls, in milliseconds.</summary>
+    internal static Histogram<double> GenerationDuration { get; } =
+        Meter.CreateHistogram<double>("baize.gen.duration", "ms");
 }

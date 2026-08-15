@@ -83,7 +83,8 @@ public sealed class FalGenerationClient : GenerationClientBase
             GenerationOperationState.Queued,
             ProviderMetadata: new Dictionary<string, object?>
             {
-                ["status"] = queued.Status
+                ["status"] = queued.Status,
+                ["provider_id"] = requestId
             });
     }
 
@@ -277,7 +278,7 @@ public sealed class FalGenerationClient : GenerationClientBase
         var metadata = new Dictionary<string, object?>
         {
             ["status"] = snapshot.Status,
-            ["request_id"] = snapshot.RequestId ?? handle.Id
+            ["provider_id"] = snapshot.RequestId ?? handle.Id
         };
         if (snapshot.Position is { } position)
             metadata["queue_position"] = position;

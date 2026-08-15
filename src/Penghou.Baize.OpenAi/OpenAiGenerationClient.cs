@@ -288,7 +288,6 @@ public sealed class OpenAiGenerationClient : GenerationClientBase
             {
                 ["status"] = video.Status,
                 ["provider_id"] = video.Id,
-                ["raw"] = root.GetRawText()
             };
         }
 

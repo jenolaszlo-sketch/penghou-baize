@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -121,40 +127,69 @@ public abstract class GenerationClientBase : IGenerationClient
     {
         ArgumentNullException.ThrowIfNull(httpRequest);
 
+        var started = Stopwatch.GetTimestamp();
+        var operationName = submission ? "submit" : context.Contains("cancel", StringComparison.OrdinalIgnoreCase) ? "cancel" : "status";
+        using var activity = BaizeTelemetry.Activities.StartActivity("llm.generation", ActivityKind.Client);
+        activity?.SetTag("gen_ai.operation.name", operationName);
+        activity?.SetTag("gen_ai.provider.name", _provider);
+        activity?.SetTag("gen_ai.request.model", _model);
+        activity?.SetTag("baize.gen.endpoint", _endpointId);
+        var tags = new TagList
+        {
+            { "gen_ai.operation.name", operationName },
+            { "gen_ai.provider.name", _provider },
+            { "gen_ai.request.model", _model }
+        };
+        BaizeTelemetry.GenerationRequests.Add(1, tags);
+
         HttpResponseMessage response;
         try
         {
-            var httpClient = _httpClientFactory.CreateClient("llm");
-            response = await httpClient.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient("llm");
+                response = await httpClient.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw submission
+                    ? BaizeException.UnknownSubmissionOutcome(
+                        $"{context} timed out; the provider may or may not have accepted the operation.",
+                        ex)
+                    : BaizeException.ProviderUnavailable($"{context} timed out before a response.", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw submission
+                    ? BaizeException.UnknownSubmissionOutcome(
+                        $"{context} failed before a response; the provider may or may not have accepted the operation.",
+                        ex)
+                    : BaizeException.ProviderUnavailable($"{context} failed before a response.", ex);
+            }
+
+            if (!response.IsSuccessStatusCode)
+                await ThrowForNonSuccessAsync(response, context, cancellationToken);
+
+            return response;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (BaizeException exception)
         {
+            RecordGenerationFailure(activity, exception, submission, context);
             throw;
         }
-        catch (OperationCanceledException ex)
+        finally
         {
-            throw submission
-                ? BaizeException.UnknownSubmissionOutcome(
-                    $"{context} timed out; the provider may or may not have accepted the operation.",
-                    ex)
-                : BaizeException.ProviderUnavailable($"{context} timed out before a response.", ex);
+            BaizeTelemetry.GenerationDuration.Record(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                tags);
         }
-        catch (HttpRequestException ex)
-        {
-            throw submission
-                ? BaizeException.UnknownSubmissionOutcome(
-                    $"{context} failed before a response; the provider may or may not have accepted the operation.",
-                    ex)
-                : BaizeException.ProviderUnavailable($"{context} failed before a response.", ex);
-        }
-
-        if (!response.IsSuccessStatusCode)
-            await ThrowForNonSuccessAsync(response, context, cancellationToken);
-
-        return response;
     }
 
     /// <summary>
@@ -270,5 +305,19 @@ public abstract class GenerationClientBase : IGenerationClient
             (int)response.StatusCode,
             body,
             null);
+    }
+
+    private void RecordGenerationFailure(Activity? activity, BaizeException exception, bool submission, string context)
+    {
+        activity?.SetStatus(ActivityStatusCode.Error);
+        activity?.SetTag("error.type", exception.GetType().FullName);
+        BaizeTelemetry.GenerationFailures.Add(1,
+            new KeyValuePair<string, object?>[]
+            {
+                new("gen_ai.operation.name", submission ? "submit" : context.Contains("cancel", StringComparison.OrdinalIgnoreCase) ? "cancel" : "status"),
+                new("gen_ai.provider.name", _provider),
+                new("gen_ai.request.model", _model),
+                new("error.type", exception.GetType().Name)
+            });
     }
 }
