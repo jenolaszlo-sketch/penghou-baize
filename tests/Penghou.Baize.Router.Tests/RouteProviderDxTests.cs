@@ -158,7 +158,12 @@ public sealed class RouteProviderDxTests
             .AddStrategy(ModelStrategy.Auto, "model")
             .AddNamedRoute("coding", "model")
             .WithMaxPendingRequests(3)
-            .WithRequestTimeout(TimeSpan.FromSeconds(30));
+            .WithRequestTimeout(TimeSpan.FromSeconds(30))
+            .WithTransientRetries(
+                maximumAttempts: 3,
+                initialDelay: TimeSpan.FromMilliseconds(250),
+                backoffFactor: 1.5,
+                maximumDelay: TimeSpan.FromSeconds(2));
 
         var options = builder.Build();
         ServiceCollectionExtensions.TryValidate(options, out var error).Should().BeTrue(error);
@@ -168,6 +173,10 @@ public sealed class RouteProviderDxTests
         options.Profiles["tools"].Batch.Should().Be(BatchCapabilities.NativeBatch);
         options.Models[0].Endpoints[0].ApiKeySecretName.Should().Be("API_KEY");
         options.NamedRoutes["coding"].Should().Equal("model");
+        options.Retry.MaximumAttempts.Should().Be(3);
+        options.Retry.InitialDelay.Should().Be(TimeSpan.FromMilliseconds(250));
+        options.Retry.BackoffFactor.Should().Be(1.5);
+        options.Retry.MaximumDelay.Should().Be(TimeSpan.FromSeconds(2));
     }
 
     [Fact]

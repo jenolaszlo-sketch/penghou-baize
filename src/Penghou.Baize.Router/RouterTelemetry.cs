@@ -13,6 +13,9 @@ internal static class RouterTelemetry
     public static Counter<long> Fallbacks { get; } =
         BaizeTelemetry.Meter.CreateCounter<long>("baize.router.fallbacks");
 
+    public static Counter<long> Retries { get; } =
+        BaizeTelemetry.Meter.CreateCounter<long>("baize.router.retries");
+
     public static Histogram<double> AttemptDuration { get; } =
         BaizeTelemetry.Meter.CreateHistogram<double>(
             "baize.router.attempt.duration",

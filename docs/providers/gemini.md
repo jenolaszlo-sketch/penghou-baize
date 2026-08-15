@@ -44,9 +44,13 @@ only for a compatible gateway or a deliberately selected API version.
 
 Gemini's accepted schema dialect is narrower than canonical JSON Schema. In
 live tests, Gemini rejected `additionalProperties` in both tool schemas and
-structured-output schemas. The Gemini adapter removes unsupported keywords
-from the wire copy while preserving the canonical schema used by the caller
-and local validation.
+structured-output schemas. Gemini's function-declaration schema also rejects
+canonical `$ref` references. The Gemini adapter non-lossily inlines resolvable
+local references, removes the now-unused `$defs`/`definitions`, and removes
+unsupported keywords from the wire copy while preserving the canonical schema
+used by the caller and local validation. Recursive or external references are
+rejected locally with an actionable validation error because they cannot be
+represented safely in Gemini's native schema dialect.
 
 This is intentionally provider-owned behavior. Do not pre-trim application
 schemas for Gemini: doing so would weaken validation for every other provider

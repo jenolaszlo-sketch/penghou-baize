@@ -12,6 +12,7 @@ public sealed class LlmRoutingBuilder
         new(StringComparer.Ordinal);
     private int _maxPendingRequests;
     private TimeSpan? _requestTimeout;
+    private LlmRouterRetryOptions _retry = new();
 
     internal bool ValidateEndpointsAtStartup { get; private set; }
 
@@ -79,6 +80,25 @@ public sealed class LlmRoutingBuilder
         return this;
     }
 
+    /// <summary>Configures bounded retries after transient route exhaustion.</summary>
+    public LlmRoutingBuilder WithTransientRetries(
+        int maximumAttempts,
+        TimeSpan initialDelay,
+        double backoffFactor = 2,
+        TimeSpan? maximumDelay = null)
+    {
+        var retry = new LlmRouterRetryOptions
+        {
+            MaximumAttempts = maximumAttempts,
+            InitialDelay = initialDelay,
+            BackoffFactor = backoffFactor,
+            MaximumDelay = maximumDelay ?? TimeSpan.FromSeconds(30)
+        };
+        retry.Validate();
+        _retry = retry;
+        return this;
+    }
+
     /// <summary>Resolves secrets and constructs every provider client when the host starts.</summary>
     public LlmRoutingBuilder ValidateEndpointsOnStart()
     {
@@ -94,7 +114,8 @@ public sealed class LlmRoutingBuilder
         StrategyFallbacks = _strategies,
         NamedRoutes = _routes,
         MaxPendingRequests = _maxPendingRequests,
-        RequestTimeout = _requestTimeout
+        RequestTimeout = _requestTimeout,
+        Retry = _retry
     };
 
     private static List<string> ValidateChain(string[] models)

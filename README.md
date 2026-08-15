@@ -624,8 +624,12 @@ chain when an attempt fails before producing meaningful output (content or
 tool-call deltas). Once content or tool-call deltas have been streamed, the
 router does not reissue the request - reissuing would duplicate output or
 repeat side effects - and the failure surfaces to the caller instead. All
-attempts share a single per-request `RequestTimeout` deadline, so a slow
-first attempt does not multiply the budget. Every stream ends with a
+compatible endpoints are tried before a transiently failed route is retried.
+By default the router makes at most two passes, with bounded exponential
+backoff and provider `Retry-After` hints when available. Deterministic invalid
+request, authentication, and content failures are not retried. All attempts share a
+single per-request `RequestTimeout` deadline, so retries cannot multiply the
+overall budget. Every stream ends with a
 `LlmRouterDiagnostics` event (also surfaced as
 `LlmResponse.RouterDiagnostics`) describing each attempt, its endpoint,
 outcome, and duration:
@@ -639,6 +643,36 @@ foreach (var attempt in response.RouterDiagnostics?.Attempts ?? [])
     Console.WriteLine(
         $"{attempt.EndpointId}: {attempt.Outcome}");
 ```
+
+Retry behavior can be configured fluently:
+
+```csharp
+services.AddLlmRouting(routes => routes
+    .WithRequestTimeout(TimeSpan.FromMinutes(2))
+    .WithTransientRetries(
+        maximumAttempts: 3,
+        initialDelay: TimeSpan.FromSeconds(1),
+        backoffFactor: 2,
+        maximumDelay: TimeSpan.FromSeconds(30)));
+```
+
+Or through configuration:
+
+```json
+{
+  "LlmRouting": {
+    "Retry": {
+      "MaximumAttempts": 3,
+      "InitialDelay": "00:00:01",
+      "BackoffFactor": 2,
+      "MaximumDelay": "00:00:30"
+    }
+  }
+}
+```
+
+Set `MaximumAttempts` to `1` to disable retry passes while retaining fallback
+between distinct endpoints.
 
 ### Router memory
 

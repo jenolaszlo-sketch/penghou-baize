@@ -51,7 +51,7 @@ public sealed class GeminiChatClientTests
             """);
         var client = CreateClient(handler, "gemini-3.6-flash");
         var canonicalSchema =
-            """{"type":"object","properties":{"value":{"type":"object","additionalProperties":false}},"additionalProperties":false}""";
+            """{"$defs":{"value":{"type":"object","properties":{"text":{"type":"string"}},"additionalProperties":false}},"type":"object","properties":{"value":{"$ref":"#/$defs/value"}},"additionalProperties":false}""";
 
         await CollectAsync(
             client.StreamAsync(
@@ -66,7 +66,16 @@ public sealed class GeminiChatClientTests
             .GetProperty("functionDeclarations")[0]
             .GetProperty("parameters");
         parameters.GetRawText().Should().NotContain("\"additionalProperties\":");
+        parameters.GetRawText().Should().NotContain("\"$ref\":");
+        parameters.GetRawText().Should().NotContain("\"$defs\":");
+        parameters.GetProperty("properties")
+            .GetProperty("value")
+            .GetProperty("properties")
+            .GetProperty("text")
+            .GetProperty("type")
+            .GetString().Should().Be("string");
         canonicalSchema.Should().Contain("\"additionalProperties\":false");
+        canonicalSchema.Should().Contain("\"$ref\":");
     }
 
     [Fact]
@@ -1180,7 +1189,7 @@ public sealed class GeminiChatClientTests
             [new LlmMessage("user", "Return the shape")],
             responseFormat:
                 LlmResponseFormat.JsonSchema(
-                    """{"type":"object","additionalProperties":false}"""));
+                    """{"$defs":{"value":{"type":"string"}},"type":"object","properties":{"value":{"$ref":"#/$defs/value"}},"additionalProperties":false}"""));
 
         await CollectAsync(
             client.StreamAsync(
@@ -1198,6 +1207,12 @@ public sealed class GeminiChatClientTests
         responseSchema.ValueKind.Should().Be(JsonValueKind.Object);
         responseSchema.TryGetProperty("additionalProperties", out _)
             .Should().BeFalse();
+        responseSchema.GetRawText().Should().NotContain("\"$ref\":");
+        responseSchema.GetRawText().Should().NotContain("\"$defs\":");
+        responseSchema.GetProperty("properties")
+            .GetProperty("value")
+            .GetProperty("type")
+            .GetString().Should().Be("string");
     }
 
     [Fact]
