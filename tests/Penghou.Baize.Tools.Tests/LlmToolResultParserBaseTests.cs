@@ -43,6 +43,70 @@ public sealed class LlmToolResultParserBaseTests
     }
 
     [Fact]
+    public void Parse_ReportsTruncation_WhenMalformedJsonReachedLengthLimit()
+    {
+        var parser = CreateParser();
+        var toolCall = new LlmToolCall(
+            "call-1",
+            "test_tool",
+            "{\"name\":\"Ada",
+            JsonRepairAttempts:
+            [
+                new LlmRepairAttempt(
+                    "arguments/tolerant-syntax-tree",
+                    LlmRepairStatus.Succeeded)
+            ])
+        {
+            JsonRepairDiagnostics = new LlmJsonRepairDiagnostics(
+                LlmRepairShapeStatus.Mismatched,
+                ["$.items is required."])
+        };
+        var response = new LlmResponse(
+            string.Empty,
+            FinishReason: "length",
+            ToolCalls: [toolCall]);
+
+        var result = parser.Parse(response);
+
+        result.Succeeded.Should().BeFalse();
+        result.Failure.Should().Be(
+            ToolCallParseFailure.TruncatedResponse);
+        result.Error.Should().Contain("output token limit");
+        result.Error.Should().Contain("repair was attempted");
+        result.Error.Should().Contain("$.items is required");
+        result.Error.Should().Contain("Invalid JSON:");
+    }
+
+    [Fact]
+    public void Parse_ReportsTruncation_WhenSchemaIsIncompleteAtLengthLimit()
+    {
+        var parser = CreateParser();
+        var response = CreateResponse(
+            """{"items":[{"count":2}]}""",
+            finishReason: "max_tokens");
+
+        var result = parser.Parse(response);
+
+        result.Succeeded.Should().BeFalse();
+        result.Failure.Should().Be(
+            ToolCallParseFailure.TruncatedResponse);
+        result.Error.Should().Contain("$.name is required");
+    }
+
+    [Fact]
+    public void Parse_Succeeds_WhenLengthLimitedJsonIsStillComplete()
+    {
+        var parser = CreateParser();
+        var response = CreateResponse(
+            """{"name":"Ada","items":[{"count":2}]}""",
+            finishReason: "length");
+
+        var result = parser.Parse(response);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
     public void Parse_Fails_WhenRequiredPropertyIsMissing()
     {
         var parser = CreateParser();
@@ -126,9 +190,12 @@ public sealed class LlmToolResultParserBaseTests
         return new TestParser();
     }
 
-    private static LlmResponse CreateResponse(string argumentsJson) =>
+    private static LlmResponse CreateResponse(
+        string argumentsJson,
+        string? finishReason = null) =>
         new(
             Content: string.Empty,
+            FinishReason: finishReason,
             ToolCalls:
             [
                 new LlmToolCall(

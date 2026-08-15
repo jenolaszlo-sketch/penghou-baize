@@ -51,6 +51,29 @@ public sealed class StructuredOutputRepairDecoratorTests
     }
 
     [Fact]
+    public async Task Decorator_PreservesFinishReasonForRepairClassification()
+    {
+        var repairer = new CapturingRepairer();
+        var client = new StructuredOutputRepairingLlmClientDecorator(repairer)
+            .Decorate(new EventClient(
+                new LlmStreamEvent(Delta: "{\"name\":\"Ada\""),
+                new LlmStreamEvent(FinishReason: "length")));
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Return JSON")],
+            responseFormat: LlmResponseFormat.JsonSchema(
+                """{"type":"object"}"""));
+
+        await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        repairer.Response.Should().NotBeNull();
+        repairer.Response!.FinishReason.Should().Be("length");
+        repairer.Response.FinishReasonKind.Should().Be(
+            LlmFinishReasonKind.LengthLimit);
+    }
+
+    [Fact]
     public async Task WithStructuredOutputRepair_DecoratesDirectClient()
     {
         var services = new ServiceCollection();
@@ -108,5 +131,19 @@ public sealed class StructuredOutputRepairDecoratorTests
             LlmResponseFormat responseFormat,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Repair should not run.");
+    }
+
+    private sealed class CapturingRepairer : ILlmStructuredOutputRepairer
+    {
+        public LlmResponse? Response { get; private set; }
+
+        public Task<LlmResponse> RepairAsync(
+            LlmResponse response,
+            LlmResponseFormat responseFormat,
+            CancellationToken cancellationToken = default)
+        {
+            Response = response;
+            return Task.FromResult(response);
+        }
     }
 }

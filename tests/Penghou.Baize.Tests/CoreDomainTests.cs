@@ -35,6 +35,25 @@ public sealed class LlmRequestTests
 
 public sealed class LlmResponseTests
 {
+    [Theory]
+    [InlineData("length", LlmFinishReasonKind.LengthLimit)]
+    [InlineData("MAX_TOKENS", LlmFinishReasonKind.LengthLimit)]
+    [InlineData("MAX_OUTPUT_TOKENS", LlmFinishReasonKind.LengthLimit)]
+    [InlineData("stop", LlmFinishReasonKind.Stop)]
+    [InlineData("end_turn", LlmFinishReasonKind.Stop)]
+    [InlineData("tool_use", LlmFinishReasonKind.ToolCall)]
+    [InlineData("content_filter", LlmFinishReasonKind.ContentFilter)]
+    [InlineData("provider_specific", LlmFinishReasonKind.Unknown)]
+    public void FinishReasonKind_NormalizesProviderReasons(
+        string finishReason,
+        LlmFinishReasonKind expected)
+    {
+        new LlmResponse("content", FinishReason: finishReason)
+            .FinishReasonKind.Should().Be(expected);
+        new LlmStreamEvent(FinishReason: finishReason)
+            .FinishReasonKind.Should().Be(expected);
+    }
+
     [Fact]
     public void PositionalConstructor_PreservesOriginalFirstThreeParameters()
     {

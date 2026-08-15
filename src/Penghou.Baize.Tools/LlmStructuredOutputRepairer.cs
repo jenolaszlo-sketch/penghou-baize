@@ -1,5 +1,7 @@
 using Penghou.Nuwa;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Penghou.Baize.Tools;
 
@@ -10,9 +12,13 @@ namespace Penghou.Baize.Tools;
 /// <see cref="LlmRepairAttempt"/>.
 /// </summary>
 public sealed class LlmStructuredOutputRepairer(
-    IJsonRepairPipeline jsonRepairPipeline)
+    IJsonRepairPipeline jsonRepairPipeline,
+    ILogger<LlmStructuredOutputRepairer>? logger = null)
     : ILlmStructuredOutputRepairer
 {
+    private readonly ILogger<LlmStructuredOutputRepairer> _logger =
+        logger ?? NullLogger<LlmStructuredOutputRepairer>.Instance;
+
     /// <inheritdoc />
     public async Task<LlmResponse> RepairAsync(
         LlmResponse response,
@@ -57,6 +63,15 @@ public sealed class LlmStructuredOutputRepairer(
             if (repairResult.Document is null ||
                 repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
             {
+                if (response.FinishReasonKind ==
+                    LlmFinishReasonKind.LengthLimit)
+                {
+                    _logger.LogWarning(
+                        "The model response reached its output token limit and remained invalid after deterministic JSON repair. Finish reason: {FinishReason}. Shape errors: {ShapeErrors}",
+                        response.FinishReason,
+                        diagnostics.ShapeErrors);
+                }
+
                 activity?.SetStatus(ActivityStatusCode.Ok);
                 return response with
                 {
@@ -66,7 +81,16 @@ public sealed class LlmStructuredOutputRepairer(
             }
 
             if (repairResult.WasRepaired)
+            {
                 ToolsTelemetry.Repairs.Add(1);
+                _logger.LogWarning(
+                    response.FinishReasonKind ==
+                        LlmFinishReasonKind.LengthLimit
+                        ? "The model response reached its output token limit and would have failed structured-output parsing without deterministic JSON repair. Repair succeeded using {RepairStrategy}; finish reason: {FinishReason}"
+                        : "The model returned structured output that would have failed without deterministic JSON repair. Repair succeeded using {RepairStrategy}; finish reason: {FinishReason}",
+                    diagnostics.SucceededBy,
+                    response.FinishReason);
+            }
             activity?.SetStatus(ActivityStatusCode.Ok);
             return response with
             {
