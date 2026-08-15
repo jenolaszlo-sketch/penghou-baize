@@ -46,4 +46,10 @@ public sealed class LlmRoutingOptions
     /// as an availability failure. Null (the default) means no bound.
     /// </summary>
     public TimeSpan? RequestTimeout { get; init; }
+
+    /// <summary>
+    /// Bounded retries used only after the configured route has exhausted its
+    /// compatible endpoints with transient failures before emitting output.
+    /// </summary>
+    public LlmRouterRetryOptions Retry { get; init; } = new();
 }

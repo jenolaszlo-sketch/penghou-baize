@@ -449,6 +449,22 @@ public static class ServiceCollectionExtensions
     /// <returns><c>true</c> when the options are valid; otherwise <c>false</c>.</returns>
     internal static bool TryValidate(LlmRoutingOptions options, out string? error)
     {
+        if (options.Retry is null)
+        {
+            error = "Retry configuration is required.";
+            return false;
+        }
+
+        try
+        {
+            options.Retry.Validate();
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            error = $"Retry configuration is invalid: {exception.Message}";
+            return false;
+        }
+
         var allModelNames = new HashSet<string>(StringComparer.Ordinal);
         var seenEndpointIds = new HashSet<string>(StringComparer.Ordinal);
 

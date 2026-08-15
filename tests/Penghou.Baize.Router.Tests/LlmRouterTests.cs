@@ -559,6 +559,50 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public async Task Router_RetriesTransientFailureAfterRouteIsExhausted()
+    {
+        var client = new FailOnceClient(
+            new LlmClientException(
+                "high demand",
+                statusCode: 503),
+            "recovered");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model"] = () => client
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model", ApiStyle.Gemini)] = () => client
+            });
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>(),
+            retryOptions: new LlmRouterRetryOptions
+            {
+                MaximumAttempts = 2,
+                InitialDelay = TimeSpan.Zero,
+                MaximumDelay = TimeSpan.Zero
+            });
+
+        var response = await router.CompleteStreamingAsync(
+            "model",
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Say hi")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("recovered");
+        client.CallCount.Should().Be(2);
+        response.RouterDiagnostics!.Attempts.Should().HaveCount(2);
+        response.RouterDiagnostics.Attempts[0].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Failed);
+        response.RouterDiagnostics.Attempts[1].Outcome
+            .Should().Be(LlmRouterAttemptOutcome.Succeeded);
+    }
+
+    [Fact]
     public async Task Router_DoesNotFallBackAfterContentEmitted()
     {
         var partialClient = new EmitThenFailClient(
@@ -1134,11 +1178,13 @@ public sealed class LlmRouterTests
         events.Should().ContainSingle(evt => evt.RouterDiagnostics != null);
         var diagnostics = events.Last(evt => evt.RouterDiagnostics != null)
             .RouterDiagnostics!;
-        diagnostics.Attempts.Should().HaveCount(2);
+        diagnostics.Attempts.Should().HaveCount(4);
         diagnostics.Attempts.Should()
             .OnlyContain(a => a.Outcome == LlmRouterAttemptOutcome.Failed);
         diagnostics.Attempts[0].EndpointModel.Should().Be("model-a");
         diagnostics.Attempts[1].EndpointModel.Should().Be("model-b");
+        diagnostics.Attempts[2].EndpointModel.Should().Be("model-a");
+        diagnostics.Attempts[3].EndpointModel.Should().Be("model-b");
     }
 
     [Fact]
@@ -2057,6 +2103,33 @@ public sealed class LlmRouterTests
             await Task.CompletedTask;
             yield return new LlmStreamEvent();
             throw exception;
+        }
+    }
+
+    private sealed class FailOnceClient(
+        Exception firstFailure,
+        string content) : ILlmClient
+    {
+        public int CallCount { get; private set; }
+
+        public LlmEndpointCapabilities Capabilities { get; } =
+            new() { NativeToolCalling = true, ParallelToolCalls = true };
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            CallCount++;
+
+            if (CallCount == 1)
+            {
+                yield return new LlmStreamEvent();
+                throw firstFailure;
+            }
+
+            yield return new LlmStreamEvent(Delta: content);
+            yield return new LlmStreamEvent(FinishReason: "stop");
         }
     }
 

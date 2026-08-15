@@ -25,13 +25,15 @@ namespace Penghou.Baize.Router;
 /// means no bound.
 /// </param>
 /// <param name="selectionPolicy">Ranks endpoints after capability filtering.</param>
+/// <param name="retryOptions">Bounded retry behavior after transient route exhaustion.</param>
 public class LlmRouter(
     ILlmModelLookup modelLookup,
     IReadOnlyDictionary<ModelStrategy, IReadOnlyList<string>> strategyLookup,
     ILlmRouterMemory? memory = null,
     int maxPendingRequests = 0,
     TimeSpan? requestTimeout = null,
-    ILlmEndpointSelectionPolicy? selectionPolicy = null) : ILlmRouter
+    ILlmEndpointSelectionPolicy? selectionPolicy = null,
+    LlmRouterRetryOptions? retryOptions = null) : ILlmRouter
 {
     private readonly ILlmRouterMemory _memory = memory ?? new InMemoryLlmRouterMemory();
     private readonly SemaphoreSlim? _gate =
@@ -39,6 +41,8 @@ public class LlmRouter(
     private readonly TimeSpan? _requestTimeout = requestTimeout;
     private readonly ILlmEndpointSelectionPolicy _selectionPolicy =
         selectionPolicy ?? new ReliabilityEndpointSelectionPolicy();
+    private readonly LlmRouterRetryOptions _retryOptions =
+        ValidateRetryOptions(retryOptions ?? LlmRouterRetryOptions.Default);
     private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _namedRouteLookup =
         new Dictionary<string, IReadOnlyList<string>>(
             StringComparer.Ordinal);
@@ -55,14 +59,16 @@ public class LlmRouter(
         ILlmRouterMemory? memory = null,
         int maxPendingRequests = 0,
         TimeSpan? requestTimeout = null,
-        ILlmEndpointSelectionPolicy? selectionPolicy = null)
+        ILlmEndpointSelectionPolicy? selectionPolicy = null,
+        LlmRouterRetryOptions? retryOptions = null)
         : this(
             modelLookup,
             strategyLookup,
             memory,
             maxPendingRequests,
             requestTimeout,
-            selectionPolicy)
+            selectionPolicy,
+            retryOptions)
     {
         _namedRouteLookup = namedRouteLookup ??
             throw new ArgumentNullException(nameof(namedRouteLookup));
@@ -82,13 +88,15 @@ public class LlmRouter(
         ILlmRouteProvider routeProvider,
         ILlmRouterMemory? memory = null,
         int maxPendingRequests = 0,
-        TimeSpan? requestTimeout = null)
+        TimeSpan? requestTimeout = null,
+        LlmRouterRetryOptions? retryOptions = null)
         : this(
             modelLookup,
             new Dictionary<ModelStrategy, IReadOnlyList<string>>(),
             memory,
             maxPendingRequests,
-            requestTimeout)
+            requestTimeout,
+            retryOptions: retryOptions)
     {
         _routeProvider = routeProvider ??
             throw new ArgumentNullException(nameof(routeProvider));
@@ -403,191 +411,226 @@ public class LlmRouter(
 
         var attempts = new List<LlmRouterAttempt>();
         Exception? lastFailure = null;
+        var incompatibleEndpoints = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var endpoint in candidates)
+        for (var routeAttempt = 1;
+             routeAttempt <= _retryOptions.MaximumAttempts;
+             routeAttempt++)
         {
-            var client = modelLookup.GetClientByEndpointId(endpoint.EndpointId);
-            var started = Stopwatch.GetTimestamp();
-            using var attemptActivity = BaizeTelemetry.Activities.StartActivity(
-                "llm.router.attempt",
-                ActivityKind.Client);
-            attemptActivity?.SetTag("gen_ai.request.model", endpoint.Model);
-            attemptActivity?.SetTag("baize.endpoint.id", endpoint.EndpointId);
-            attemptActivity?.SetTag("gen_ai.provider.name", endpoint.Provider.ToString());
-            attemptActivity?.SetTag("gen_ai.operation.name", "chat");
-            var telemetryTags = new TagList
+            var retryableFailure = false;
+            TimeSpan? providerRetryAfter = null;
+
+            foreach (var endpoint in candidates)
+            {
+                if (incompatibleEndpoints.Contains(endpoint.EndpointId))
+                    continue;
+
+                var client = modelLookup.GetClientByEndpointId(endpoint.EndpointId);
+                var started = Stopwatch.GetTimestamp();
+                using var attemptActivity = BaizeTelemetry.Activities.StartActivity(
+                    "llm.router.attempt",
+                    ActivityKind.Client);
+                attemptActivity?.SetTag("gen_ai.request.model", endpoint.Model);
+                attemptActivity?.SetTag("baize.endpoint.id", endpoint.EndpointId);
+                attemptActivity?.SetTag("gen_ai.provider.name", endpoint.Provider.ToString());
+                attemptActivity?.SetTag("gen_ai.operation.name", "chat");
+                var telemetryTags = new TagList
             {
                 { "gen_ai.operation.name", "chat" },
                 { "gen_ai.provider.name", endpoint.Provider.ToString() },
                 { "gen_ai.request.model", endpoint.Model },
                 { "baize.endpoint.id", endpoint.EndpointId }
             };
-            RouterTelemetry.Attempts.Add(1, telemetryTags);
+                RouterTelemetry.Attempts.Add(1, telemetryTags);
 
-            await _memory.RecordCallAsync(endpoint.EndpointId, cancellationToken);
+                await _memory.RecordCallAsync(endpoint.EndpointId, cancellationToken);
 
-            var emittedOutput = false;
-            var shouldFallBack = false;
-            List<LlmStreamEvent>? pending = null;
+                var emittedOutput = false;
+                var shouldFallBack = false;
+                List<LlmStreamEvent>? pending = null;
 
-            await using var enumerator =
-                client.StreamAsync(wireRequest, effective)
-                    .GetAsyncEnumerator(effective);
+                await using var enumerator =
+                    client.StreamAsync(wireRequest, effective)
+                        .GetAsyncEnumerator(effective);
 
-            while (true)
-            {
-                LlmStreamEvent? evt = null;
-                Exception? failure = null;
-                Exception? incompatible = null;
-                DateTimeOffset? unavailableUntil = null;
-
-                try
+                while (true)
                 {
-                    if (!await enumerator.MoveNextAsync())
+                    LlmStreamEvent? evt = null;
+                    Exception? failure = null;
+                    Exception? incompatible = null;
+                    DateTimeOffset? unavailableUntil = null;
+
+                    try
+                    {
+                        if (!await enumerator.MoveNextAsync())
+                            break;
+
+                        evt = enumerator.Current;
+                    }
+                    catch (Exception ex) when (
+                        !cancellationToken.IsCancellationRequested &&
+                        (IsAvailabilityFailure(ex) || ex is LlmRequestValidationException))
+                    {
+                        if (ex is LlmRequestValidationException)
+                        {
+                            incompatible = ex;
+                        }
+                        else
+                        {
+                            failure = ex;
+                            unavailableUntil = (ex as LlmClientException)?.RateLimit?.UnavailableUntil;
+                        }
+                    }
+
+                    if (incompatible is not null)
+                    {
+                        attemptActivity?.SetStatus(ActivityStatusCode.Error);
+                        attemptActivity?.SetTag("error.type", incompatible.GetType().FullName);
+                        // The request cannot be expressed on this endpoint's
+                        // declared capabilities. Validation precedes any event, so
+                        // nothing was emitted; the next capable candidate gets the
+                        // request instead of the whole chain failing.
+                        attempts.Add(new LlmRouterAttempt(
+                            EndpointId: endpoint.EndpointId,
+                            EndpointModel: endpoint.Model,
+                            EndpointApiStyle: endpoint.Provider.ToString(),
+                            Outcome: LlmRouterAttemptOutcome.Failed,
+                            Duration: Stopwatch.GetElapsedTime(started),
+                            Error: incompatible.Message));
+
+                        lastFailure = incompatible;
+                        incompatibleEndpoints.Add(endpoint.EndpointId);
+                        RouterTelemetry.Failures.Add(1, telemetryTags);
+                        RouterTelemetry.AttemptDuration.Record(
+                            Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                            telemetryTags);
+                        shouldFallBack = true;
                         break;
-
-                    evt = enumerator.Current;
-                }
-                catch (Exception ex) when (
-                    !cancellationToken.IsCancellationRequested &&
-                    (IsAvailabilityFailure(ex) || ex is LlmRequestValidationException))
-                {
-                    if (ex is LlmRequestValidationException)
-                    {
-                        incompatible = ex;
-                    }
-                    else
-                    {
-                        failure = ex;
-                        unavailableUntil = (ex as LlmClientException)?.RateLimit?.UnavailableUntil;
-                    }
-                }
-
-                if (incompatible is not null)
-                {
-                    attemptActivity?.SetStatus(ActivityStatusCode.Error);
-                    attemptActivity?.SetTag("error.type", incompatible.GetType().FullName);
-                    // The request cannot be expressed on this endpoint's
-                    // declared capabilities. Validation precedes any event, so
-                    // nothing was emitted; the next capable candidate gets the
-                    // request instead of the whole chain failing.
-                    attempts.Add(new LlmRouterAttempt(
-                        EndpointId: endpoint.EndpointId,
-                        EndpointModel: endpoint.Model,
-                        EndpointApiStyle: endpoint.Provider.ToString(),
-                        Outcome: LlmRouterAttemptOutcome.Failed,
-                        Duration: Stopwatch.GetElapsedTime(started),
-                        Error: incompatible.Message));
-
-                    lastFailure = incompatible;
-                    RouterTelemetry.Failures.Add(1, telemetryTags);
-                    RouterTelemetry.AttemptDuration.Record(
-                        Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                        telemetryTags);
-                    shouldFallBack = true;
-                    break;
-                }
-
-                if (failure is not null)
-                {
-                    attemptActivity?.SetStatus(ActivityStatusCode.Error);
-                    attemptActivity?.SetTag("error.type", failure.GetType().FullName);
-                    await _memory.RecordFailureAsync(
-                        endpoint.EndpointId,
-                        LlmFailureCategory.Availability,
-                        unavailableUntil,
-                        cancellationToken);
-
-                    attempts.Add(new LlmRouterAttempt(
-                        EndpointId: endpoint.EndpointId,
-                        EndpointModel: endpoint.Model,
-                        EndpointApiStyle: endpoint.Provider.ToString(),
-                        Outcome: LlmRouterAttemptOutcome.Failed,
-                        Duration: Stopwatch.GetElapsedTime(started),
-                        Error: failure.Message,
-                        UnavailableUntil: unavailableUntil));
-
-                    lastFailure = failure;
-                    RouterTelemetry.Failures.Add(1, telemetryTags);
-                    RouterTelemetry.AttemptDuration.Record(
-                        Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                        telemetryTags);
-
-                    // Never reissue after meaningful output has been streamed,
-                    // and stop once the shared deadline has passed. Reasoning
-                    // alone does not block reissue: it is held in the pending
-                    // buffer and discarded on failover, so a failed endpoint's
-                    // thoughts are never mixed with the next endpoint's answer.
-                    // The same holds for events that precede any content
-                    // (usage, diagnostics, finish reasons): they are buffered
-                    // until a content or tool-call event commits the endpoint.
-                    if (emittedOutput || effective.IsCancellationRequested)
-                    {
-                        yield return DiagnosticsEvent(attempts);
-                        throw failure;
                     }
 
-                    shouldFallBack = true;
-                    break;
+                    if (failure is not null)
+                    {
+                        attemptActivity?.SetStatus(ActivityStatusCode.Error);
+                        attemptActivity?.SetTag("error.type", failure.GetType().FullName);
+                        await _memory.RecordFailureAsync(
+                            endpoint.EndpointId,
+                            LlmFailureCategory.Availability,
+                            unavailableUntil,
+                            cancellationToken);
+
+                        attempts.Add(new LlmRouterAttempt(
+                            EndpointId: endpoint.EndpointId,
+                            EndpointModel: endpoint.Model,
+                            EndpointApiStyle: endpoint.Provider.ToString(),
+                            Outcome: LlmRouterAttemptOutcome.Failed,
+                            Duration: Stopwatch.GetElapsedTime(started),
+                            Error: failure.Message,
+                            UnavailableUntil: unavailableUntil));
+
+                        lastFailure = failure;
+                        retryableFailure = true;
+                        var retryAfter =
+                            (failure as LlmClientException)?.RateLimit?.RetryAfter;
+                        if (retryAfter is { } hint &&
+                            (providerRetryAfter is null || hint > providerRetryAfter))
+                        {
+                            providerRetryAfter = hint;
+                        }
+                        RouterTelemetry.Failures.Add(1, telemetryTags);
+                        RouterTelemetry.AttemptDuration.Record(
+                            Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                            telemetryTags);
+
+                        // Never reissue after meaningful output has been streamed,
+                        // and stop once the shared deadline has passed. Reasoning
+                        // alone does not block reissue: it is held in the pending
+                        // buffer and discarded on failover, so a failed endpoint's
+                        // thoughts are never mixed with the next endpoint's answer.
+                        // The same holds for events that precede any content
+                        // (usage, diagnostics, finish reasons): they are buffered
+                        // until a content or tool-call event commits the endpoint.
+                        if (emittedOutput || effective.IsCancellationRequested)
+                        {
+                            yield return DiagnosticsEvent(attempts);
+                            throw failure;
+                        }
+
+                        shouldFallBack = true;
+                        break;
+                    }
+
+                    // A content or tool-call delta is the moment the endpoint
+                    // commits: everything buffered before it (reasoning, usage,
+                    // diagnostics, finish reasons) is released in order, then the
+                    // committing event itself. Buffering until this point means a
+                    // mid-stream transport failure exposes none of the endpoint's
+                    // output, so failover cannot mix it with the next endpoint.
+                    var commit = evt!.Delta is not null || evt.ToolCallDelta is not null;
+
+                    if (!commit)
+                    {
+                        pending ??= [];
+                        pending.Add(evt);
+                        continue;
+                    }
+
+                    if (pending is not null)
+                    {
+                        foreach (var buffered in pending)
+                            yield return buffered;
+
+                        pending = null;
+                    }
+
+                    emittedOutput = true;
+
+                    yield return evt;
                 }
 
-                // A content or tool-call delta is the moment the endpoint
-                // commits: everything buffered before it (reasoning, usage,
-                // diagnostics, finish reasons) is released in order, then the
-                // committing event itself. Buffering until this point means a
-                // mid-stream transport failure exposes none of the endpoint's
-                // output, so failover cannot mix it with the next endpoint.
-                var commit = evt!.Delta is not null || evt.ToolCallDelta is not null;
-
-                if (!commit)
+                if (shouldFallBack)
                 {
-                    pending ??= [];
-                    pending.Add(evt);
+                    RouterTelemetry.Fallbacks.Add(1, telemetryTags);
                     continue;
                 }
 
+                // The stream ended without a content or tool-call event (for
+                // example a reasoning-only response followed by its usage and
+                // finish reason): release the buffered events rather than dropping
+                // them, preserving their order.
                 if (pending is not null)
                 {
                     foreach (var buffered in pending)
                         yield return buffered;
-
-                    pending = null;
                 }
 
-                emittedOutput = true;
+                attempts.Add(new LlmRouterAttempt(
+                    EndpointId: endpoint.EndpointId,
+                    EndpointModel: endpoint.Model,
+                    EndpointApiStyle: endpoint.Provider.ToString(),
+                    Outcome: LlmRouterAttemptOutcome.Succeeded,
+                    Duration: Stopwatch.GetElapsedTime(started)));
+                attemptActivity?.SetStatus(ActivityStatusCode.Ok);
+                RouterTelemetry.AttemptDuration.Record(
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    telemetryTags);
 
-                yield return evt;
+                yield return DiagnosticsEvent(attempts);
+                yield break;
             }
 
-            if (shouldFallBack)
+            if (!retryableFailure ||
+                routeAttempt >= _retryOptions.MaximumAttempts ||
+                effective.IsCancellationRequested)
             {
-                RouterTelemetry.Fallbacks.Add(1, telemetryTags);
-                continue;
+                break;
             }
 
-            // The stream ended without a content or tool-call event (for
-            // example a reasoning-only response followed by its usage and
-            // finish reason): release the buffered events rather than dropping
-            // them, preserving their order.
-            if (pending is not null)
-            {
-                foreach (var buffered in pending)
-                    yield return buffered;
-            }
-
-            attempts.Add(new LlmRouterAttempt(
-                EndpointId: endpoint.EndpointId,
-                EndpointModel: endpoint.Model,
-                EndpointApiStyle: endpoint.Provider.ToString(),
-                Outcome: LlmRouterAttemptOutcome.Succeeded,
-                Duration: Stopwatch.GetElapsedTime(started)));
-            attemptActivity?.SetStatus(ActivityStatusCode.Ok);
-            RouterTelemetry.AttemptDuration.Record(
-                Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                telemetryTags);
-
-            yield return DiagnosticsEvent(attempts);
-            yield break;
+            var delay = _retryOptions.DelayForRetry(
+                routeAttempt,
+                providerRetryAfter);
+            RouterTelemetry.Retries.Add(1);
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, effective);
         }
 
         yield return DiagnosticsEvent(attempts);
@@ -609,4 +652,11 @@ public class LlmRouter(
         ex is HttpRequestException
             or TaskCanceledException
             or LlmClientException { CanFallback: true };
+
+    private static LlmRouterRetryOptions ValidateRetryOptions(
+        LlmRouterRetryOptions options)
+    {
+        options.Validate();
+        return options;
+    }
 }

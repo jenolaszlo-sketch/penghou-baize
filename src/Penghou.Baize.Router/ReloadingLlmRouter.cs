@@ -217,6 +217,7 @@ public sealed class ReloadingLlmRouter : ILlmRouter, IDisposable
             _memory,
             maxPendingRequests: options.MaxPendingRequests,
             requestTimeout: options.RequestTimeout,
-            selectionPolicy: _selectionPolicy);
+            selectionPolicy: _selectionPolicy,
+            retryOptions: options.Retry);
     }
 }

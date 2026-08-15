@@ -57,6 +57,8 @@ public sealed class GeminiSchemaAdapter : ILlmSchemaAdapter
             ?? throw new ArgumentException("Schema cannot be JSON null.", nameof(schema));
         var adaptations = new List<LlmSchemaAdaptation>();
 
+        root = GeminiSchemaReferenceExpander.Expand(root, adaptations);
+
         VisitSchema(root, "$", adaptations);
 
         return new LlmSchemaAdaptationResult(

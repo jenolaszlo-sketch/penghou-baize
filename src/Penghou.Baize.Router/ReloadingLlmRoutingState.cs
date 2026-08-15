@@ -262,13 +262,15 @@ internal sealed class ReloadingLlmRoutingState :
                 _memory,
                 options.MaxPendingRequests,
                 options.RequestTimeout,
-                _selectionPolicy)
+                _selectionPolicy,
+                options.Retry)
             : new LlmRouter(
                 built.Lookup,
                 customRouteProvider,
                 _memory,
                 options.MaxPendingRequests,
-                options.RequestTimeout);
+                options.RequestTimeout,
+                options.Retry);
         return new RoutingRuntimeSnapshot(
             built.Lookup,
             router,
