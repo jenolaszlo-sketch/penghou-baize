@@ -533,11 +533,12 @@ audio request types are initial candidates.
 
 ### Phase 3: generation through an existing provider
 
-Status: in progress. The OpenAI adapter implements image, image-edit, video,
+Status: complete. The OpenAI adapter implements image, image-edit, video,
 and speech generation with deterministic tests (77 passing on .NET 8 and 10).
-An opt-in live probe validates text-to-image through the real
-`IGenerationClient` (see the README live-test section). Still pending: more
-modalities in the live probe and first-class documentation.
+The opt-in live probe (`OpenAiGenerationLiveTests`) drives the real
+`IGenerationClient` through DI for all four modalities — text-to-image, image
+editing, queued video polling, and speech — and the first-class
+[OpenAI provider guide](providers/openai.md) documents the generation surface.
 
 Implement `IGenerationClient` for one existing Baize provider. This validates
 explicit generation intent, synchronous completion, assets, errors, diagnostics,
@@ -600,8 +601,13 @@ ratio, duration, seed, output format, audio, and negative-prompt parameters map
 from `VideoGenerationRequest`. An end-to-end executor test proves the genuinely
 queued, long-running path: the `IGenerationExecutor` submits once, polls a
 recorded `THROTTLED → RUNNING → SUCCEEDED` sequence, and reports progress. 35
-deterministic tests pass on .NET 8 and 10. Not yet wired: opt-in live tests and
-Runway upload-hosted files.
+deterministic tests pass on .NET 8 and 10. Opt-in live tests (`RunwayGenerationLiveTests`)
+drive queued text-to-video through `IGenerationExecutor` against the real API
+when `BAIZE_LIVE_PROVIDER=Runway` and `BAIZE_LIVE_TEST_GENERATION=1` are set, and
+upload-hosted files are wired through the uploads API: `RunwayGenerationClient`
+reserves an ephemeral upload, posts the file bytes to the presigned URL, and
+submits the resulting `runway://` URI as the prompt image for provider-owned
+file inputs.
 
 Create `Penghou.Baize.Runway` with provider-faithful request and task types, then
 adapt it to `IGenerationClient`. Initial responsibilities are:

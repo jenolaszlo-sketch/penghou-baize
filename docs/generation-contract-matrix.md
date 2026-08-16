@@ -127,7 +127,7 @@ Authentication uses a Bearer API key plus a required `X-Runway-Version:
 | Cancellation | `PUT .../requests/{request_id}/cancel`. |
 | Progress | Queue `position` for `IN_QUEUE`; SSE status streaming for live updates. |
 | Inputs | Model-specific JSON arguments with an arbitrary per-model schema. |
-| Outputs | Model-specific JSON; image/video models typically return URLs (lifecycle preferences are controllable via `x-fal-object-lifecycle-preference`). |
+| Outputs | Model-specific JSON; image/video models typically return URLs (lifecycle preferences are controllable via `x-fal-object-lifecycle-preference`). Storage-backed assets are documented as `{url, content_type, file_name, file_size}`; the Baize adapter preserves those fields on each `GeneratedAsset`. |
 | Errors | Error status bodies and webhook `status: "ERROR"` payloads. |
 | Rate limits | Queue priority header (`x-fal-queue-priority`, `low`/`normal`); server-side `start_timeout` via `x-fal-request-timeout`. |
 | Candidate counts | Model-dependent, not part of the transport contract. |
@@ -157,7 +157,13 @@ Authentication uses a Bearer API key plus a required `X-Runway-Version:
   provider-native options on provider clients preserves fidelity.
 - **Asset sources differ.** Inline data (OpenAI images/speech, Gemini probe),
   temporary URLs (OpenAI video, Runway), and storage-backed URLs (fal.ai) all
-  occur; the `GeneratedAssetSource` hierarchy already models the first two and
-  must accommodate provider-owned file identifiers before fal.ai/Replicate.
+  occur. The `GeneratedAssetSource` hierarchy models inline data and URLs, and
+  `ProviderGeneratedAssetSource` accommodates provider-owned file identifiers
+  for fal.ai/Replicate. The fal adapter now preserves the provider's documented
+  per-asset metadata (`content_type`, `file_name`, `file_size`) from the output
+  document instead of inferring a content type from the URL extension alone.
 - **Expiry information is unevenly documented.** Only fal.ai exposes an explicit
-  lifecycle preference. Asset expiry stays metadata rather than a guarantee.
+  lifecycle preference; Runway's output TTL is not published in the gathered
+  sources. `GeneratedAsset.ExpiresAt` stays populated only when a provider
+  conveys an expiry; otherwise asset expiry remains provider metadata rather
+  than a guarantee.

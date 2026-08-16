@@ -22,7 +22,7 @@ planned client surfaces.
 | Package | Purpose |
 | --- | --- |
 | `Penghou.Baize` | Core domain: `ILlmClient`, `LlmRequest`, `LlmStreamEvent`, tool model |
-| `Penghou.Baize.OpenAi` | OpenAI-compatible chat client (OpenAI, Azure, DeepSeek, ...) |
+| `Penghou.Baize.OpenAi` | OpenAI-compatible chat client (OpenAI, Azure, DeepSeek, ...) and artifact generation client; see [OpenAI provider guide](docs/providers/openai.md) |
 | `Penghou.Baize.Claude` | Anthropic Claude chat client |
 | `Penghou.Baize.Ollama` | Ollama chat client |
 | `Penghou.Baize.Gemini` | Google Gemini chat and image-generation client |
@@ -1024,11 +1024,19 @@ $env:BAIZE_LIVE_TEST_IMAGE_GENERATION = "1"
 $env:BAIZE_LIVE_IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
 
-# OpenAI generation-client probe (text-to-image through IGenerationClient)
+# OpenAI generation-client probe (image, image-edit, video, speech through IGenerationClient)
 $env:BAIZE_LIVE_PROVIDER = "OpenAi"
 $env:BAIZE_LIVE_MODEL = "gpt-4o"             # chat baseline model
 $env:BAIZE_LIVE_TEST_GENERATION = "1"
 $env:BAIZE_LIVE_GENERATION_MODEL = "gpt-image-1"
+$env:BAIZE_LIVE_GENERATION_VIDEO_MODEL = "gpt-video-2"
+$env:BAIZE_LIVE_GENERATION_AUDIO_MODEL = "gpt-4o-mini-tts"
+dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
+
+# Runway generation-client probe (queued text-to-video through IGenerationClient)
+$env:BAIZE_LIVE_PROVIDER = "Runway"
+$env:BAIZE_LIVE_TEST_GENERATION = "1"
+$env:BAIZE_LIVE_GENERATION_MODEL = "gen4.5"
 dotnet test Penghou.Baize.IntegrationTests.slnx --configuration Release --filter "Category=Live&Capability=ImageGeneration"
 
 # Native batch only (when live batch coverage is enabled)
@@ -1043,7 +1051,8 @@ and fill in the credential instead. The live-test harness finds that file from
 the repository tree and never overwrites environment variables already
 provided by the shell or CI.
 
-Supported provider values are `OpenAi`, `Claude`, `Gemini`, and `Ollama`.
+Supported provider values are `OpenAi`, `Claude`, `Gemini`, `Ollama`, and
+`Runway`.
 Use `BAIZE_LIVE_BASE_URL` for compatible gateways or local servers and
 `BAIZE_LIVE_SECRET_NAME` when the credential has a different environment
 variable name. Use `BAIZE_LIVE_DIALECT=DeepSeek` when exercising DeepSeek
@@ -1064,6 +1073,15 @@ binary artifacts; that portable surface remains planned for GenerationClient.
 Set `BAIZE_LIVE_TEST_GENERATION=1` to opt into the OpenAI generation-client
 probe, which drives the real `IGenerationClient` through DI with
 `BAIZE_LIVE_GENERATION_MODEL` selecting its image model (default `gpt-image-1`).
+The probe covers text-to-image, image editing (using the repository's
+`solid-red.png` fixture as a reference image), queued video
+(`BAIZE_LIVE_GENERATION_VIDEO_MODEL`, default `gpt-video-2`), and speech
+(`BAIZE_LIVE_GENERATION_AUDIO_MODEL`, default `gpt-4o-mini-tts`).
+With `BAIZE_LIVE_PROVIDER=Runway` the same switch drives the Runway
+generation-client probe, which runs queued text-to-video through
+`IGenerationExecutor` and polls the real task to completion
+(`BAIZE_LIVE_GENERATION_MODEL`, default `gen4.5`; credential
+`RUNWAYML_API_SECRET`).
 The tests print Baize activities and metrics and keep
 the correlated raw transport artifacts under
 `tests/Penghou.Baize.IntegrationTests/bin/.../artifacts/live-diagnostics` by

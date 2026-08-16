@@ -435,6 +435,16 @@ public sealed class FalGenerationClient : GenerationClientBase
                 break;
 
             case JsonValueKind.Object:
+                // fal storage-backed assets are objects such as
+                // { "url", "content_type", "file_name", "file_size" } (the
+                // documented ImageFile/VideoFile shape). Preserve the provider's
+                // own metadata when the url property is present; otherwise walk
+                // the object generically.
+                if (TryReadAssetObject(element, out var asset))
+                {
+                    assets.Add(asset);
+                    break;
+                }
                 foreach (var property in element.EnumerateObject())
                     CollectAssetUrls(property.Value, assets);
                 break;
@@ -444,6 +454,41 @@ public sealed class FalGenerationClient : GenerationClientBase
                     CollectAssetUrls(item, assets);
                 break;
         }
+    }
+
+    private static bool TryReadAssetObject(JsonElement element, out GeneratedAsset asset)
+    {
+        asset = null!;
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty("url", out var urlElement) ||
+            urlElement.ValueKind != JsonValueKind.String ||
+            urlElement.GetString() is not { } urlText ||
+            !Uri.TryCreate(urlText, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return false;
+        }
+
+        string? contentType = null;
+        string? fileName = null;
+        long? size = null;
+        if (TryGetString(element, "content_type", out var documentedContentType))
+            contentType = documentedContentType;
+        if (TryGetString(element, "file_name", out var documentedFileName))
+            fileName = documentedFileName;
+        if (element.TryGetProperty("file_size", out var sizeElement) &&
+            sizeElement.ValueKind == JsonValueKind.Number &&
+            sizeElement.TryGetInt64(out var parsedSize))
+        {
+            size = parsedSize;
+        }
+
+        asset = new GeneratedAsset(
+            new UriGeneratedAssetSource(uri),
+            ContentType: contentType ?? InferContentType(uri),
+            FileName: fileName,
+            Size: size);
+        return true;
     }
 
     private static string? InferContentType(Uri uri)

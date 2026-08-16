@@ -24,6 +24,8 @@
     <ProjectReference Include="..\..\src\Penghou.Baize.Claude\Penghou.Baize.Claude.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Gemini\Penghou.Baize.Gemini.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Ollama\Penghou.Baize.Ollama.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Runway\Penghou.Baize.Runway.csproj" />
+    <ProjectReference Include="..\..\src\Penghou.Baize.Fal\Penghou.Baize.Fal.csproj" />
   </ItemGroup>
 
   <ItemGroup>

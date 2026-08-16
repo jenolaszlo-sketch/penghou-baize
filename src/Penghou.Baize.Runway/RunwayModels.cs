@@ -86,6 +86,52 @@ public sealed record RunwayTextToVideoRequest
 }
 
 /// <summary>
+/// The request body for <c>POST /v1/uploads</c>, which reserves an ephemeral
+/// upload slot for a media file. The response carries a presigned
+/// <c>uploadUrl</c> and form <c>fields</c>; after the file is posted there, the
+/// returned <c>runwayUri</c> (a <c>runway://</c> URI) can be used as an input
+/// image or video reference in generation requests.
+/// </summary>
+public sealed record RunwayUploadCreateRequest
+{
+    /// <summary>The file name with a valid media extension (image, video, or audio).</summary>
+    [JsonPropertyName("filename")]
+    public required string Filename { get; init; }
+
+    /// <summary>The upload type; Runway currently uses <c>ephemeral</c>.</summary>
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "ephemeral";
+}
+
+/// <summary>
+/// The response from <c>POST /v1/uploads</c>. The file bytes must be posted to
+/// <see cref="UploadUrl"/> as a multipart form containing <see cref="Fields"/>
+/// plus the file part; the resulting <see cref="RunwayUri"/> is then usable as
+/// an input media reference.
+/// </summary>
+public sealed record RunwayUploadCreateResponse
+{
+    /// <summary>The identifier of the reserved upload slot.</summary>
+    [JsonPropertyName("id")]
+    public string? Id { get; init; }
+
+    /// <summary>The presigned URL that completes the multipart upload.</summary>
+    [JsonPropertyName("uploadUrl")]
+    public string? UploadUrl { get; init; }
+
+    /// <summary>
+    /// The <c>runway://</c> URI to reference the uploaded file in generation
+    /// requests once the multipart upload completes.
+    /// </summary>
+    [JsonPropertyName("runwayUri")]
+    public string? RunwayUri { get; init; }
+
+    /// <summary>The form fields to include alongside the file part in the multipart upload.</summary>
+    [JsonPropertyName("fields")]
+    public IReadOnlyDictionary<string, string>? Fields { get; init; }
+}
+
+/// <summary>
 /// The provider-faithful wire body for <c>POST /v1/image_to_video</c>.
 /// </summary>
 public sealed record RunwayImageToVideoRequest

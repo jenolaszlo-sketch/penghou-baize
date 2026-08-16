@@ -25,6 +25,7 @@ internal sealed record LiveTestSettings(
             "CLAUDE" => ("Penghou.Baize.Claude", "ANTHROPIC_API_KEY"),
             "GEMINI" => ("Penghou.Baize.Gemini", "GEMINI_API_KEY"),
             "OLLAMA" => ("Penghou.Baize.Ollama", null),
+            "RUNWAY" => ("Penghou.Baize.Runway", "RUNWAYML_API_SECRET"),
             _ => throw new InvalidOperationException(
                 $"Unsupported BAIZE_LIVE_PROVIDER '{provider}'.")
         };
@@ -120,6 +121,26 @@ internal sealed record LiveTestSettings(
             return Environment.GetEnvironmentVariable("BAIZE_LIVE_GENERATION_MODEL") ??
                    Environment.GetEnvironmentVariable("BAIZE_LIVE_MODEL") ??
                    "gpt-image-1";
+        }
+    }
+
+    public static string GenerationVideoModel
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return Environment.GetEnvironmentVariable("BAIZE_LIVE_GENERATION_VIDEO_MODEL") ??
+                   "gpt-video-2";
+        }
+    }
+
+    public static string GenerationAudioModel
+    {
+        get
+        {
+            LiveEnvironment.Load();
+            return Environment.GetEnvironmentVariable("BAIZE_LIVE_GENERATION_AUDIO_MODEL") ??
+                   "gpt-4o-mini-tts";
         }
     }
 

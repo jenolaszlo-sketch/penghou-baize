@@ -36,7 +36,8 @@ public static class ServiceCollectionExtensions
                 InputTransports = new HashSet<LlmContentTransport>
                 {
                     LlmContentTransport.Uri,
-                    LlmContentTransport.InlineData
+                    LlmContentTransport.InlineData,
+                    LlmContentTransport.ProviderFile
                 }
             };
             var client = new RunwayGenerationClient(

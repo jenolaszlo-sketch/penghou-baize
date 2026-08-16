@@ -415,7 +415,114 @@ public sealed class RunwayGenerationClientTests
             GenerationFeature.Cancellation |
             GenerationFeature.Progress);
         client.Capabilities.InputTransports.Should().BeEquivalentTo(
-            new[] { LlmContentTransport.Uri, LlmContentTransport.InlineData });
+            new[] { LlmContentTransport.Uri, LlmContentTransport.InlineData, LlmContentTransport.ProviderFile });
+    }
+
+    [Fact]
+    public async Task SubmitAsync_ImageToVideo_WithRunwayHostedFile_SendsFileId()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"id":"task-4"}""");
+        var client = CreateClient(handler);
+
+        await client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "animate",
+                FirstFrame = new LlmProviderFileSource(new LlmProviderKey("Runway"), "runway://file-1")
+            },
+            TestContext.Current.CancellationToken);
+
+        handler.LastRequest!.RequestUri!.AbsolutePath.Should().Be("/v1/image_to_video");
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.GetProperty("promptImage").GetString().Should().Be("runway://file-1");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_ImageToVideo_WithForeignProviderFile_RejectedBeforeProviderCall()
+    {
+        var handler = new RecordingHandler();
+        var client = CreateClient(handler);
+
+        var action = async () => await client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "animate",
+                FirstFrame = new LlmProviderFileSource(new LlmProviderKey("Gemini"), "file-1")
+            },
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<BaizeException>()
+            .Where(exception => exception.ErrorKind == GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateEphemeralUploadAsync_ReservesUploadSlot()
+    {
+        var handler = new RecordingHandler().ReturnJson(
+            """{"id":"up-1","uploadUrl":"https://storage.test/upload","runwayUri":"runway://up-1","fields":{"key":"abc","policy":"xyz"}}""");
+        var client = CreateClient(handler);
+
+        var upload = await client.CreateEphemeralUploadAsync(
+            "first-frame.png",
+            TestContext.Current.CancellationToken);
+
+        upload.Id.Should().Be("up-1");
+        upload.UploadUrl.Should().Be("https://storage.test/upload");
+        upload.RunwayUri.Should().Be("runway://up-1");
+        upload.Fields.Should().Contain("key", "abc");
+
+        handler.LastRequest!.RequestUri!.AbsolutePath.Should().Be("/v1/uploads");
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.GetProperty("filename").GetString().Should().Be("first-frame.png");
+        body.RootElement.GetProperty("type").GetString().Should().Be("ephemeral");
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_PostsMultipartToPresignedUrl_ReturnsRunwayUri()
+    {
+        var handler = new RecordingHandler().ReturnEmpty();
+        var client = CreateClient(handler);
+
+        var runwayUri = await client.UploadFileAsync(
+            new RunwayUploadCreateResponse
+            {
+                Id = "up-1",
+                UploadUrl = "https://storage.test/upload",
+                RunwayUri = "runway://up-1",
+                Fields = new Dictionary<string, string> { ["key"] = "abc", ["policy"] = "xyz" }
+            },
+            new byte[] { 1, 2, 3 },
+            "first-frame.png",
+            "image/png",
+            TestContext.Current.CancellationToken);
+
+        runwayUri.Should().Be("runway://up-1");
+        handler.LastRequest!.RequestUri!.ToString().Should().Be("https://storage.test/upload");
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequestBody!.Should().Contain("name=key").And.Contain("abc");
+        handler.LastRequestBody!.Should().Contain("name=file").And.Contain("first-frame.png");
+        handler.LastRequest!.Headers.Authorization.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_ReservationWithoutUrl_ThrowsGenerationFailed()
+    {
+        var handler = new RecordingHandler();
+        var client = CreateClient(handler);
+
+        var action = async () => await client.UploadFileAsync(
+            new RunwayUploadCreateResponse { Id = "up-1" },
+            new byte[] { 1, 2, 3 },
+            "first-frame.png",
+            "image/png",
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<BaizeException>()
+            .Where(exception => exception.ErrorKind == GenerationErrorKind.GenerationFailed);
+        handler.Requests.Should().BeEmpty();
     }
 
     [Fact]
@@ -510,6 +617,7 @@ public sealed class RunwayGenerationClientTests
         var client = provider.GetRequiredKeyedService<IGenerationClient>("runway-gen-1");
         client.Should().BeOfType<RunwayGenerationClient>();
         client.Capabilities.Features.Should().HaveFlag(GenerationFeature.TextToVideo);
+        client.Capabilities.InputTransports.Should().Contain(LlmContentTransport.ProviderFile);
 
         var registry = provider.GetRequiredService<IGenerationClientRegistry>();
         registry.Find("Runway", "runway-gen-1").Should().NotBeNull();
@@ -538,7 +646,8 @@ public sealed class RunwayGenerationClientTests
                 InputTransports = new HashSet<LlmContentTransport>
                 {
                     LlmContentTransport.Uri,
-                    LlmContentTransport.InlineData
+                    LlmContentTransport.InlineData,
+                    LlmContentTransport.ProviderFile
                 }
             },
             "runway-gen-1",

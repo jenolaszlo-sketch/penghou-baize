@@ -808,6 +808,61 @@ public sealed class FalGenerationClientTests
         operation.Result.Assets.Should().HaveCount(13);
     }
 
+    [Fact]
+    public async Task GetAsync_Completed_PreservesDocumentedAssetMetadata()
+    {
+        var handler = new RecordingHandler()
+            .ReturnJson("""{"request_id":"r-1","status":"COMPLETED"}""")
+            .ReturnJson(
+                """
+                {
+                  "images":[
+                    {
+                      "url":"https://v3.fal.media/files/abc123/output.png",
+                      "content_type":"image/png",
+                      "file_name":"output.png",
+                      "file_size":48291
+                    },
+                    {
+                      "url":"https://v3.fal.media/files/def456/raw.bin",
+                      "file_name":"raw.bin"
+                    }
+                  ],
+                  "video":{
+                    "url":"https://v3.fal.media/files/ghi789/clip.mp4",
+                    "content_type":"video/mp4",
+                    "file_size":1048576
+                  },
+                  "audio":"https://v3.fal.media/files/jkl012/voice.wav"
+                }
+                """);
+        var client = CreateClient(handler);
+        var handle = Handle("r-1");
+
+        var operation = await client.GetAsync(handle, TestContext.Current.CancellationToken);
+
+        operation.State.Should().Be(GenerationOperationState.Succeeded);
+        operation.Result!.Assets.Should().HaveCount(4);
+
+        var image = operation.Result.Assets[0];
+        image.ContentType.Should().Be("image/png");
+        image.FileName.Should().Be("output.png");
+        image.Size.Should().Be(48291);
+
+        var raw = operation.Result.Assets[1];
+        raw.ContentType.Should().BeNull();
+        raw.FileName.Should().Be("raw.bin");
+
+        var video = operation.Result.Assets[2];
+        video.ContentType.Should().Be("video/mp4");
+        video.Size.Should().Be(1048576);
+
+        var bareAudio = operation.Result.Assets[3];
+        bareAudio.Source.As<UriGeneratedAssetSource>().Uri.ToString()
+            .Should().Be("https://v3.fal.media/files/jkl012/voice.wav");
+        bareAudio.ContentType.Should().Be("audio/wav");
+    }
+
     private static GenerationOperationHandle Handle(string id) =>
         new("Fal", "fal-gen-1", id, "fal-ai/flux/dev");
 

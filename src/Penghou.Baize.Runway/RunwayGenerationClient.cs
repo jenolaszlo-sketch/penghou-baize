@@ -15,6 +15,7 @@ public sealed class RunwayGenerationClient : GenerationClientBase
 {
     private readonly Uri _textToVideoUri;
     private readonly Uri _imageToVideoUri;
+    private readonly Uri _uploadsUri;
     private readonly string _tasksUriPrefix;
     private readonly string _apiVersion;
     private readonly string _defaultInputImageMimeType;
@@ -55,6 +56,7 @@ public sealed class RunwayGenerationClient : GenerationClientBase
         var baseUrl = baseAddress.ToString().TrimEnd('/');
         _textToVideoUri = new Uri($"{baseUrl}/text_to_video");
         _imageToVideoUri = new Uri($"{baseUrl}/image_to_video");
+        _uploadsUri = new Uri($"{baseUrl}/uploads");
         _tasksUriPrefix = $"{baseUrl}/tasks/";
         _apiVersion = apiVersion ?? "2024-11-06";
         _defaultInputImageMimeType = defaultInputImageMimeType ?? "image/png";
@@ -188,6 +190,90 @@ public sealed class RunwayGenerationClient : GenerationClientBase
         await SendAsync(httpRequest, "task cancellation", submission: false, cancellationToken);
     }
 
+    /// <summary>
+    /// Reserves an ephemeral upload slot for a media file. The returned
+    /// <see cref="RunwayUploadCreateResponse"/> carries a presigned
+    /// <see cref="RunwayUploadCreateResponse.UploadUrl"/> plus form
+    /// <see cref="RunwayUploadCreateResponse.Fields"/>; complete the upload with
+    /// <see cref="UploadFileAsync"/>, then use the resulting
+    /// <see cref="RunwayUploadCreateResponse.RunwayUri"/> as an input image or
+    /// video reference in generation requests.
+    /// </summary>
+    /// <param name="filename">The file name with a valid media extension (for example <c>first-frame.png</c>).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The reserved upload slot.</returns>
+    public async Task<RunwayUploadCreateResponse> CreateEphemeralUploadAsync(
+        string filename,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _uploadsUri);
+        ApplyAuth(httpRequest);
+        httpRequest.Content = JsonContent(new RunwayUploadCreateRequest { Filename = filename });
+
+        var response = await SendAsync(httpRequest, "ephemeral upload", submission: false, cancellationToken);
+        var root = await ReadJsonAsync(response, "ephemeral upload", cancellationToken);
+        return Deserialize<RunwayUploadCreateResponse>(root, "ephemeral upload");
+    }
+
+    /// <summary>
+    /// Completes a reserved ephemeral upload by posting the file bytes to the
+    /// presigned upload URL. Returns the <c>runway://</c> URI that generation
+    /// requests can use as an input image or video reference.
+    /// </summary>
+    /// <param name="upload">The reserved upload slot.</param>
+    /// <param name="data">The file bytes to upload.</param>
+    /// <param name="filename">The file name used for the file part.</param>
+    /// <param name="contentType">The media content type (for example <c>image/png</c>).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The <c>runway://</c> URI referencing the uploaded file.</returns>
+    public async Task<string> UploadFileAsync(
+        RunwayUploadCreateResponse upload,
+        ReadOnlyMemory<byte> data,
+        string filename,
+        string contentType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(upload);
+        if (data.IsEmpty)
+            throw new ArgumentException("Upload data cannot be empty.", nameof(data));
+        ArgumentException.ThrowIfNullOrWhiteSpace(filename);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+
+        if (string.IsNullOrWhiteSpace(upload.UploadUrl))
+            throw new BaizeException(
+                "Runway upload reservation returned no presigned upload URL.",
+                GenerationErrorKind.GenerationFailed);
+        if (upload.Fields is null)
+            throw new BaizeException(
+                "Runway upload reservation returned no multipart fields.",
+                GenerationErrorKind.GenerationFailed);
+
+        var form = new MultipartFormDataContent();
+        foreach (var (name, value) in upload.Fields)
+            form.Add(new StringContent(value, System.Text.Encoding.UTF8), name);
+        form.Add(new ByteArrayContent(data.ToArray())
+        {
+            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType) }
+        }, "file", filename);
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri(upload.UploadUrl, UriKind.Absolute))
+        {
+            Content = form
+        };
+
+        var response = await SendAsync(httpRequest, "ephemeral upload", submission: false, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(upload.RunwayUri))
+            throw new BaizeException(
+                "Runway upload reservation returned no runway:// URI.",
+                GenerationErrorKind.GenerationFailed);
+        return upload.RunwayUri;
+    }
+
     /// <inheritdoc />
     protected override void ApplyAuth(HttpRequestMessage httpRequest)
     {
@@ -303,8 +389,11 @@ public sealed class RunwayGenerationClient : GenerationClientBase
             LlmInlineDataSource inline =>
                 $"data:{_defaultInputImageMimeType};base64," +
                 Convert.ToBase64String(inline.Data.ToArray()),
-            LlmProviderFileSource => throw BaizeException.UnsupportedCapability(
-                $"Runway endpoint '{EndpointId}' does not accept provider-file image inputs."),
+            LlmProviderFileSource file when file.Provider == new LlmProviderKey("Runway") =>
+                file.FileId,
+            LlmProviderFileSource file => throw BaizeException.UnsupportedCapability(
+                $"Runway endpoint '{EndpointId}' does not accept files owned by " +
+                $"provider '{file.Provider}'."),
             _ => throw BaizeException.InvalidRequest(
                 $"Unsupported image input source '{source.GetType().Name}'.")
         };
