@@ -78,6 +78,7 @@ public sealed class GenerationBatchExecutorTests
         public List<GenerationOperation> PollScript { get; set; } = [];
         public Queue<BaizeException> GetErrors { get; set; } = [];
         public List<string> CallLog { get; } = [];
+        public List<string?> ObservedIdempotencyKeys { get; } = [];
         public int GetCount { get; private set; }
         private readonly object _lock = new();
 
@@ -90,6 +91,7 @@ public sealed class GenerationBatchExecutorTests
                 SubmitCount++;
                 var count = request is ImageGenerationRequest image ? image.Count : 1;
                 MaxObservedCount = Math.Max(MaxObservedCount, count);
+                ObservedIdempotencyKeys.Add(request.IdempotencyKey);
                 CallLog.Add($"S:{count}");
                 if (SubmitError is not null)
                     throw SubmitError;
@@ -175,6 +177,48 @@ public sealed class GenerationBatchExecutorTests
         result.Chunks.Should().HaveCount(5);
         client.SubmitCount.Should().Be(5);
         client.MaxObservedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IdempotencyKey_IsDerivedDeterministicallyPerChunk()
+    {
+        var client = new ScriptedGenerationClient(ImageCapabilities(maximumCandidates: 4));
+        var registry = new DefaultGenerationClientRegistry();
+        registry.Register("OpenAi", "image-endpoint", client);
+        var batchExecutor = new GenerationBatchExecutor(registry);
+
+        await batchExecutor.ExecuteAsync(
+            new GenerationBatchRequest(
+                new ImageGenerationRequest { Prompt = "icons", IdempotencyKey = "batch-9" },
+                TotalCount: 10),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Chunks submit concurrently; compare as a set, not in completion order.
+        client.ObservedIdempotencyKeys.Should().HaveCount(3);
+        client.ObservedIdempotencyKeys.Should().BeEquivalentTo(
+            ["batch-9-0", "batch-9-1", "batch-9-2"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutKey_ChunkRequestsCarryNoKey()
+    {
+        var client = new ScriptedGenerationClient(
+            new GenerationCapabilities
+            {
+                Features = GenerationFeature.TextToVideo | GenerationFeature.OperationRetrieval
+            });
+        var registry = new DefaultGenerationClientRegistry();
+        registry.Register("OpenAi", "image-endpoint", client);
+        var batchExecutor = new GenerationBatchExecutor(registry);
+
+        await batchExecutor.ExecuteAsync(
+            new GenerationBatchRequest(
+                new VideoGenerationRequest { Prompt = "clip" },
+                TotalCount: 3,
+                MaxConcurrency: 1),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        client.ObservedIdempotencyKeys.Should().HaveCount(3).And.OnlyContain(key => key == null);
     }
 
     [Fact]
