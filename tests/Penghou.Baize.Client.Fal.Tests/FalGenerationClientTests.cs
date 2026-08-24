@@ -136,6 +136,24 @@ public sealed class FalGenerationClientTests
         body.RootElement.GetProperty("duration").GetInt32().Should().Be(30);
     }
 
+    // Regression: IdempotencyKey was advertised on GenerationRequest but never
+    // sent, leaving replay-after-ambiguity unprotected.
+
+    [Fact]
+    public async Task SubmitAsync_IdempotencyKey_IsForwardedAsFalHeader()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"request_id":"r-idem"}""");
+        var client = CreateClient(handler);
+
+        await client.SubmitAsync(
+            new ImageGenerationRequest { Prompt = "one of a kind", IdempotencyKey = "order-42" },
+            TestContext.Current.CancellationToken);
+
+        handler.LastRequest!.Headers.TryGetValues("x-fal-idempotency-key", out var values)
+            .Should().BeTrue();
+        values!.Should().ContainSingle().Which.Should().Be("order-42");
+    }
+
     [Fact]
     public async Task SubmitAsync_ImageToImage_WithUriInput_SendsImageUrl()
     {
@@ -640,7 +658,9 @@ public sealed class FalGenerationClientTests
             ["fps"] = 24,
             ["enable_safety_checker"] = true
         };
-        var response = await client.SubmitQueueAsync(payload, TestContext.Current.CancellationToken);
+        var response = await client.SubmitQueueAsync(
+            payload,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         response.RequestId.Should().Be("r-1");
         handler.LastRequest!.RequestUri!.AbsolutePath.Should().Be("/fal-ai/flux/dev");

@@ -287,6 +287,15 @@ public sealed class RunwayGenerationClient : GenerationClientBase
     {
         ValidateRequest(request);
 
+        // Runway's API exposes no idempotent-submission mechanism. A caller
+        // asserting an idempotency key must be told rather than silently
+        // losing replay protection on billable work.
+        if (!string.IsNullOrEmpty(request.IdempotencyKey))
+        {
+            throw BaizeException.UnsupportedCapability(
+                "Runway does not support idempotent submission; remove IdempotencyKey or choose a provider that honors it.");
+        }
+
         // Runway's task API has no video-to-video or interpolation inputs on
         // this client; failing fast beats billing a degraded text/image
         // generation that silently ignores the source assets.

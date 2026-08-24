@@ -98,7 +98,7 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
             {
                 var count = Math.Min(chunkSize, request.TotalCount - (index * chunkSize));
                 var slot = index * chunkSize;
-                var chunkRequest = BuildChunkRequest(request.Request, count);
+                var chunkRequest = BuildChunkRequest(request.Request, index, count);
                 try
                 {
                     var operation = await endpoint.Client
@@ -320,10 +320,22 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         return Math.Min(maximum, totalCount);
     }
 
-    private static GenerationRequest BuildChunkRequest(GenerationRequest request, int count) =>
-        request is ImageGenerationRequest image
-            ? image with { Count = count }
+    private static GenerationRequest BuildChunkRequest(
+        GenerationRequest request,
+        int chunkIndex,
+        int count)
+    {
+        // Each chunk carries a deterministic derived idempotency key so a
+        // whole-batch replay cannot duplicate already-submitted billable
+        // chunks on providers that honor keys.
+        var keyed = request.IdempotencyKey is { } key
+            ? request with { IdempotencyKey = $"{key}-{chunkIndex}" }
             : request;
+
+        return keyed is ImageGenerationRequest image
+            ? image with { Count = count }
+            : keyed;
+    }
 
     private static GenerationBatchChunk? TryFinalize(int slot, GenerationOperation operation) =>
         operation.State switch

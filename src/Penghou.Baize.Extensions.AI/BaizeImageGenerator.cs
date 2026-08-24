@@ -19,6 +19,7 @@ public sealed class BaizeImageGenerator : IImageGenerator
     private readonly IGenerationClient _client;
     private readonly ImageGeneratorMetadata _metadata;
     private readonly string _providerName;
+    private readonly BaizeImageGeneratorOptions _options;
 
     /// <summary>
     /// Initializes the adapter.
@@ -27,14 +28,17 @@ public sealed class BaizeImageGenerator : IImageGenerator
     /// <param name="providerName">The provider name for metadata, when known.</param>
     /// <param name="providerUri">The provider base URI for metadata, when known.</param>
     /// <param name="modelId">The configured model for metadata, when known.</param>
+    /// <param name="options">Polling interval and completion timeout for queued providers.</param>
     /// <exception cref="ArgumentNullException"><paramref name="client"/> is null.</exception>
     public BaizeImageGenerator(
         IGenerationClient client,
         string? providerName = null,
         Uri? providerUri = null,
-        string? modelId = null)
+        string? modelId = null,
+        BaizeImageGeneratorOptions? options = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _options = options ?? new BaizeImageGeneratorOptions();
         _providerName = providerName ?? "Unknown";
         _metadata = new ImageGeneratorMetadata(providerName, providerUri, modelId);
     }
@@ -50,6 +54,10 @@ public sealed class BaizeImageGenerator : IImageGenerator
         var operation = await _client.SubmitAsync(
             ToBaizeRequest(request, options),
             cancellationToken).ConfigureAwait(false);
+
+        // Queued providers (Runway, fal) return before generation finishes;
+        // poll to a terminal state instead of failing the caller.
+        operation = await WaitForTerminalAsync(operation, cancellationToken);
 
         if (operation.State != GenerationOperationState.Succeeded)
         {
@@ -78,6 +86,38 @@ public sealed class BaizeImageGenerator : IImageGenerator
         {
             RawRepresentation = operation
         };
+    }
+
+    private async Task<GenerationOperation> WaitForTerminalAsync(
+        GenerationOperation operation,
+        CancellationToken cancellationToken)
+    {
+        var started = DateTimeOffset.UtcNow;
+
+        while (operation.State is GenerationOperationState.Queued
+                   or GenerationOperationState.Running)
+        {
+            if (!_client.Capabilities.Supports(GenerationFeature.OperationRetrieval))
+            {
+                throw new BaizeException(
+                    $"Image generation was accepted ({operation.State}) but the endpoint does not support operation retrieval, so completion cannot be awaited. Resume later via GetAsync with handle '{operation.Handle.Id}'.",
+                    GenerationErrorKind.UnknownSubmissionOutcome);
+            }
+
+            if (_options.Timeout is { } timeout &&
+                DateTimeOffset.UtcNow - started > timeout)
+            {
+                throw new BaizeException(
+                    $"Image generation did not complete within the configured timeout. Resume later via GetAsync with handle '{operation.Handle.Id}'.",
+                    GenerationErrorKind.UnknownSubmissionOutcome);
+            }
+
+            await Task.Delay(_options.PollInterval, cancellationToken);
+
+            operation = await _client.GetAsync(operation.Handle, cancellationToken);
+        }
+
+        return operation;
     }
 
     /// <inheritdoc />

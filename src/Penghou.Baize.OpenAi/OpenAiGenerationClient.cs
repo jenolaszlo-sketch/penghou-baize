@@ -69,6 +69,16 @@ public sealed class OpenAiGenerationClient : GenerationClientBase
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // OpenAI's images/videos/speech endpoints expose no idempotent-
+        // submission mechanism. A caller asserting an idempotency key must be
+        // told rather than silently losing replay protection on billable work.
+        if (!string.IsNullOrEmpty(request.IdempotencyKey))
+        {
+            throw BaizeException.UnsupportedCapability(
+                "OpenAI generation endpoints do not support idempotent submission; remove IdempotencyKey or choose a provider that honors it.");
+        }
+
         return request switch
         {
             ImageGenerationRequest image => await SubmitImageAsync(image, cancellationToken),

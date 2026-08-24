@@ -18,7 +18,7 @@ namespace Penghou.Baize.Fal;
 /// of a progress fraction, output assets are storage-backed URLs extracted from
 /// an arbitrary result document, and cancellation is a <c>PUT</c> rather than a
 /// <c>DELETE</c>. The common Baize surface maps to a conventional fal payload;
-/// the native <see cref="SubmitQueueAsync(System.Text.Json.Nodes.JsonNode, CancellationToken)"/>
+/// the native <see cref="SubmitQueueAsync(System.Text.Json.Nodes.JsonNode, string, System.Threading.CancellationToken)"/>
 /// posts any model-faithful payload unchanged.
 /// </para>
 /// </summary>
@@ -73,7 +73,10 @@ public sealed class FalGenerationClient : GenerationClientBase
                 $"type '{request.GetType().Name}'.")
         };
 
-        var queued = await SubmitQueueAsync(payload, cancellationToken);
+        var queued = await SubmitQueueAsync(
+                payload,
+                request.IdempotencyKey,
+                cancellationToken);
         var requestId = queued.RequestId ?? throw new BaizeException(
             "Fal submission returned no request id.",
             GenerationErrorKind.GenerationFailed);
@@ -122,16 +125,23 @@ public sealed class FalGenerationClient : GenerationClientBase
     /// per-model JSON, so the payload is posted unchanged.
     /// </summary>
     /// <param name="payload">The model-faithful JSON payload.</param>
+    /// <param name="idempotencyKey">
+    /// An optional idempotency key forwarded as <c>x-fal-idempotency-key</c> so a
+    /// retry after an ambiguous submission cannot create duplicate billable work.
+    /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The queue-submission response.</returns>
     public async Task<FalQueueResponse> SubmitQueueAsync(
         JsonNode payload,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(payload);
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _queueUri);
         ApplyAuth(httpRequest);
+        if (!string.IsNullOrEmpty(idempotencyKey))
+            httpRequest.Headers.Add("x-fal-idempotency-key", idempotencyKey);
         httpRequest.Content = JsonContent(payload);
 
         var response = await SendAsync(httpRequest, "queue submission", submission: true, cancellationToken);

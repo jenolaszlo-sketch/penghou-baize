@@ -173,5 +173,137 @@ public sealed class BaizeImageGeneratorTests
             Task.FromResult(operation);
     }
 
+    [Fact]
+    public async Task GenerateAsync_QueuedOperation_PollsUntilSucceeded()
+    {
+        var inner = new ScriptedGenerationClient(
+            new GenerationCapabilities
+            {
+                Features = GenerationFeature.TextToImage |
+                           GenerationFeature.OperationRetrieval
+            },
+            submit: new GenerationOperation(Handle, GenerationOperationState.Queued),
+            polls:
+            [
+                new GenerationOperation(Handle, GenerationOperationState.Running, Progress: 0.5),
+                new GenerationOperation(
+                    Handle,
+                    GenerationOperationState.Succeeded,
+                    new GenerationResult(
+                        [new GeneratedAsset(new UriGeneratedAssetSource(new Uri("https://cdn.test/a.png")))]))
+            ]);
+        using var generator = new BaizeImageGenerator(
+            inner,
+            "Runway",
+            modelId: "gen4",
+            options: new BaizeImageGeneratorOptions { PollInterval = TimeSpan.FromMilliseconds(1) });
+
+        var response = await generator.GenerateAsync(
+            new Microsoft.Extensions.AI.ImageGenerationRequest("a blue circle"),
+            options: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        inner.GetCount.Should().Be(2);
+        response.Contents.Should().ContainSingle()
+            .Which.Should().BeOfType<UriContent>()
+            .Which.Uri.ToString().Should().Be("https://cdn.test/a.png");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_QueuedWithoutRetrieval_ThrowsWithResumeHandle()
+    {
+        var inner = new ScriptedGenerationClient(
+            new GenerationCapabilities { Features = GenerationFeature.TextToImage },
+            submit: new GenerationOperation(Handle, GenerationOperationState.Queued));
+        using var generator = new BaizeImageGenerator(inner, "Runway");
+
+        var action = async () => await generator.GenerateAsync(
+            new Microsoft.Extensions.AI.ImageGenerationRequest("a cube"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var exception = (await action.Should().ThrowAsync<BaizeException>()).Which;
+        exception.ErrorKind.Should().Be(GenerationErrorKind.UnknownSubmissionOutcome);
+        exception.Message.Should().Contain("op-1");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_QueuedOperation_TimesOutWithResumableHandle()
+    {
+        var queued = new GenerationOperation(Handle, GenerationOperationState.Queued);
+        var inner = new ScriptedGenerationClient(
+            new GenerationCapabilities
+            {
+                Features = GenerationFeature.TextToImage |
+                           GenerationFeature.OperationRetrieval
+            },
+            submit: queued,
+            polls: [queued, queued, queued]);
+        using var generator = new BaizeImageGenerator(
+            inner,
+            "Runway",
+            providerUri: null,
+            modelId: null,
+            new BaizeImageGeneratorOptions
+            {
+                PollInterval = TimeSpan.FromMilliseconds(5),
+                Timeout = TimeSpan.FromMilliseconds(40)
+            });
+
+        var action = async () => await generator.GenerateAsync(
+            new Microsoft.Extensions.AI.ImageGenerationRequest("a cube"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var exception = (await action.Should().ThrowAsync<BaizeException>()).Which;
+        exception.ErrorKind.Should().Be(GenerationErrorKind.UnknownSubmissionOutcome);
+        exception.Message.Should().Contain("timeout");
+        exception.Message.Should().Contain("op-1");
+        inner.GetCount.Should().BeGreaterThan(0);
+    }
+
+    private sealed class ScriptedGenerationClient(
+        GenerationCapabilities capabilities,
+        GenerationOperation submit,
+        IReadOnlyList<GenerationOperation>? polls = null)
+        : IGenerationClient
+    {
+        private int _pollIndex;
+
+        public GenerationCapabilities Capabilities { get; } = capabilities;
+
+        public GenerationRequest? Submitted { get; private set; }
+
+        public int GetCount { get; private set; }
+
+        public Task<GenerationOperation> SubmitAsync(
+            GenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Submitted = request;
+            return Task.FromResult(submit);
+        }
+
+        public Task<GenerationOperation> GetAsync(
+            GenerationOperationHandle handle,
+            CancellationToken cancellationToken = default)
+        {
+            GetCount++;
+            if (polls is null || polls.Count == 0)
+            {
+                throw new BaizeException(
+                    "no poll script",
+                    GenerationErrorKind.GenerationFailed);
+            }
+
+            var next = polls[Math.Min(_pollIndex, polls.Count - 1)];
+            _pollIndex++;
+            return Task.FromResult(next);
+        }
+
+        public Task<GenerationOperation> CancelAsync(
+            GenerationOperationHandle handle,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(submit);
+    }
+
     private sealed class UnsupportedContent : AIContent;
 }

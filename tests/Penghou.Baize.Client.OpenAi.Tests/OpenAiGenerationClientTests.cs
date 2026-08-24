@@ -217,6 +217,23 @@ public sealed class OpenAiGenerationClientTests
     }
 
     [Fact]
+    public async Task SubmitAsync_IdempotencyKey_FailsFastAsUnsupported()
+    {
+        // OpenAI's generation endpoints expose no idempotent submission;
+        // asserting a key must surface instead of being silently ignored.
+        var handler = new RecordingHandler().ReturnJson("""{"created":1,"data":[]}""");
+        var client = CreateClient(handler);
+
+        var action = () => client.SubmitAsync(
+            new ImageGenerationRequest { Prompt = "a dog", IdempotencyKey = "order-42" },
+            TestContext.Current.CancellationToken);
+
+        var exception = (await action.Should().ThrowAsync<BaizeException>()).Which;
+        exception.ErrorKind.Should().Be(GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SubmitAsync_Speech_ReturnsInlineAudioAsset()
     {
         var handler = new RecordingHandler().ReturnBytes(

@@ -114,6 +114,23 @@ public sealed class RunwayGenerationClientTests
     }
 
     [Fact]
+    public async Task SubmitAsync_IdempotencyKey_FailsFastAsUnsupported()
+    {
+        // Runway's API exposes no idempotent submission; asserting a key must
+        // surface instead of being silently ignored.
+        var handler = new RecordingHandler().ReturnJson("""{"id":"task-x"}""");
+        var client = CreateClient(handler);
+
+        var action = () => client.SubmitAsync(
+            new VideoGenerationRequest { Prompt = "a dog", IdempotencyKey = "order-42" },
+            TestContext.Current.CancellationToken);
+
+        (await action.Should().ThrowAsync<BaizeException>())
+            .Which.ErrorKind.Should().Be(GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SubmitAsync_TextToVideo_UsesConfiguredDefaultsWhenOmitted()
     {
         var handler = new RecordingHandler().ReturnJson("""{"id":"task-1"}""");

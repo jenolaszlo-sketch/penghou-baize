@@ -18,32 +18,34 @@ validation, and error taxonomy, plus a set of **billable-impact correctness
 gaps** in the media providers where validated request fields are silently
 dropped.
 
-## P0 — Correctness / billable impact
+## Resolved since review
 
-1. **fal payload builders silently drop validated request fields** —
-   `src\Penghou.Baize.Fal\FalGenerationClient.cs` (`BuildImagePayload`,
-   `BuildVideoPayload`, `BuildAudioPayload`) ignore `AspectRatio`, `Size`,
-   `OutputFormat`, `Duration`, `GenerateAudio`, `LastFrame`, `References`. A
-   caller sets `Size`, validation passes, and a wrong-sized asset is billed.
-2. **Runway silently degrades video-to-video to text-to-video** —
-   `RunwayGenerationClient.SubmitVideoAsync` never reads `SourceVideo`,
-   `LastFrame`, or `References`. Fail fast with unsupported-capability instead.
-3. **Batch executor error isolation only catches `BaizeException`** —
-   `Generation\GenerationBatchExecutor.cs` (~127): any other exception aborts
-   `Parallel.ForEachAsync`, discarding handles of already-submitted billable
-   chunks.
-4. **Undisposed `JsonDocument` leaked to public callers** —
-   `GenerationClientBase.ReadJsonAsync` returns `JsonDocument.Parse(body).
-   RootElement` without clone/dispose; `FalGenerationClient.GetResultAsync`
-   hands it on.
-5. **`GenerationRequest.IdempotencyKey` advertised, never implemented** by any
-   generation provider (only OpenAI batch consumes keys) — exactly the
-   replay-after-ambiguity case media submissions create.
-6. **M.E.AI `BaizeImageGenerator` unusable with queued providers** — throws
-   unless state is immediately `Succeeded`; Runway/fal always return `Queued`.
-7. **Coordinator paths lose partial outcomes** — status/results/cancel use bare
-   `Task.WhenAll`; one failed part discards the others' results (asymmetric with
-   `SubmitAsync`'s careful partial preservation).
+All seven P0 findings below were fixed and regression-tested
+(`Fix P0 generation issues, raise core coverage above threshold` and
+`Implement idempotent submission and queued image generation`):
+
+1. fal payload builders now map every validated field (`aspect_ratio`,
+   `image_size`, `video_size`, `output_format`, `duration`,
+   `generate_audio`, `last_image_url`, `reference_image_urls`) with MIME
+   formats normalized to the bare form.
+2. Runway fails fast with `UnsupportedCapability` for `SourceVideo`,
+   `LastFrame`, `References`, and explicit pixel sizes instead of silently
+   degrading video-to-video to text/image-to-video.
+3. The batch executor's submit and poll sweeps convert unexpected exceptions
+   into per-chunk failures, so already-submitted billable handles are always
+   reported; caller cancellation still propagates.
+4. `GenerationClientBase.ReadJsonAsync` clones the parsed root and disposes
+   the document — no undisposed `JsonDocument` escapes to callers.
+5. `GenerationRequest.IdempotencyKey` is implemented: fal forwards it as
+   `x-fal-idempotency-key`; Runway and OpenAI generation fail fast when a key
+   is set (no provider-side mechanism exists); batch chunks derive
+   deterministic per-chunk keys (`{key}-{index}`).
+6. The M.E.AI `BaizeImageGenerator` polls queued operations to a terminal
+   state (`BaizeImageGeneratorOptions.PollInterval`/`Timeout`) and every
+   timeout/no-retrieval error carries the resumable operation handle.
+7. Coordinator status/results/cancel no longer lose partial outcomes: status
+   surfaces per-part failures as Failed entries (transients still retry),
+   and results/cancel attempt every part before aggregating failures.
 
 ## P1 — Architecture & boundaries
 
@@ -190,8 +192,7 @@ dropped.
 
 ## Suggested priority
 
-1. **P0 billing fixes** (#1–#7): reject-or-map every validated field; fail fast
-   on unsupported inputs; per-item batch isolation; clone/dispose leaked JSON.
+1. ~~**P0 billing fixes** (#1–#7)~~ **Done** — see "Resolved since review".
 2. **Unify the error taxonomy** and status-code classification; typed
    timeout-with-handle resume API.
 3. **Extract shared routing/registry/validation primitives**; eager endpoint
@@ -200,4 +201,5 @@ dropped.
    auth template method, Gemini mappers; centralize JSON options.
 5. **Adopt PublicApi baselines + benchmarks** (port tooling from Zhinu).
 6. Ergonomics batch: constructor options objects, typed progress, streaming
-   opt-out knob, M.E.AI adapter hardening.
+   opt-out knob, M.E.AI adapter hardening (unknown-content handling,
+   disposable wrapping).
