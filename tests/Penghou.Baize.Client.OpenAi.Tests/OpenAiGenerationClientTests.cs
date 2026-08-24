@@ -138,6 +138,85 @@ public sealed class OpenAiGenerationClientTests
     }
 
     [Fact]
+    public async Task GetAsync_Video_ProviderError_MapsToFailedWithErrorDetails()
+    {
+        var handler = new RecordingHandler()
+            .ReturnJson("""{"id":"video_1","status":"queued"}""")
+            .ReturnJson("""{"id":"video_1","status":"failed","error":{"code":"content_policy","message":"rejected"}}""");
+        var client = CreateClient(handler, video: true);
+
+        var submitted = await client.SubmitAsync(
+            new VideoGenerationRequest { Prompt = "a dog" },
+            TestContext.Current.CancellationToken);
+
+        var operation = await client.GetAsync(submitted.Handle, TestContext.Current.CancellationToken);
+
+        operation.State.Should().Be(GenerationOperationState.Failed);
+        operation.Error.Should().NotBeNull();
+        operation.Error!.Message.Should().Be("rejected");
+        operation.Error.ProviderStatus.Should().Be("content_policy");
+    }
+
+    [Fact]
+    public async Task GetAsync_Video_FailedWithoutErrorObject_StillReportsFailure()
+    {
+        var handler = new RecordingHandler()
+            .ReturnJson("""{"id":"video_1","status":"queued"}""")
+            .ReturnJson("""{"id":"video_1","status":"failed"}""");
+        var client = CreateClient(handler, video: true);
+
+        var submitted = await client.SubmitAsync(
+            new VideoGenerationRequest { Prompt = "a dog" },
+            TestContext.Current.CancellationToken);
+
+        var operation = await client.GetAsync(submitted.Handle, TestContext.Current.CancellationToken);
+
+        operation.State.Should().Be(GenerationOperationState.Failed);
+        operation.Error.Should().NotBeNull();
+        operation.Error!.Message.Should().Contain("failed");
+    }
+
+    [Fact]
+    public async Task GetAsync_Video_CompletedWithOutputUrlOnly_ProducesAsset()
+    {
+        var handler = new RecordingHandler()
+            .ReturnJson("""{"id":"video_1","status":"queued"}""")
+            .ReturnJson("""{"id":"video_1","status":"completed","progress":2.5,"output":"https://cdn.test/out.mp4"}""");
+        var client = CreateClient(handler, video: true);
+
+        var submitted = await client.SubmitAsync(
+            new VideoGenerationRequest { Prompt = "a dog" },
+            TestContext.Current.CancellationToken);
+
+        var operation = await client.GetAsync(submitted.Handle, TestContext.Current.CancellationToken);
+
+        operation.State.Should().Be(GenerationOperationState.Succeeded);
+        operation.Progress.Should().Be(1.0);
+        operation.Result!.Assets.Should().ContainSingle()
+            .Which.Source.As<UriGeneratedAssetSource>().Uri.ToString().Should().Be("https://cdn.test/out.mp4");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_ImageBase64_ReturnsInlineAsset()
+    {
+        var bytes = Convert.ToBase64String([9, 8, 7]);
+        var handler = new RecordingHandler().ReturnJson(
+            $$"""{"created":1700000000,"data":[{"b64_json":"{{bytes}}","revised_prompt":"a clearer dog"}]}""");
+        var client = CreateClient(handler);
+
+        var operation = await client.SubmitAsync(
+            new ImageGenerationRequest { Prompt = "a dog", OutputFormat = "png" },
+            TestContext.Current.CancellationToken);
+
+        operation.State.Should().Be(GenerationOperationState.Succeeded);
+        var asset = operation.Result!.Assets.Should().ContainSingle().Which;
+        var inline = asset.Source.As<InlineGeneratedAssetSource>();
+        inline.Data.ToArray().Should().Equal(9, 8, 7);
+        inline.ContentType.Should().Be("image/png");
+        asset.ContentType.Should().Be("image/png");
+    }
+
+    [Fact]
     public async Task SubmitAsync_Speech_ReturnsInlineAudioAsset()
     {
         var handler = new RecordingHandler().ReturnBytes(
