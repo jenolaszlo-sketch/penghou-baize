@@ -30,68 +30,14 @@ public static class ServiceCollectionExtensions
         string endpointId,
         Action<OpenAiGenerationOptions> configure)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
-        ArgumentNullException.ThrowIfNull(configure);
-        services.AddBaizeGeneration();
-        services.Configure(endpointId, configure);
-        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
-        {
-            var options = sp.GetRequiredService<IOptionsMonitor<OpenAiGenerationOptions>>()
-                .Get(endpointId);
-            var capabilities = BuildCapabilities(options.Features, options.MaximumCandidates);
-
-            // Per-model timeout: wrap once so every call this client makes enforces it.
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-            if (options.RequestTimeout is { } requestTimeout)
+        return services.AddBaizeGenerationEndpoint<OpenAiGenerationOptions>(
+            "OpenAi",
+            endpointId,
+            configure,
+            validate: null,
+            (sp, options) =>
             {
-                httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
-            }
-
-            var client = new OpenAiGenerationClient(
-                options.Model,
-                httpClientFactory,
-                options.ApiKey,
-                options.BaseAddress,
-                capabilities,
-                endpointId,
-                options.ImageModel,
-                options.VideoModel,
-                options.AudioModel,
-                options.DefaultVoice);
-            sp.GetRequiredService<IGenerationClientRegistry>()
-                .Register("OpenAi", endpointId, client);
-            return client;
-        });
-        return services;
-    }
-
-    /// <summary>
-    /// Registers an opt-in OpenAI-compatible artifact-generation endpoint.
-    /// Generation is never inferred from OpenAI-compatible chat support; only
-    /// the explicitly configured <see cref="OpenAiCompatibleGenerationOptions.Features"/>
-    /// are advertised. Endpoint options are validated and the client is
-    /// registered with routing when the <see cref="IGenerationClientRegistry"/>
-    /// is resolved — not lazily on first use.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="endpointId">The configured endpoint identity.</param>
-    /// <param name="configure">Configures the OpenAI-compatible generation endpoint.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddBaizeOpenAiCompatibleGeneration(
-        this IServiceCollection services,
-        string endpointId,
-        Action<OpenAiCompatibleGenerationOptions> configure)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
-        ArgumentNullException.ThrowIfNull(configure);
-        services.AddBaizeGeneration();
-        services.Configure(endpointId, configure);
-        services.AddSingleton<IGenerationEndpointDescriptor>(
-            new DelegateGenerationEndpointDescriptor((sp, registry) =>
-            {
-                var options = sp.GetRequiredService<IOptionsMonitor<OpenAiCompatibleGenerationOptions>>()
-                    .Get(endpointId);
-                ValidateEndpointOptions(endpointId, options);
+                var capabilities = BuildCapabilities(options.Features, options.MaximumCandidates);
 
                 // Per-model timeout: wrap once so every call this client makes enforces it.
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
@@ -100,8 +46,47 @@ public static class ServiceCollectionExtensions
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
                 }
 
+                return new OpenAiGenerationClient(
+                    options.Model,
+                    httpClientFactory,
+                    options.ApiKey,
+                    options.BaseAddress,
+                    capabilities,
+                    endpointId,
+                    options.ImageModel,
+                    options.VideoModel,
+                    options.AudioModel,
+                    options.DefaultVoice);
+            });
+    }
+
+    /// <summary>
+    /// Registers an opt-in OpenAI-compatible artifact-generation endpoint.
+    /// Generation is never inferred from OpenAI-compatible chat support; only
+    /// the explicitly configured <see cref="OpenAiCompatibleGenerationOptions.Features"/>
+    /// are advertised. Endpoint options are validated and the client is
+    /// registered with routing when the <see cref="IGenerationClientRegistry"/>
+    /// is resolved � not lazily on first use.
+    /// </summary>
+    public static IServiceCollection AddBaizeOpenAiCompatibleGeneration(
+        this IServiceCollection services,
+        string endpointId,
+        Action<OpenAiCompatibleGenerationOptions> configure)
+    {
+        return services.AddBaizeGenerationEndpoint<OpenAiCompatibleGenerationOptions>(
+            "OpenAi",
+            endpointId,
+            configure,
+            (sp, options) => ValidateEndpointOptions(endpointId, options),
+            (sp, options) =>
+            {
                 var capabilities = BuildCapabilities(options.Features, options.MaximumCandidates);
-                var client = new OpenAiGenerationClient(
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                if (options.RequestTimeout is { } requestTimeout)
+                {
+                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
+                }
+                return new OpenAiGenerationClient(
                     options.Model,
                     httpClientFactory,
                     options.ApiKey,
@@ -109,13 +94,8 @@ public static class ServiceCollectionExtensions
                     capabilities,
                     endpointId,
                     options.ImageModel);
-                registry.Register("OpenAi", endpointId, client);
-            }));
-        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
-            ResolveRegisteredClient(sp, "OpenAi", endpointId));
-        return services;
+            });
     }
-
     internal static void ValidateEndpointOptions(
         string endpointId,
         OpenAiCompatibleGenerationOptions options)
@@ -125,17 +105,6 @@ public static class ServiceCollectionExtensions
                 $"OpenAI generation endpoint '{endpointId}' requires a Model.");
     }
 
-    private static IGenerationClient ResolveRegisteredClient(
-        IServiceProvider sp,
-        string provider,
-        string endpointId)
-    {
-        var registry = sp.GetRequiredService<IGenerationClientRegistry>();
-        return registry.Endpoints.First(endpoint =>
-                string.Equals(endpoint.EndpointId, endpointId, StringComparison.Ordinal) &&
-                string.Equals(endpoint.Provider, provider, StringComparison.Ordinal))
-            .Client;
-    }
 
     private static GenerationCapabilities BuildCapabilities(
         GenerationFeature features,

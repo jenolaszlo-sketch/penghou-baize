@@ -21,36 +21,21 @@ public static class ServiceCollectionExtensions
     /// <see cref="IGenerationClient"/>. Multiple generation endpoints can be
     /// registered under distinct <paramref name="endpointId"/> values. Endpoint
     /// options are validated and the client is registered with routing when
-    /// the <see cref="IGenerationClientRegistry"/> is resolved â€” not lazily on
+    /// the <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
     /// first use.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="endpointId">The configured endpoint identity.</param>
-    /// <param name="configure">Configures the Gemini generation endpoint.</param>
-    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddBaizeGeminiGeneration(
         this IServiceCollection services,
         string endpointId,
         Action<GeminiGenerationOptions> configure)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
-        ArgumentNullException.ThrowIfNull(configure);
-        services.AddBaizeGeneration();
-        services.Configure(endpointId, configure);
-        services.AddSingleton<IGenerationEndpointDescriptor>(
-            new DelegateGenerationEndpointDescriptor((sp, registry) =>
+        return services.AddBaizeGenerationEndpoint<GeminiGenerationOptions>(
+            "Gemini",
+            endpointId,
+            configure,
+            (sp, options) => ValidateEndpointOptions(endpointId, options),
+            (sp, options) =>
             {
-                var options = sp.GetRequiredService<IOptionsMonitor<GeminiGenerationOptions>>()
-                    .Get(endpointId);
-                ValidateEndpointOptions(endpointId, options);
-
-                // Per-model timeout: wrap once so every call this client makes enforces it.
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                if (options.RequestTimeout is { } requestTimeout)
-                {
-                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
-                }
-
                 var capabilities = new GenerationCapabilities
                 {
                     Features = options.Features,
@@ -60,7 +45,12 @@ public static class ServiceCollectionExtensions
                         LlmContentTransport.InlineData
                     }
                 };
-                var client = new GeminiGenerationClient(
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                if (options.RequestTimeout is { } requestTimeout)
+                {
+                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
+                }
+                return new GeminiGenerationClient(
                     options.Model,
                     httpClientFactory,
                     options.ApiKey,
@@ -70,13 +60,8 @@ public static class ServiceCollectionExtensions
                     options.ImageSize,
                     options.DefaultInputImageMimeType,
                     options.StoreResponses);
-                registry.Register("Gemini", endpointId, client);
-            }));
-        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
-            ResolveRegisteredClient(sp, "Gemini", endpointId));
-        return services;
+            });
     }
-
     internal static void ValidateEndpointOptions(
         string endpointId,
         GeminiGenerationOptions options)

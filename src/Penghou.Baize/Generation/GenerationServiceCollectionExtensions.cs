@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Penghou.Baize.Generation;
 
@@ -72,5 +73,62 @@ public static class GenerationServiceCollectionExtensions
         if (configureExecutor is not null)
             services.Configure(configureExecutor);
         return services;
+    }
+
+    /// <summary>
+    /// Registers one configured generation endpoint for an arbitrary provider
+    /// and options type. Endpoint options are validated by
+    /// <paramref name="validate"/> and the client produced by
+    /// <paramref name="createClient"/> is registered with routing when the
+    /// <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
+    /// first use.
+    /// </summary>
+    /// <typeparam name="TOptions">The provider's endpoint options type.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <param name="providerName">The registry provider key (for example "Runway").</param>
+    /// <param name="endpointId">The configured endpoint identity.</param>
+    /// <param name="configure">Configures the endpoint options.</param>
+    /// <param name="validate">Validates materialized options; throw to fail startup.</param>
+    /// <param name="createClient">Builds the client from resolved options.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddBaizeGenerationEndpoint<TOptions>(
+        this IServiceCollection services,
+        string providerName,
+        string endpointId,
+        Action<TOptions> configure,
+        Action<IServiceProvider, TOptions>? validate,
+        Func<IServiceProvider, TOptions, IGenerationClient> createClient)
+        where TOptions : class
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
+        ArgumentNullException.ThrowIfNull(configure);
+        ArgumentNullException.ThrowIfNull(createClient);
+
+        services.AddBaizeGeneration();
+        services.Configure(endpointId, configure);
+        services.AddSingleton<IGenerationEndpointDescriptor>(
+            new DelegateGenerationEndpointDescriptor((sp, registry) =>
+            {
+                var options = sp.GetRequiredService<IOptionsMonitor<TOptions>>()
+                    .Get(endpointId);
+                validate?.Invoke(sp, options);
+                registry.Register(providerName, endpointId, createClient(sp, options));
+            }));
+        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
+            ResolveRegisteredEndpoint(sp, providerName, endpointId));
+        return services;
+    }
+
+    private static IGenerationClient ResolveRegisteredEndpoint(
+        IServiceProvider serviceProvider,
+        string providerName,
+        string endpointId)
+    {
+        var registry = serviceProvider.GetRequiredService<IGenerationClientRegistry>();
+        return registry.Endpoints.First(endpoint =>
+                string.Equals(endpoint.EndpointId, endpointId, StringComparison.Ordinal) &&
+                string.Equals(endpoint.Provider, providerName, StringComparison.Ordinal))
+            .Client;
     }
 }

@@ -13,7 +13,7 @@ public static class ServiceCollectionExtensions
     /// <see cref="IGenerationClient"/>. Multiple generation endpoints can be
     /// registered under distinct <paramref name="endpointId"/> values. Endpoint
     /// options are validated and the client is registered with routing when
-    /// the <see cref="IGenerationClientRegistry"/> is resolved â€” not lazily on
+    /// the <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
     /// first use.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -25,24 +25,13 @@ public static class ServiceCollectionExtensions
         string endpointId,
         Action<RunwayGenerationOptions> configure)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
-        ArgumentNullException.ThrowIfNull(configure);
-        services.AddBaizeGeneration();
-        services.Configure(endpointId, configure);
-        services.AddSingleton<IGenerationEndpointDescriptor>(
-            new DelegateGenerationEndpointDescriptor((sp, registry) =>
+        return services.AddBaizeGenerationEndpoint<RunwayGenerationOptions>(
+            "Runway",
+            endpointId,
+            configure,
+            (sp, options) => ValidateEndpointOptions(endpointId, options),
+            (sp, options) =>
             {
-                var options = sp.GetRequiredService<IOptionsMonitor<RunwayGenerationOptions>>()
-                    .Get(endpointId);
-                ValidateEndpointOptions(endpointId, options);
-
-                // Per-model timeout: wrap once so every call this client makes enforces it.
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                if (options.RequestTimeout is { } requestTimeout)
-                {
-                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
-                }
-
                 var capabilities = new GenerationCapabilities
                 {
                     Features = options.Features,
@@ -53,7 +42,12 @@ public static class ServiceCollectionExtensions
                         LlmContentTransport.ProviderFile
                     }
                 };
-                var client = new RunwayGenerationClient(
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                if (options.RequestTimeout is { } requestTimeout)
+                {
+                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
+                }
+                return new RunwayGenerationClient(
                     options.Model,
                     httpClientFactory,
                     options.ApiKey,
@@ -64,13 +58,8 @@ public static class ServiceCollectionExtensions
                     options.DefaultInputImageMimeType,
                     options.DefaultRatio,
                     options.DefaultOutputFormat);
-                registry.Register("Runway", endpointId, client);
-            }));
-        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
-            ResolveRegisteredClient(sp, "Runway", endpointId));
-        return services;
+            });
     }
-
     internal static void ValidateEndpointOptions(
         string endpointId,
         RunwayGenerationOptions options)
@@ -83,15 +72,4 @@ public static class ServiceCollectionExtensions
                 $"Runway generation endpoint '{endpointId}' requires an ApiKey.");
     }
 
-    internal static IGenerationClient ResolveRegisteredClient(
-        IServiceProvider sp,
-        string provider,
-        string endpointId)
-    {
-        var registry = sp.GetRequiredService<IGenerationClientRegistry>();
-        return registry.Endpoints.First(endpoint =>
-                string.Equals(endpoint.EndpointId, endpointId, StringComparison.Ordinal) &&
-                string.Equals(endpoint.Provider, provider, StringComparison.Ordinal))
-            .Client;
-    }
 }

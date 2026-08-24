@@ -13,13 +13,13 @@ namespace Penghou.Baize;
 public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
 {
     /// <summary>The provider model identifier used on the wire.</summary>
-    protected readonly string Model;
+    protected string Model { get; }
 
     /// <summary>The HTTP client factory used to create the streaming client.</summary>
-    protected readonly IHttpClientFactory HttpClientFactory;
+    protected IHttpClientFactory HttpClientFactory { get; }
 
     /// <summary>The API key used to authenticate, when any.</summary>
-    protected readonly string ApiKey;
+    protected string ApiKey { get; }
 
     /// <summary>The declared capabilities of the endpoint, queryable via <see cref="ILlmClient.Capabilities"/>.</summary>
     public LlmEndpointCapabilities Capabilities { get; }
