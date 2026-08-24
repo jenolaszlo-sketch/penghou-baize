@@ -40,6 +40,12 @@ public sealed record LlmResponse(
     LlmProviderContinuation? ContentContinuation = null)
 {
     /// <summary>
+    /// Gets the provider-neutral classification of <see cref="FinishReason"/>.
+    /// </summary>
+    public LlmFinishReasonKind FinishReasonKind =>
+        LlmFinishReasonClassifier.Classify(FinishReason);
+
+    /// <summary>
     /// Gets the raw ordered content parts yielded by the provider stream.
     /// </summary>
     public IReadOnlyList<LlmContentPart>? Parts { get; init; }

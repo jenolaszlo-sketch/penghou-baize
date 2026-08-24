@@ -44,15 +44,20 @@ public sealed class StructuredOutputRepairingLlmClientDecorator(
 
             var events = new List<LlmStreamEvent>();
             var content = new StringBuilder();
+            string? finishReason = null;
             await foreach (var item in inner.StreamAsync(request, cancellationToken))
             {
                 events.Add(item);
                 if (item.Delta is not null)
                     content.Append(item.Delta);
+                if (item.FinishReason is not null)
+                    finishReason = item.FinishReason;
             }
 
             var repaired = await repairer.RepairAsync(
-                new LlmResponse(content.ToString()),
+                new LlmResponse(
+                    content.ToString(),
+                    FinishReason: finishReason),
                 request.ResponseFormat,
                 cancellationToken);
 

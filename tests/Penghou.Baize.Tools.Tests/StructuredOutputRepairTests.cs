@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Penghou.Baize.Tools.Extensions;
 using Penghou.Nuwa;
 using System.Text.Json;
@@ -70,6 +71,55 @@ public sealed class StructuredOutputRepairTests
         JsonSchemaExpectation.FromSchemaJson(FilesSchema)!
             .Validate(System.Text.Json.Nodes.JsonNode.Parse(response.Content)!)
             .Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RepairAsync_RepairsLengthLimitedOutputAndLogsWarning()
+    {
+        var logger = new RecordingLogger<LlmStructuredOutputRepairer>();
+        var repairer = new LlmStructuredOutputRepairer(
+            JsonRepairPipeline.Create(),
+            logger);
+
+        var response = await repairer.RepairAsync(
+            new LlmResponse(
+                "{\"name\":\"me",
+                FinishReason: "length"),
+            LlmResponseFormat.JsonSchema(NameSchema),
+            TestContext.Current.CancellationToken);
+
+        response.ContentWasRepaired.Should().BeTrue();
+        response.FinishReasonKind.Should().Be(
+            LlmFinishReasonKind.LengthLimit);
+        response.Content.Should().Be("""{"name":"me"}""");
+        logger.Messages.Should().ContainSingle(message =>
+            message.Contains("would have failed", StringComparison.Ordinal) &&
+            message.Contains("output token limit", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RepairAsync_LeavesSchemaIncompleteTruncationForParserAndLogsReason()
+    {
+        var logger = new RecordingLogger<LlmStructuredOutputRepairer>();
+        var repairer = new LlmStructuredOutputRepairer(
+            JsonRepairPipeline.Create(),
+            logger);
+        const string content = "{\"other\":\"value";
+
+        var response = await repairer.RepairAsync(
+            new LlmResponse(content, FinishReason: "max_tokens"),
+            LlmResponseFormat.JsonSchema(NameSchema),
+            TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be(content);
+        response.ContentWasRepaired.Should().BeFalse();
+        response.ContentRepairDiagnostics!.ShapeStatus.Should().Be(
+            LlmRepairShapeStatus.Mismatched);
+        response.ContentRepairDiagnostics.ShapeErrors.Should().Contain(
+            "$.name is required.");
+        logger.Messages.Should().ContainSingle(message =>
+            message.Contains("remained invalid", StringComparison.Ordinal) &&
+            message.Contains("output token limit", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -223,6 +273,27 @@ public sealed class StructuredOutputRepairTests
                             StrategyStatus.Failed)
                     ],
                     []));
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Warning)
+                Messages.Add(formatter(state, exception));
+        }
     }
 
     private const string FilesSchema =

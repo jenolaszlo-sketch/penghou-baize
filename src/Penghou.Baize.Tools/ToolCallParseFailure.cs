@@ -21,5 +21,11 @@ public enum ToolCallParseFailure
     SchemaValidationFailed,
 
     /// <summary>The validated arguments could not be deserialized to the result type.</summary>
-    DeserializationFailed
+    DeserializationFailed,
+
+    /// <summary>
+    /// The model reached its output limit and the resulting tool arguments
+    /// remained invalid or schema-incomplete after deterministic repair.
+    /// </summary>
+    TruncatedResponse
 }

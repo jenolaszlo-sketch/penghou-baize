@@ -38,10 +38,13 @@ public abstract class LlmToolResultParserBase<TResult>(
                 $"No '{ToolName}' tool call found.", response.Content);
         }
 
-        return ParseArguments(toolCall.ArgumentsJson);
+        return ParseArguments(toolCall.ArgumentsJson, response, toolCall);
     }
 
-    private ToolCallParseResult<TResult> ParseArguments(string argumentsJson)
+    private ToolCallParseResult<TResult> ParseArguments(
+        string argumentsJson,
+        LlmResponse response,
+        LlmToolCall toolCall)
     {
         if (string.IsNullOrWhiteSpace(argumentsJson))
             return ToolCallParseResult<TResult>.Failed(
@@ -58,7 +61,9 @@ public abstract class LlmToolResultParserBase<TResult>(
         }
         catch (JsonException ex)
         {
-            return ToolCallParseResult<TResult>.Failed(
+            return FailedForStructuredOutput(
+                response,
+                toolCall,
                 ToolCallParseFailure.InvalidJson,
                 $"Invalid JSON: {ex.Message}",
                 argumentsJson);
@@ -71,7 +76,9 @@ public abstract class LlmToolResultParserBase<TResult>(
                     "$",
                     out var duplicatePath))
             {
-                return ToolCallParseResult<TResult>.Failed(
+                return FailedForStructuredOutput(
+                    response,
+                    toolCall,
                     ToolCallParseFailure.SchemaValidationFailed,
                     $"Schema validation failed: duplicate property '{duplicatePath}'.",
                     argumentsJson);
@@ -87,7 +94,9 @@ public abstract class LlmToolResultParserBase<TResult>(
         }
         catch (JsonException ex)
         {
-            return ToolCallParseResult<TResult>.Failed(
+            return FailedForStructuredOutput(
+                response,
+                toolCall,
                 ToolCallParseFailure.InvalidJson,
                 $"Invalid JSON: {ex.Message}",
                 argumentsJson);
@@ -110,7 +119,9 @@ public abstract class LlmToolResultParserBase<TResult>(
         }
         catch (ArgumentException ex)
         {
-            return ToolCallParseResult<TResult>.Failed(
+            return FailedForStructuredOutput(
+                response,
+                toolCall,
                 ToolCallParseFailure.SchemaValidationFailed,
                 $"Schema validation could not materialize the JSON object: {ex.Message}",
                 argumentsJson);
@@ -118,7 +129,9 @@ public abstract class LlmToolResultParserBase<TResult>(
 
         if (validationErrors.Count > 0)
         {
-            return ToolCallParseResult<TResult>.Failed(
+            return FailedForStructuredOutput(
+                response,
+                toolCall,
                 ToolCallParseFailure.SchemaValidationFailed,
                 $"Schema validation failed: {string.Join(" ", validationErrors)}",
                 argumentsJson);
@@ -142,6 +155,40 @@ public abstract class LlmToolResultParserBase<TResult>(
                 ex.Message,
                 argumentsJson);
         }
+    }
+
+    private static ToolCallParseResult<TResult> FailedForStructuredOutput(
+        LlmResponse response,
+        LlmToolCall toolCall,
+        ToolCallParseFailure failure,
+        string error,
+        string raw)
+    {
+        if (response.FinishReasonKind != LlmFinishReasonKind.LengthLimit)
+        {
+            return ToolCallParseResult<TResult>.Failed(
+                failure,
+                error,
+                raw);
+        }
+
+        var repairAttempted =
+            toolCall.JsonRepairAttempts is not null ||
+            response.ContentRepairAttempts is not null;
+        var repairDetail = repairAttempted
+            ? " Deterministic JSON repair was attempted, but could not produce valid, schema-conforming output."
+            : string.Empty;
+        var diagnostics = toolCall.JsonRepairDiagnostics ??
+            response.ContentRepairDiagnostics;
+        var shapeDetail = diagnostics?.ShapeErrors.Count > 0
+            ? $" Repair shape errors: {string.Join(" ", diagnostics.ShapeErrors)}"
+            : string.Empty;
+
+        return ToolCallParseResult<TResult>.Failed(
+            ToolCallParseFailure.TruncatedResponse,
+            $"The model response was truncated after reaching its output token limit " +
+            $"(finish reason '{response.FinishReason}').{repairDetail} {error}{shapeDetail}",
+            raw);
     }
 
     private static bool TryFindDuplicateProperty(

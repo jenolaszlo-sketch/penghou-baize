@@ -26,6 +26,12 @@ public sealed record LlmStreamEvent(
     LlmProviderContinuation? Continuation = null)
 {
     /// <summary>
+    /// Gets the provider-neutral classification of <see cref="FinishReason"/>.
+    /// </summary>
+    public LlmFinishReasonKind FinishReasonKind =>
+        LlmFinishReasonClassifier.Classify(FinishReason);
+
+    /// <summary>
     /// Gets the provider-assigned index of the response content part this
     /// event updates. Events sharing an index are accumulated into one ordered
     /// part.
