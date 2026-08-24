@@ -223,10 +223,22 @@ public sealed class FalGenerationClient : GenerationClientBase
         };
         if (image.Inputs.Count > 0)
             payload["image_url"] = FormatMedia(image.Inputs[0], "image/png");
+        foreach (var reference in image.Inputs.Skip(1))
+            AddReference(payload, reference, "image/png");
         if (image.Count > 1)
             payload["num_images"] = image.Count;
         if (image.Seed is { } seed)
             payload["seed"] = seed;
+        if (!string.IsNullOrEmpty(image.AspectRatio))
+            payload["aspect_ratio"] = image.AspectRatio;
+        if (image.Size is { } imageSize)
+            payload["image_size"] = new JsonObject
+            {
+                ["width"] = imageSize.Width,
+                ["height"] = imageSize.Height
+            };
+        if (!string.IsNullOrEmpty(image.OutputFormat))
+            payload["output_format"] = NormalizeFormat(image.OutputFormat);
         return payload;
     }
 
@@ -240,8 +252,24 @@ public sealed class FalGenerationClient : GenerationClientBase
             payload["input_video"] = FormatMedia(video.SourceVideo, "video/mp4");
         else if (video.FirstFrame is not null)
             payload["image_url"] = FormatMedia(video.FirstFrame, "image/png");
+        if (video.LastFrame is not null)
+            payload["last_image_url"] = FormatMedia(video.LastFrame, "image/png");
+        foreach (var reference in video.References)
+            AddReference(payload, reference, "image/png");
+        if (video.Duration is { } duration)
+            payload["duration"] = (int)Math.Round(duration.TotalSeconds);
         if (video.Seed is { } seed)
             payload["seed"] = seed;
+        if (!string.IsNullOrEmpty(video.AspectRatio))
+            payload["aspect_ratio"] = video.AspectRatio;
+        if (video.Size is { } videoSize)
+            payload["video_size"] = new JsonObject
+            {
+                ["width"] = videoSize.Width,
+                ["height"] = videoSize.Height
+            };
+        if (video.GenerateAudio is { } generateAudio)
+            payload["generate_audio"] = generateAudio;
         return payload;
     }
 
@@ -255,8 +283,33 @@ public sealed class FalGenerationClient : GenerationClientBase
             payload["input_audio"] = FormatMedia(audio.SourceAudio, "audio/mp3");
         if (audio.Voice is { } voice)
             payload["voice"] = voice;
+        if (!string.IsNullOrEmpty(audio.OutputFormat))
+            payload["output_format"] = NormalizeFormat(audio.OutputFormat);
+        if (audio.Duration is { } duration)
+            payload["duration"] = (int)Math.Round(duration.TotalSeconds);
         return payload;
     }
+
+    private static void AddReference(
+        JsonObject payload,
+        LlmMediaSource reference,
+        string defaultMimeType)
+    {
+        if (payload["reference_image_urls"] is not JsonArray references)
+        {
+            references = [];
+            payload["reference_image_urls"] = references;
+        }
+
+        references.Add(FormatMedia(reference, defaultMimeType));
+    }
+
+    /// <summary>Accepts bare (<c>png</c>) or MIME-style (<c>image/png</c>) formats and sends the bare form.</summary>
+    private static string NormalizeFormat(string outputFormat) =>
+        outputFormat.Contains('/') &&
+        outputFormat.Split('/') is [_, var subtype]
+            ? subtype
+            : outputFormat;
 
     private static string FormatMedia(LlmMediaSource source, string defaultMimeType) =>
         source switch

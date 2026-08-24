@@ -199,7 +199,7 @@ public abstract class GenerationClientBase : IGenerationClient
     /// <param name="response">The success response.</param>
     /// <param name="context">A human-readable context label for error messages.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The parsed JSON root.</returns>
+    /// <returns>The parsed JSON root, cloned so it stays valid independently of the backing document.</returns>
     protected static async Task<JsonElement> ReadJsonAsync(
         HttpResponseMessage response,
         string context,
@@ -208,7 +208,10 @@ public abstract class GenerationClientBase : IGenerationClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         try
         {
-            return JsonDocument.Parse(body).RootElement;
+            // Clone detaches the element from the document's pooled buffers,
+            // so no undisposed JsonDocument is leaked to callers.
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.Clone();
         }
         catch (JsonException ex)
         {

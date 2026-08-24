@@ -150,12 +150,34 @@ public sealed class BaizeBatchCoordinator(
         CancellationToken cancellationToken = default)
     {
         ValidateHandle(handle);
+        // A provider fault on one part must not discard the other parts'
+        // statuses; the failing part surfaces as a Failed entry instead.
         var statuses = await Task.WhenAll(handle.Parts.Select(async part =>
-            new ProviderBatchPartStatus(
-                part,
-                await resolver.GetClient(part.EndpointId).GetStatusAsync(
-                    ToProviderHandle(part),
-                    cancellationToken))));
+            {
+                try
+                {
+                    return new ProviderBatchPartStatus(
+                        part,
+                        await resolver.GetClient(part.EndpointId).GetStatusAsync(
+                            ToProviderHandle(part),
+                            cancellationToken));
+                }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                    when (!IsTransient(exception))
+                {
+                    return new ProviderBatchPartStatus(
+                        part,
+                        new ProviderBatchStatus(
+                            BaizeBatchState.Failed,
+                            ProviderStatus:
+                                $"status unavailable: {exception.Message}"));
+                }
+            }));
 
         return new BaizeBatchStatus(
             handle.LogicalBatchId,
@@ -291,9 +313,12 @@ public sealed class BaizeBatchCoordinator(
         var results = new List<BaizeBatchResult>();
         var ids = new HashSet<string>(StringComparer.Ordinal);
 
-        var partResults = await Task.WhenAll(handle.Parts.Select(async part =>
-            (Part: part, Results: await resolver.GetClient(part.EndpointId)
-                .GetResultsAsync(ToProviderHandle(part), cancellationToken))));
+        var partResults = await WhenAllPartsReportedAsync(
+            handle,
+            handle.Parts.Select(async part =>
+                (Part: part, Results: await resolver.GetClient(part.EndpointId)
+                    .GetResultsAsync(ToProviderHandle(part), cancellationToken))),
+            cancellationToken);
 
         foreach (var (part, providerResults) in partResults)
         {
@@ -350,10 +375,80 @@ public sealed class BaizeBatchCoordinator(
     {
         ValidateHandle(handle);
 
-        await Task.WhenAll(handle.Parts.Select(part =>
-            resolver.GetClient(part.EndpointId).CancelAsync(
-                ToProviderHandle(part),
-                cancellationToken)));
+        // Attempt every part even when some fail, then report all failures
+        // together — cancelling the remaining providers still prevents
+        // billable work from running to completion.
+        await WhenAllPartsReportedAsync(
+            handle,
+            handle.Parts.Select(part =>
+                resolver.GetClient(part.EndpointId).CancelAsync(
+                    ToProviderHandle(part),
+                    cancellationToken)),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Awaits every part task even when individual parts fail. Caller-
+    /// initiated cancellation propagates immediately; otherwise all failures
+    /// are aggregated and thrown after every part has been attempted.
+    /// </summary>
+    private static Task WhenAllPartsReportedAsync(
+        BaizeBatchHandle handle,
+        IEnumerable<Task> tasks,
+        CancellationToken cancellationToken)
+    {
+        var wrapped = new List<Task<object?>>();
+        foreach (var task in tasks)
+        {
+            wrapped.Add(AwaitDiscardingResult(task));
+        }
+
+        return WhenAllPartsReportedAsync(
+            handle,
+            wrapped,
+            cancellationToken);
+    }
+
+    private static async Task<object?> AwaitDiscardingResult(Task task)
+    {
+        await task.ConfigureAwait(false);
+        return null;
+    }
+
+    private static async Task<T[]> WhenAllPartsReportedAsync<T>(
+        BaizeBatchHandle handle,
+        IEnumerable<Task<T>> tasks,
+        CancellationToken cancellationToken)
+    {
+        var all = tasks.ToArray();
+        var results = new T[all.Length];
+        var failures = new List<Exception>();
+
+        for (var index = 0; index < all.Length; index++)
+        {
+            try
+            {
+                results[index] = await all[index].ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(
+                $"One or more provider parts of logical batch '{handle.LogicalBatchId}' failed.",
+                failures);
+        }
+
+        return results;
     }
 
     private static ProviderBatchHandle ToProviderHandle(ProviderBatchPart part) =>

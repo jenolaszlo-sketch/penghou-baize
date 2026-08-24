@@ -53,6 +53,66 @@ public sealed class RunwayGenerationClientTests
         root.TryGetProperty("promptImage", out _).Should().BeFalse();
     }
 
+    // Regression: unsupported inputs must fail fast instead of silently
+    // degrading to text/image-to-video and billing the wrong generation.
+
+    [Fact]
+    public async Task SubmitAsync_VideoToVideo_FailsFastAsUnsupported()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"id":"task-x"}""");
+        var client = CreateClient(handler);
+
+        var action = () => client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "restyle",
+                SourceVideo = new LlmUriSource(new Uri("https://cdn.test/in.mp4"))
+            },
+            TestContext.Current.CancellationToken);
+
+        var exception = (await action.Should().ThrowAsync<BaizeException>()).Which;
+        exception.ErrorKind.Should().Be(GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SubmitAsync_LastFrame_FailsFastAsUnsupported()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"id":"task-x"}""");
+        var client = CreateClient(handler);
+
+        var action = () => client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "interpolate",
+                LastFrame = new LlmUriSource(new Uri("https://cdn.test/last.png"))
+            },
+            TestContext.Current.CancellationToken);
+
+        (await action.Should().ThrowAsync<BaizeException>())
+            .Which.ErrorKind.Should().Be(GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SubmitAsync_References_FailFastAsUnsupported()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"id":"task-x"}""");
+        var client = CreateClient(handler);
+
+        var action = () => client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "conditioned",
+                References = [new LlmUriSource(new Uri("https://cdn.test/ref.png"))]
+            },
+            TestContext.Current.CancellationToken);
+
+        (await action.Should().ThrowAsync<BaizeException>())
+            .Which.ErrorKind.Should().Be(GenerationErrorKind.UnsupportedCapability);
+        handler.Requests.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task SubmitAsync_TextToVideo_UsesConfiguredDefaultsWhenOmitted()
     {

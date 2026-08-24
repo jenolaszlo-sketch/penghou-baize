@@ -278,7 +278,7 @@ public sealed class GenerationBatchExecutorTests
             new GenerationBatchRequest(
                 new ImageGenerationRequest { Prompt = "icons" },
                 TotalCount: 2),
-            progress: new Progress<double>(value => reports.Add(value)),
+            progress: new SynchronousProgress(value => reports.Add(value)),
             cancellationToken: TestContext.Current.CancellationToken);
 
         result.AllSucceeded.Should().BeTrue();

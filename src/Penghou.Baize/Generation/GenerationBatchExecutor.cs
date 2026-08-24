@@ -124,11 +124,33 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
                         }
                     }
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    // Caller-initiated cancellation propagates; submitted
+                    // handles were already recorded by earlier iterations.
+                    throw;
+                }
                 catch (BaizeException exception)
                 {
                     lock (sync)
                     {
                         chunks[index] = new GenerationBatchChunk(slot, null, exception);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    // Never let an unexpected fault abort the submission
+                    // sweep: chunks that already returned handles are billable
+                    // and must be reported instead of discarded.
+                    lock (sync)
+                    {
+                        chunks[index] = new GenerationBatchChunk(
+                            slot,
+                            null,
+                            new BaizeException(
+                                $"Chunk submission failed unexpectedly: {exception.Message}",
+                                GenerationErrorKind.GenerationFailed,
+                                innerException: exception));
                     }
                 }
             }).ConfigureAwait(false);
@@ -187,9 +209,26 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
                     {
                         return;
                     }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        throw;
+                    }
                     catch (BaizeException exception)
                     {
                         completed[item.Chunk] = new GenerationBatchChunk(item.Slot, null, exception);
+                        return;
+                    }
+                    catch (Exception exception)
+                    {
+                        // An unexpected polling fault must not abort the wave
+                        // and strand the remaining billable handles.
+                        completed[item.Chunk] = new GenerationBatchChunk(
+                            item.Slot,
+                            null,
+                            new BaizeException(
+                                $"Polling failed unexpectedly: {exception.Message}",
+                                GenerationErrorKind.GenerationFailed,
+                                innerException: exception));
                         return;
                     }
 

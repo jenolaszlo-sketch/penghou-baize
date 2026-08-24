@@ -103,9 +103,13 @@ public sealed class GenerationExecutorTests
             }));
 
         var reports = new List<double>();
+
+        // Progress<T> posts callbacks to the thread pool, which races with
+        // ExecuteAsync returning. A synchronous recorder keeps the
+        // observation deterministic.
         var result = await executor.ExecuteAsync(
             ImageRequest(),
-            progress: new Progress<double>(value => reports.Add(value)),
+            progress: new SynchronousProgress(reports.Add),
             TestContext.Current.CancellationToken);
 
         result.Assets.Should().ContainSingle();
@@ -249,6 +253,7 @@ public sealed class GenerationExecutorTests
         provider.GetRequiredService<IGenerationExecutor>().Should()
             .BeOfType<GenerationExecutor>();
     }
+
 
     private sealed class FakeGenerationClient(GenerationCapabilities capabilities)
         : IGenerationClient

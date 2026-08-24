@@ -287,6 +287,33 @@ public sealed class RunwayGenerationClient : GenerationClientBase
     {
         ValidateRequest(request);
 
+        // Runway's task API has no video-to-video or interpolation inputs on
+        // this client; failing fast beats billing a degraded text/image
+        // generation that silently ignores the source assets.
+        if (request.SourceVideo is not null)
+        {
+            throw BaizeException.UnsupportedCapability(
+                "Runway does not support video-to-video generation; the request supplied SourceVideo.");
+        }
+
+        if (request.LastFrame is not null)
+        {
+            throw BaizeException.UnsupportedCapability(
+                "Runway does not support last-frame interpolation via this client; the request supplied LastFrame.");
+        }
+
+        if (request.References.Count > 0)
+        {
+            throw BaizeException.UnsupportedCapability(
+                "Runway does not support reference conditioning via this client; the request supplied References.");
+        }
+
+        if (request.Size is not null)
+        {
+            throw BaizeException.UnsupportedCapability(
+                "Runway does not support explicit pixel sizes; use AspectRatio instead.");
+        }
+
         RunwayTaskCreateResponse payload;
         if (request.FirstFrame is not null)
         {

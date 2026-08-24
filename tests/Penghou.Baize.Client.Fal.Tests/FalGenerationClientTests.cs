@@ -57,6 +57,85 @@ public sealed class FalGenerationClientTests
         body.RootElement.GetProperty("num_images").GetInt32().Should().Be(3);
     }
 
+    // Regression: validated request fields must reach the payload instead of
+    // being silently dropped (a caller sets Size, validation passes, and a
+    // wrong-sized asset gets billed).
+
+    [Fact]
+    public async Task SubmitAsync_ImageOptionalFields_AreMappedToPayload()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"request_id":"r-opt"}""");
+        var client = CreateClient(handler);
+
+        await client.SubmitAsync(
+            new ImageGenerationRequest
+            {
+                Prompt = "poster",
+                AspectRatio = "16:9",
+                Size = new GenerationImageSize(1920, 1080),
+                OutputFormat = "jpeg",
+                Inputs =
+                [
+                    new LlmUriSource(new Uri("https://cdn.test/r1.png")),
+                    new LlmUriSource(new Uri("https://cdn.test/r2.png"))
+                ]
+            },
+            TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        var root = body.RootElement;
+        root.GetProperty("aspect_ratio").GetString().Should().Be("16:9");
+        root.GetProperty("image_size").GetProperty("width").GetInt32().Should().Be(1920);
+        root.GetProperty("image_size").GetProperty("height").GetInt32().Should().Be(1080);
+        root.GetProperty("output_format").GetString().Should().Be("jpeg");
+        var references = root.GetProperty("reference_image_urls");
+        references.GetArrayLength().Should().Be(1);
+        references[0].GetString().Should().Be("https://cdn.test/r2.png");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_VideoOptionalFields_AreMappedToPayload()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"request_id":"r-vid"}""");
+        var client = CreateClient(handler);
+
+        await client.SubmitAsync(
+            new VideoGenerationRequest
+            {
+                Prompt = "drift through clouds",
+                Duration = TimeSpan.FromSeconds(6),
+                GenerateAudio = true,
+                LastFrame = new LlmUriSource(new Uri("https://cdn.test/last.png"))
+            },
+            TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        var root = body.RootElement;
+        root.GetProperty("duration").GetInt32().Should().Be(6);
+        root.GetProperty("generate_audio").GetBoolean().Should().BeTrue();
+        root.GetProperty("last_image_url").GetString().Should().Be("https://cdn.test/last.png");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_AudioOutputFormat_MimeFormIsNormalized()
+    {
+        var handler = new RecordingHandler().ReturnJson("""{"request_id":"r-aud"}""");
+        var client = CreateClient(handler);
+
+        await client.SubmitAsync(
+            new AudioGenerationRequest
+            {
+                Prompt = "lo-fi loop",
+                OutputFormat = "audio/wav",
+                Duration = TimeSpan.FromSeconds(30)
+            },
+            TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.GetProperty("output_format").GetString().Should().Be("wav");
+        body.RootElement.GetProperty("duration").GetInt32().Should().Be(30);
+    }
+
     [Fact]
     public async Task SubmitAsync_ImageToImage_WithUriInput_SendsImageUrl()
     {
