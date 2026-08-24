@@ -65,6 +65,7 @@ code change is required when upgrading the application's target framework.
 - Provider guides: [DeepSeek](docs/providers/deepseek.md) and
   [Gemini](docs/providers/gemini.md)
 - [Generation client roadmap](docs/roadmap-generation-client.md)
+- [Streaming integrity and protocol reliability roadmap](docs/roadmap-streaming-integrity.md)
 - [Generation contract matrix](docs/generation-contract-matrix.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
