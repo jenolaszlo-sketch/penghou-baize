@@ -701,6 +701,62 @@ public sealed class RunwayGenerationClientTests
         registry.Find("Runway", "runway-gen-1")!.Capabilities.Features.Should().HaveFlag(GenerationFeature.TextToVideo);
     }
 
+    [Fact]
+    public void AddBaizeRunwayGeneration_RegistersEagerlyWithoutKeyedResolution()
+    {
+        var services = new ServiceCollection();
+        services.AddHttpClient();
+        services.AddBaizeGeneration();
+        services.AddBaizeRunwayGeneration("runway-gen-1", options =>
+        {
+            options.ApiKey = "secret";
+            options.Model = "gen4.5";
+        });
+        using var provider = services.BuildServiceProvider();
+
+        // Resolving only the registry must materialize the endpoint: routing
+        // sees every configured endpoint without any keyed-client lookup.
+        var registry = provider.GetRequiredService<IGenerationClientRegistry>();
+        registry.Endpoints.Should().Contain(endpoint =>
+            endpoint.Provider == "Runway" && endpoint.EndpointId == "runway-gen-1");
+    }
+
+    [Fact]
+    public void RegistryResolution_RejectsMissingApiKey()
+    {
+        var services = new ServiceCollection();
+        services.AddHttpClient();
+        services.AddBaizeGeneration();
+        services.AddBaizeRunwayGeneration("bad-endpoint", options => options.Model = "gen4.5");
+        using var provider = services.BuildServiceProvider();
+
+        var resolve = () => provider.GetRequiredService<IGenerationClientRegistry>();
+
+        var exception = resolve.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("bad-endpoint");
+        exception.Message.Should().Contain("ApiKey");
+    }
+
+    [Fact]
+    public void RegistryResolution_RejectsMissingModel()
+    {
+        var services = new ServiceCollection();
+        services.AddHttpClient();
+        services.AddBaizeGeneration();
+        services.AddBaizeRunwayGeneration("bad-endpoint", options =>
+        {
+            options.ApiKey = "secret";
+            options.Model = " ";
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var resolve = () => provider.GetRequiredService<IGenerationClientRegistry>();
+
+        var exception = resolve.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("bad-endpoint");
+        exception.Message.Should().Contain("Model");
+    }
+
     private static GenerationOperationHandle Handle(string id) =>
         new("Runway", "runway-gen-1", id, "gen4.5");
 
