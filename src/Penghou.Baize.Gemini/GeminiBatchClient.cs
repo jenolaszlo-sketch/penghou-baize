@@ -14,7 +14,7 @@ namespace Penghou.Baize.Gemini;
 /// stateless: a submitted batch can be resumed purely through its serializable
 /// <see cref="ProviderBatchHandle"/>.
 /// </summary>
-public sealed class GeminiBatchClient : IBaizeBatchClient
+public sealed class GeminiBatchClient : BaizeBatchClientBase
 {
     private const string InputFileName = "batch-input.jsonl";
     private const string InputFileMimeType = "application/jsonl";
@@ -26,9 +26,6 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private readonly string _model;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly string _apiKey;
     private readonly Uri _uploadUri;
     private readonly Uri _createUri;
     private readonly string _rootBase;
@@ -37,11 +34,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     private readonly LlmEndpointCapabilities _capabilities;
     private readonly ILlmSchemaAdapter _schemaAdapter;
 
-    /// <inheritdoc />
-    public string ProviderId => "Gemini";
-
-    /// <inheritdoc />
-    public BatchCapabilities Capabilities => _capabilities.Batch;
+    /// <summary>Applies the Gemini API-key header scheme.</summary>
+    protected override void ApplyAuth(HttpRequestMessage request) =>
+        ApplyCredentialHeader(request, "x-goog-api-key");
 
     /// <summary>
     /// Creates a Gemini Batch API client.
@@ -59,10 +54,8 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         ILlmSchemaAdapter? schemaAdapter = null)
+        : base("Gemini", model, httpClientFactory, apiKey, capabilities)
     {
-        _httpClientFactory = httpClientFactory;
-        _model = model;
-        _apiKey = apiKey;
         _capabilities = capabilities;
         _schemaAdapter = schemaAdapter ?? GeminiSchemaAdapter.Default;
 
@@ -85,7 +78,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchHandle> SubmitAsync(
+    public override async Task<ProviderBatchHandle> SubmitAsync(
         IReadOnlyList<BaizeBatchItem> items,
         BatchSubmissionOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -93,7 +86,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         BatchRequestValidator.ValidateItems(items, ProviderId);
 
         foreach (var item in items)
-            GeminiMessageRequestMapper.Validate(_model, _capabilities, item.Request);
+            GeminiMessageRequestMapper.Validate(Model, _capabilities, item.Request);
 
         var jsonl = BuildJsonl(items);
 
@@ -117,7 +110,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             _createUri);
 
-        SetApiKey(createRequest);
+        ApplyAuth(createRequest);
 
         createRequest.Content = new StringContent(
             JsonSerializer.Serialize(createBody, JsonOptions),
@@ -125,7 +118,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             "application/json");
 
         var operation = await SendAsync<GeminiBatchOperation>(
+
             createRequest,
+            JsonOptions,
             cancellationToken);
 
         if (string.IsNullOrEmpty(operation.Name))
@@ -145,7 +140,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchStatus> GetStatusAsync(
+    public override async Task<ProviderBatchStatus> GetStatusAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -170,7 +165,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
+    public override async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -243,7 +238,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task CancelAsync(
+    public override async Task CancelAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -259,10 +254,11 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             new Uri($"{_versionedBase}/{handle.BatchId}:cancel"));
 
-        SetApiKey(request);
+        ApplyAuth(request);
 
         await SendAsync<JsonElement>(
             request,
+            JsonOptions,
             cancellationToken);
     }
 
@@ -276,10 +272,12 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_versionedBase}/{handle.BatchId}"));
 
-        SetApiKey(request);
+        ApplyAuth(request);
 
         return await SendAsync<GeminiBatchOperation>(
+
             request,
+            JsonOptions,
             cancellationToken);
     }
 
@@ -289,7 +287,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
     {
         var bytes = Encoding.UTF8.GetBytes(jsonl);
         using var startRequest = new HttpRequestMessage(HttpMethod.Post, _uploadUri);
-        SetApiKey(startRequest);
+        ApplyAuth(startRequest);
         startRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Protocol", "resumable");
         startRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Command", "start");
         startRequest.Headers.TryAddWithoutValidation(
@@ -305,7 +303,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             Encoding.UTF8,
             "application/json");
 
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
+        var httpClient = CreateTransport();
         using var startResponse = await httpClient.SendAsync(
             startRequest,
             HttpCompletionOption.ResponseHeadersRead,
@@ -330,7 +328,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         using var uploadRequest = new HttpRequestMessage(
             HttpMethod.Post,
             new Uri(uploadUrls.First()!));
-        SetApiKey(uploadRequest);
+        ApplyAuth(uploadRequest);
         uploadRequest.Headers.TryAddWithoutValidation(
             "X-Goog-Upload-Command",
             "upload, finalize");
@@ -339,7 +337,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         uploadRequest.Content.Headers.ContentType = new MediaTypeHeaderValue(InputFileMimeType);
 
         var upload = await SendAsync<GeminiFileUploadResponse>(
+
             uploadRequest,
+            JsonOptions,
             cancellationToken);
         var file = upload.File;
 
@@ -359,9 +359,9 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_rootBase}/download/{_apiVersion}/{fileName}:download?alt=media"));
 
-        SetApiKey(request);
+        ApplyAuth(request);
 
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
+        var httpClient = CreateTransport();
 
         using var response = await httpClient.SendAsync(
             request,
@@ -388,7 +388,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         foreach (var item in items)
         {
             var wireRequest = GeminiMessageRequestMapper.Build(
-                _model,
+                Model,
                 _capabilities,
                 item.Request,
                 _schemaAdapter,
@@ -441,47 +441,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         return results;
     }
 
-    private async Task<T> SendAsync<T>(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
-        using var response = await httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var responseBody = await response.Content.ReadAsStringAsync(
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new LlmClientException(
-                $"Gemini batch request failed with HTTP {(int)response.StatusCode}: {responseBody}",
-                (int)response.StatusCode);
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(responseBody, JsonOptions)
-                ?? throw new LlmClientException(
-                    $"Gemini returned an empty {typeof(T).Name} body.",
-                    LlmClientFailureKind.Protocol);
-        }
-        catch (JsonException ex)
-        {
-            throw new LlmClientException(
-                $"Failed to parse Gemini batch response: {responseBody}",
-                ex);
-        }
-    }
-
-    private void SetApiKey(HttpRequestMessage request)
-    {
-        if (!string.IsNullOrEmpty(_apiKey))
-            request.Headers.Add("x-goog-api-key", _apiKey);
-    }
 
     private static string ReadDisplayName(BatchSubmissionOptions? options) =>
         options?.Metadata is { } metadata &&
@@ -490,16 +450,6 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             ? name
             : DefaultDisplayName;
 
-    private static IEnumerable<string> SplitJsonl(string content)
-    {
-        using var reader = new StringReader(content);
-
-        while (reader.ReadLine() is { } line)
-        {
-            if (!string.IsNullOrWhiteSpace(line))
-                yield return line;
-        }
-    }
 
     private static string? ReadNestedString(
         JsonElement root,

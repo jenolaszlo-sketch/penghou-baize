@@ -12,7 +12,7 @@ namespace Penghou.Baize.Claude;
 /// file. The client is stateless: a submitted batch can be resumed purely
 /// through its serializable <see cref="ProviderBatchHandle"/>.
 /// </summary>
-public sealed class ClaudeBatchClient : IBaizeBatchClient
+public sealed class ClaudeBatchClient : BaizeBatchClientBase
 {
     private const string AnthropicVersion = "2023-06-01";
 
@@ -21,18 +21,16 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private readonly string _model;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly string _apiKey;
     private readonly Uri _batchesUri;
     private readonly LlmEndpointCapabilities _capabilities;
     private readonly ClaudeThinkingStyle _thinkingStyle;
 
-    /// <inheritdoc />
-    public string ProviderId => "Claude";
-
-    /// <inheritdoc />
-    public BatchCapabilities Capabilities => _capabilities.Batch;
+    /// <summary>Applies the Anthropic credential and transport-version headers.</summary>
+    protected override void ApplyAuth(HttpRequestMessage request)
+    {
+        ApplyCredentialHeader(request, "x-api-key");
+        request.Headers.Add("anthropic-version", AnthropicVersion);
+    }
 
     /// <summary>
     /// Creates an Anthropic Messages Batch client.
@@ -50,10 +48,8 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         ClaudeThinkingStyle thinkingStyle = ClaudeThinkingStyle.Adaptive)
+        : base("Claude", model, httpClientFactory, apiKey, capabilities)
     {
-        _httpClientFactory = httpClientFactory;
-        _model = model;
-        _apiKey = apiKey;
         _capabilities = capabilities;
         _thinkingStyle = thinkingStyle;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
@@ -61,7 +57,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchHandle> SubmitAsync(
+    public override async Task<ProviderBatchHandle> SubmitAsync(
         IReadOnlyList<BaizeBatchItem> items,
         BatchSubmissionOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -69,7 +65,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
         BatchRequestValidator.ValidateItems(items, ProviderId);
 
         foreach (var item in items)
-            ClaudeMessageRequestMapper.Validate(_model, _capabilities, item.Request);
+            ClaudeMessageRequestMapper.Validate(Model, _capabilities, item.Request);
 
         var createBody = new ClaudeMessageBatchCreateRequest
         {
@@ -78,7 +74,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
                 {
                     CustomId = item.RequestId,
                     Params = ClaudeMessageRequestMapper.Build(
-                        _model,
+                        Model,
                         _capabilities,
                         _thinkingStyle,
                         item.Request,
@@ -92,7 +88,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             _batchesUri);
 
-        SetHeaders(request);
+        ApplyAuth(request);
 
         request.Content = new StringContent(
             JsonSerializer.Serialize(createBody, JsonOptions),
@@ -101,6 +97,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
 
         var batch = await SendAsync<ClaudeMessageBatch>(
             request,
+            JsonOptions,
             cancellationToken);
 
         if (string.IsNullOrEmpty(batch.Id))
@@ -114,7 +111,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchStatus> GetStatusAsync(
+    public override async Task<ProviderBatchStatus> GetStatusAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -124,10 +121,11 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_batchesUri}/{handle.BatchId}"));
 
-        SetHeaders(request);
+        ApplyAuth(request);
 
         var batch = await SendAsync<ClaudeMessageBatch>(
             request,
+            JsonOptions,
             cancellationToken);
 
         return new ProviderBatchStatus(
@@ -141,7 +139,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
+    public override async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -151,9 +149,9 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_batchesUri}/{handle.BatchId}/results"));
 
-        SetHeaders(request);
+        ApplyAuth(request);
 
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
+        var httpClient = CreateTransport();
 
         using var response = await httpClient.SendAsync(
             request,
@@ -203,7 +201,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task CancelAsync(
+    public override async Task CancelAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -219,63 +217,12 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             new Uri($"{_batchesUri}/{handle.BatchId}/cancel"));
 
-        SetHeaders(request);
+        ApplyAuth(request);
 
-        await SendAsync<ClaudeMessageBatch>(request, cancellationToken);
+        await SendAsync<ClaudeMessageBatch>(request, JsonOptions, cancellationToken);
     }
 
-    private void SetHeaders(HttpRequestMessage request)
-    {
-        request.Headers.Add("x-api-key", _apiKey);
-        request.Headers.Add("anthropic-version", AnthropicVersion);
-    }
 
-    private async Task<T> SendAsync<T>(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
-
-        using var response = await httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var responseBody = await response.Content.ReadAsStringAsync(
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new LlmClientException(
-                $"Anthropic batch request failed with HTTP {(int)response.StatusCode}: {responseBody}",
-                (int)response.StatusCode);
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(responseBody, JsonOptions)
-                ?? throw new LlmClientException(
-                    $"Anthropic returned an empty {typeof(T).Name} body.",
-                    LlmClientFailureKind.Protocol);
-        }
-        catch (JsonException ex)
-        {
-            throw new LlmClientException(
-                $"Failed to parse Anthropic batch response: {responseBody}",
-                ex);
-        }
-    }
-
-    private static IEnumerable<string> SplitJsonl(string content)
-    {
-        using var reader = new StringReader(content);
-
-        while (reader.ReadLine() is { } line)
-        {
-            if (!string.IsNullOrWhiteSpace(line))
-                yield return line;
-        }
-    }
 
     private static BaizeBatchResult NormalizeResult(
         ClaudeMessageBatchResultLine line)

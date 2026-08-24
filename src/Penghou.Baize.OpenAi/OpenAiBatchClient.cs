@@ -13,7 +13,7 @@ namespace Penghou.Baize.OpenAi;
 /// file. The client is stateless: a submitted batch can be resumed purely
 /// through its serializable <see cref="ProviderBatchHandle"/>.
 /// </summary>
-public sealed class OpenAiBatchClient : IBaizeBatchClient
+public sealed class OpenAiBatchClient : BaizeBatchClientBase
 {
     private const string BatchEndpoint = "/v1/chat/completions";
     private const string CompletionWindow = "24h";
@@ -28,19 +28,17 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
                 JsonIgnoreCondition.WhenWritingNull
         };
 
-    private readonly string _model;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly string _apiKey;
     private readonly Uri _filesUri;
     private readonly Uri _batchesUri;
     private readonly OpenAiDialect _dialect;
-    private readonly LlmEndpointCapabilities _capabilities;
+    private readonly LlmEndpointCapabilities _effectiveCapabilities;
 
-    /// <inheritdoc />
-    public string ProviderId => "OpenAi";
+    /// <summary>Wire display name; the registry provider key is "OpenAi".</summary>
+    protected override string ProviderDisplayName => "OpenAI";
 
-    /// <inheritdoc />
-    public BatchCapabilities Capabilities => _capabilities.Batch;
+    /// <summary>Applies the OpenAI bearer scheme.</summary>
+    protected override void ApplyAuth(HttpRequestMessage request) =>
+        ApplyBearerAuth(request);
 
     /// <summary>
     /// Creates an OpenAI Batch API client.
@@ -58,19 +56,17 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         string baseUrl,
         LlmEndpointCapabilities capabilities,
         OpenAiDialect dialect = OpenAiDialect.Standard)
+        : base("OpenAi", model, httpClientFactory, apiKey, OpenAiDialectPolicy.Apply(capabilities, dialect))
     {
-        _model = model;
-        _httpClientFactory = httpClientFactory;
-        _apiKey = apiKey;
         _dialect = dialect;
-        _capabilities = OpenAiDialectPolicy.Apply(capabilities, dialect);
+        _effectiveCapabilities = OpenAiDialectPolicy.Apply(capabilities, dialect);
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _filesUri = new Uri($"{normalizedBaseUrl}/files");
         _batchesUri = new Uri($"{normalizedBaseUrl}/batches");
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchHandle> SubmitAsync(
+    public override async Task<ProviderBatchHandle> SubmitAsync(
         IReadOnlyList<BaizeBatchItem> items,
         BatchSubmissionOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -78,7 +74,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         BatchRequestValidator.ValidateItems(items, ProviderId);
 
         foreach (var item in items)
-            LlmRequestValidator.Validate(_model, _capabilities, item.Request);
+            LlmRequestValidator.Validate(Model, _effectiveCapabilities, item.Request);
 
         var jsonl = BuildJsonl(items);
 
@@ -89,7 +85,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         using var createRequest =
             new HttpRequestMessage(HttpMethod.Post, _batchesUri);
 
-        SetAuthorization(createRequest);
+        ApplyAuth(createRequest);
 
         if (!string.IsNullOrEmpty(options?.IdempotencyKey))
         {
@@ -113,6 +109,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
 
         var batch = await SendAsync<OpenAiBatch>(
             createRequest,
+            JsonOptions,
             cancellationToken);
 
         if (string.IsNullOrEmpty(batch.Id))
@@ -132,7 +129,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<ProviderBatchStatus> GetStatusAsync(
+    public override async Task<ProviderBatchStatus> GetStatusAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -142,11 +139,17 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_batchesUri}/{handle.BatchId}"));
 
-        SetAuthorization(request);
+        ApplyAuth(request);
 
         var batch = await SendAsync<OpenAiBatch>(
             request,
+            JsonOptions,
             cancellationToken);
+
+        if (string.IsNullOrEmpty(batch.Id))
+            throw new LlmClientException(
+                "OpenAI batch creation returned no batch identifier.",
+                LlmClientFailureKind.Protocol);
 
         return new ProviderBatchStatus(
             State: MapState(batch.Status),
@@ -157,7 +160,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
+    public override async Task<IReadOnlyList<BaizeBatchResult>> GetResultsAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -197,7 +200,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
     }
 
     /// <inheritdoc />
-    public async Task CancelAsync(
+    public override async Task CancelAsync(
         ProviderBatchHandle handle,
         CancellationToken cancellationToken = default)
     {
@@ -213,9 +216,9 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             new Uri($"{_batchesUri}/{handle.BatchId}/cancel"));
 
-        SetAuthorization(request);
+        ApplyAuth(request);
 
-        await SendAsync<OpenAiBatch>(request, cancellationToken);
+        await SendAsync<OpenAiBatch>(request, JsonOptions, cancellationToken);
     }
 
     private async Task<OpenAiBatch> GetBatchAsync(
@@ -226,9 +229,9 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
             HttpMethod.Get,
             new Uri($"{_batchesUri}/{handle.BatchId}"));
 
-        SetAuthorization(request);
+        ApplyAuth(request);
 
-        return await SendAsync<OpenAiBatch>(request, cancellationToken);
+        return await SendAsync<OpenAiBatch>(request, JsonOptions, cancellationToken);
     }
 
     private async Task<IReadOnlyList<BaizeBatchResult>> ReadResultsFileAsync(
@@ -238,9 +241,9 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
             new Uri($"{_filesUri}/{fileId}/content"));
-        SetAuthorization(request);
+        ApplyAuth(request);
 
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
+        var httpClient = CreateTransport();
         using var response = await httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
@@ -292,7 +295,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
             HttpMethod.Post,
             _filesUri);
 
-        SetAuthorization(request);
+        ApplyAuth(request);
 
         using var form = new MultipartFormDataContent();
 
@@ -309,6 +312,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
 
         var file = await SendAsync<OpenAiFile>(
             request,
+            JsonOptions,
             cancellationToken);
 
         if (string.IsNullOrEmpty(file.Id))
@@ -326,8 +330,8 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         foreach (var item in items)
         {
             var wireRequest = OpenAiChatCompletionRequestMapper.Build(
-                _model,
-                _capabilities,
+                Model,
+                _effectiveCapabilities,
                 _dialect,
                 item.Request,
                 streaming: false);
@@ -347,59 +351,6 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         return builder.ToString();
     }
 
-    private async Task<T> SendAsync<T>(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
-
-        using var response = await httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var responseBody = await response.Content.ReadAsStringAsync(
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new LlmClientException(
-                $"OpenAI batch request failed with HTTP {(int)response.StatusCode}: {responseBody}",
-                (int)response.StatusCode);
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(responseBody, JsonOptions)
-                ?? throw new LlmClientException(
-                    $"OpenAI returned an empty {typeof(T).Name} body.",
-                    LlmClientFailureKind.Protocol);
-        }
-        catch (JsonException ex)
-        {
-            throw new LlmClientException(
-                $"Failed to parse OpenAI batch response: {responseBody}",
-                ex);
-        }
-    }
-
-    private void SetAuthorization(HttpRequestMessage request)
-    {
-        if (!string.IsNullOrEmpty(_apiKey))
-            request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", _apiKey);
-    }
-
-    private static IEnumerable<string> SplitJsonl(string content)
-    {
-        using var reader = new StringReader(content);
-
-        while (reader.ReadLine() is { } line)
-        {
-            if (!string.IsNullOrWhiteSpace(line))
-                yield return line;
-        }
-    }
 
     private static BaizeBatchResult NormalizeResult(
         OpenAiBatchOutputLine line)
