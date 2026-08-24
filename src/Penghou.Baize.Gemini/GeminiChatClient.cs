@@ -55,7 +55,7 @@ public sealed class GeminiChatClient : LlmClientBase
             normalizedBaseUrl[
                 (normalizedBaseUrl.LastIndexOf('/') + 1)..];
         var includeVersionSegment =
-            !LooksLikeApiVersion(lastSegment);
+            !GeminiUrl.LooksLikeApiVersion(lastSegment);
         _apiVersion = includeVersionSegment ? "v1beta" : lastSegment;
         _schemaAdapter = schemaAdapter ?? GeminiSchemaAdapter.Default;
 
@@ -63,6 +63,13 @@ public sealed class GeminiChatClient : LlmClientBase
             $"{normalizedBaseUrl}" +
             $"{(includeVersionSegment ? "/v1beta" : string.Empty)}" +
             $"/models/{model}:streamGenerateContent?alt=sse");
+    }
+
+    /// <summary>Applies the Gemini API-key header scheme.</summary>
+    protected override void ApplyAuth(HttpRequestMessage httpRequest)
+    {
+        if (!string.IsNullOrEmpty(ApiKey))
+            httpRequest.Headers.Add("x-goog-api-key", ApiKey);
     }
 
     /// <inheritdoc />
@@ -78,10 +85,6 @@ public sealed class GeminiChatClient : LlmClientBase
                 HttpMethod.Post,
                 _chatUri);
 
-        httpRequest.Headers.Add(
-            "x-goog-api-key",
-            ApiKey);
-
         httpRequest.Content =
             new StringContent(
                 json,
@@ -95,7 +98,7 @@ public sealed class GeminiChatClient : LlmClientBase
     protected override void ValidateRequest(LlmRequest request) =>
         GeminiMessageRequestMapper.Validate(Model, Capabilities, request);
 
-    /// <inheritdoc />
+    /// <summary>Maps the neutral request onto the Gemini wire format.</summary>
     private GeminiChatRequest ToWireRequest(LlmRequest request) =>
         GeminiMessageRequestMapper.Build(
             Model,
@@ -104,10 +107,6 @@ public sealed class GeminiChatClient : LlmClientBase
             _schemaAdapter,
             _apiVersion);
 
-    private static bool LooksLikeApiVersion(string segment) =>
-        segment.Length >= 2 &&
-        segment[0] == 'v' &&
-        char.IsDigit(segment[1]);
 
     /// <inheritdoc />
     protected override async IAsyncEnumerable<LlmStreamEvent> ProcessStreamAsync(

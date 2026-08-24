@@ -6,6 +6,16 @@ namespace Penghou.Baize;
 public static class BaizeHttp
 {
     /// <summary>
+    /// The shared named HttpClient every Baize transport consumer obtains
+    /// through <c>IHttpClientFactory.CreateClient</c>. Registered by core via
+    /// <c>AddBaizeTransport</c>; the optional Diagnostics package layers
+    /// traffic capture on top.
+    /// </summary>
+    public const string ClientName = "llm";
+
+    /// <summary>The default request timeout applied by <c>AddBaizeTransport</c>.</summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(100);
+    /// <summary>
     /// Wraps an <see cref="IHttpClientFactory"/> so every client it creates
     /// carries the supplied per-request timeout. The global transport default
     /// (registered by <c>AddBaizeTransport</c>) stays in force until the

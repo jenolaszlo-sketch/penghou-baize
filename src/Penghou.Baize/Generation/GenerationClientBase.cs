@@ -92,11 +92,36 @@ public abstract class GenerationClientBase : IGenerationClient
     /// <summary>A human-readable endpoint label used in validation messages.</summary>
     protected virtual string EndpointDescription => $"{_provider} endpoint '{_endpointId}'";
 
+    /// <summary>
+    /// The provider display name used in handle-ownership errors; defaults to
+    /// <see cref="Provider"/>. Override when the wire display differs from the
+    /// registry provider key (for example "OpenAI" vs "OpenAi").
+    /// </summary>
+    protected virtual string ProviderDisplayName => _provider;
+
     /// <summary>Creates an operation handle pinned to this endpoint.</summary>
     /// <param name="id">The provider-assigned operation id.</param>
     /// <returns>The pinned handle.</returns>
     protected GenerationOperationHandle CreateHandle(string id) =>
         new(_provider, _endpointId, id, _model);
+
+    /// <summary>
+    /// Rejects handles that were not issued by this endpoint, so status reads
+    /// and cancellations can never be routed to the wrong provider or
+    /// endpoint by a persisted handle.
+    /// </summary>
+    /// <param name="handle">The operation handle to check.</param>
+    protected void EnsureHandleOwnership(GenerationOperationHandle handle)
+    {
+        ArgumentNullException.ThrowIfNull(handle);
+        if (!string.Equals(handle.Provider, _provider, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(handle.EndpointId, _endpointId, StringComparison.Ordinal))
+        {
+            throw BaizeException.InvalidRequest(
+                $"Handle '{handle.Provider}/{handle.EndpointId}/{handle.Id}' does not belong to " +
+                $"{ProviderDisplayName} endpoint '{_endpointId}'.");
+        }
+    }
 
     /// <summary>
     /// Validates the request against the endpoint capabilities. Providers that
@@ -147,7 +172,7 @@ public abstract class GenerationClientBase : IGenerationClient
         {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient("llm");
+                var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
                 response = await httpClient.SendAsync(
                     httpRequest,
                     HttpCompletionOption.ResponseHeadersRead,

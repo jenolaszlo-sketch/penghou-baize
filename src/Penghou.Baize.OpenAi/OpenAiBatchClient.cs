@@ -240,7 +240,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
             new Uri($"{_filesUri}/{fileId}/content"));
         SetAuthorization(request);
 
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
         using var response = await httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
@@ -351,7 +351,7 @@ public sealed class OpenAiBatchClient : IBaizeBatchClient
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
         using var response = await httpClient.SendAsync(
             request,

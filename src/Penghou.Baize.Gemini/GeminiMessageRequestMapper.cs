@@ -368,19 +368,6 @@ internal static class GeminiMessageRequestMapper
 
     private static JsonElement ParseJsonElement(
         string? json,
-        string context)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new LlmClientException($"Missing JSON for {context}.");
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            throw new LlmClientException($"Failed to parse {context}: {json}", ex);
-        }
-    }
+        string context) =>
+        LlmJson.ParseElement(json, context);
 }

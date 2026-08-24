@@ -70,7 +70,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         var lastSegment =
             normalizedBaseUrl[
                 (normalizedBaseUrl.LastIndexOf('/') + 1)..];
-        var includeVersionSegment = !LooksLikeApiVersion(lastSegment);
+        var includeVersionSegment = !GeminiUrl.LooksLikeApiVersion(lastSegment);
         var rootBase = includeVersionSegment
             ? normalizedBaseUrl
             : normalizedBaseUrl[..normalizedBaseUrl.LastIndexOf('/')];
@@ -305,7 +305,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
             Encoding.UTF8,
             "application/json");
 
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
         using var startResponse = await httpClient.SendAsync(
             startRequest,
             HttpCompletionOption.ResponseHeadersRead,
@@ -361,7 +361,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
 
         SetApiKey(request);
 
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
         using var response = await httpClient.SendAsync(
             request,
@@ -445,7 +445,7 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
         using var response = await httpClient.SendAsync(
             request,
@@ -786,8 +786,4 @@ public sealed class GeminiBatchClient : IBaizeBatchClient
         }
     }
 
-    private static bool LooksLikeApiVersion(string segment) =>
-        segment.Length >= 2 &&
-        segment[0] == 'v' &&
-        char.IsDigit(segment[1]);
 }

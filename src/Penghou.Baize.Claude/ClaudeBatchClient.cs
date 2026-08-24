@@ -153,7 +153,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
 
         SetHeaders(request);
 
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
         using var response = await httpClient.SendAsync(
             request,
@@ -234,7 +234,7 @@ public sealed class ClaudeBatchClient : IBaizeBatchClient
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var httpClient = _httpClientFactory.CreateClient("llm");
+        var httpClient = _httpClientFactory.CreateClient(BaizeHttp.ClientName);
 
         using var response = await httpClient.SendAsync(
             request,

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -46,9 +46,18 @@ public sealed class OpenAiChatClient : LlmClientBase
         OpenAiDialect dialect = OpenAiDialect.Standard)
         : base(model, httpClientFactory, apiKey, OpenAiDialectPolicy.Apply(capabilities, dialect), "OpenAi")
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseUrl);
         _dialect = dialect;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _chatCompletionsUri = new Uri($"{normalizedBaseUrl}/chat/completions");
+    }
+
+    /// <summary>Applies the OpenAI bearer scheme.</summary>
+    protected override void ApplyAuth(HttpRequestMessage httpRequest)
+    {
+        if (!string.IsNullOrEmpty(ApiKey))
+            httpRequest.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", ApiKey);
     }
 
     /// <inheritdoc />
@@ -58,10 +67,6 @@ public sealed class OpenAiChatClient : LlmClientBase
         var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             _chatCompletionsUri);
-
-        if (!string.IsNullOrEmpty(ApiKey))
-            httpRequest.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", ApiKey);
 
         var json = JsonSerializer.Serialize(wireRequest, JsonOptions);
 
@@ -73,7 +78,7 @@ public sealed class OpenAiChatClient : LlmClientBase
         return httpRequest;
     }
 
-    /// <inheritdoc />
+    /// <summary>Maps the neutral request onto the OpenAI wire format.</summary>
     private OpenAiChatCompletionRequest ToWireRequest(LlmRequest request) =>
         OpenAiChatCompletionRequestMapper.Build(
             Model,

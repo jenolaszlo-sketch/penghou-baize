@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -45,9 +45,18 @@ public sealed class ClaudeChatClient : LlmClientBase
         ClaudeThinkingStyle thinkingStyle = ClaudeThinkingStyle.Adaptive)
         : base(model, httpClientFactory, apiKey, capabilities, "Claude")
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseUrl);
         _thinkingStyle = thinkingStyle;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _messagesUri = new Uri($"{normalizedBaseUrl}/v1/messages");
+    }
+
+    /// <inheritdoc />
+    /// <inheritdoc />
+    protected override void ApplyAuth(HttpRequestMessage httpRequest)
+    {
+        if (!string.IsNullOrEmpty(ApiKey))
+            httpRequest.Headers.Add("x-api-key", ApiKey);
     }
 
     /// <inheritdoc />
@@ -56,7 +65,6 @@ public sealed class ClaudeChatClient : LlmClientBase
         var wireRequest = ToWireRequest(request);
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, _messagesUri);
 
-        httpRequest.Headers.Add("x-api-key", ApiKey);
         httpRequest.Headers.Add("anthropic-version", AnthropicVersion);
 
         var json = JsonSerializer.Serialize(wireRequest, JsonOptions);
@@ -66,7 +74,7 @@ public sealed class ClaudeChatClient : LlmClientBase
         return httpRequest;
     }
 
-    /// <inheritdoc />
+    /// <summary>Maps the neutral request onto the Claude wire format.</summary>
     private ClaudeMessageRequest ToWireRequest(LlmRequest request) =>
         ClaudeMessageRequestMapper.Build(
             Model,

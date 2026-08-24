@@ -63,6 +63,9 @@ public sealed class OpenAiGenerationClient : GenerationClientBase
         _defaultVoice = defaultVoice ?? "alloy";
     }
 
+    /// <summary>Wire display name; the registry provider key is "OpenAi".</summary>
+    protected override string ProviderDisplayName => "OpenAI";
+
     /// <inheritdoc />
     public override async Task<GenerationOperation> SubmitAsync(
         GenerationRequest request,
@@ -432,17 +435,6 @@ public sealed class OpenAiGenerationClient : GenerationClientBase
         return form;
     }
 
-    private void EnsureHandleOwnership(GenerationOperationHandle handle)
-    {
-        ArgumentNullException.ThrowIfNull(handle);
-        if (!string.Equals(handle.Provider, "OpenAi", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(handle.EndpointId, EndpointId, StringComparison.Ordinal))
-        {
-            throw BaizeException.InvalidRequest(
-                $"Handle '{handle.Provider}/{handle.EndpointId}/{handle.Id}' does not belong to " +
-                $"OpenAI endpoint '{EndpointId}'.");
-        }
-    }
 
     private static string? FormatSize(GenerationImageSize? size) =>
         size is null ? null : $"{size.Width}x{size.Height}";

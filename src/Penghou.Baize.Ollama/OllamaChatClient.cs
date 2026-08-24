@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -57,13 +57,9 @@ public sealed class OllamaChatClient : LlmClientBase
     }
 
     /// <inheritdoc />
-    protected override HttpRequestMessage CreateHttpRequest(LlmRequest request)
+    /// <inheritdoc />
+    protected override void ApplyAuth(HttpRequestMessage httpRequest)
     {
-        var wireRequest = ToWireRequest(request);
-        var httpRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            _chatUri);
-
         if (!string.IsNullOrWhiteSpace(ApiKey))
         {
             httpRequest.Headers.Authorization =
@@ -71,6 +67,15 @@ public sealed class OllamaChatClient : LlmClientBase
                     "Bearer",
                     ApiKey);
         }
+    }
+
+    /// <inheritdoc />
+    protected override HttpRequestMessage CreateHttpRequest(LlmRequest request)
+    {
+        var wireRequest = ToWireRequest(request);
+        var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            _chatUri);
 
         httpRequest.Content = new StringContent(
             JsonSerializer.Serialize(
@@ -82,7 +87,7 @@ public sealed class OllamaChatClient : LlmClientBase
         return httpRequest;
     }
 
-    /// <inheritdoc />
+    /// <summary>Maps the neutral request onto the Ollama wire format.</summary>
     private OllamaChatRequest ToWireRequest(LlmRequest request)
     {
         var tools = !Capabilities.NativeToolCalling ||

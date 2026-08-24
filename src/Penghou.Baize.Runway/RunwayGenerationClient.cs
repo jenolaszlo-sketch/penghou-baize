@@ -467,15 +467,4 @@ public sealed class RunwayGenerationClient : GenerationClientBase
     private static double? ClampProgress(double? progress) =>
         progress is null ? null : Math.Clamp(progress.Value, 0.0, 1.0);
 
-    private void EnsureHandleOwnership(GenerationOperationHandle handle)
-    {
-        ArgumentNullException.ThrowIfNull(handle);
-        if (!string.Equals(handle.Provider, "Runway", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(handle.EndpointId, EndpointId, StringComparison.Ordinal))
-        {
-            throw BaizeException.InvalidRequest(
-                $"Handle '{handle.Provider}/{handle.EndpointId}/{handle.Id}' does not belong to " +
-                $"Runway endpoint '{EndpointId}'.");
-        }
-    }
 }

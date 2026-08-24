@@ -574,15 +574,4 @@ public sealed class FalGenerationClient : GenerationClientBase
         };
     }
 
-    private void EnsureHandleOwnership(GenerationOperationHandle handle)
-    {
-        ArgumentNullException.ThrowIfNull(handle);
-        if (!string.Equals(handle.Provider, "Fal", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(handle.EndpointId, EndpointId, StringComparison.Ordinal))
-        {
-            throw BaizeException.InvalidRequest(
-                $"Handle '{handle.Provider}/{handle.EndpointId}/{handle.Id}' does not belong to " +
-                $"Fal endpoint '{EndpointId}'.");
-        }
-    }
 }

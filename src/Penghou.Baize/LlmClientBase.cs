@@ -91,6 +91,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             try
             {
                 httpRequest = CreateHttpRequest(request);
+                ApplyAuth(httpRequest);
             }
             catch (Exception exception)
             {
@@ -99,7 +100,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             }
             using var httpRequestScope = httpRequest;
 
-            var httpClient = HttpClientFactory.CreateClient("llm");
+            var httpClient = HttpClientFactory.CreateClient(BaizeHttp.ClientName);
 
             HttpResponseMessage response;
             try
@@ -220,6 +221,20 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
     /// <param name="request">The canonical request.</param>
     /// <returns>The HTTP request message to send.</returns>
     protected abstract HttpRequestMessage CreateHttpRequest(LlmRequest request);
+
+    /// <summary>
+    /// Applies the endpoint credential to an outgoing chat request. The
+    /// template method invokes this right after <see cref="CreateHttpRequest"/>;
+    /// the default writes a Bearer header when a key is configured. Override
+    /// for provider-specific schemes (header names, query parameters).
+    /// </summary>
+    /// <param name="httpRequest">The request to authorize.</param>
+    protected virtual void ApplyAuth(HttpRequestMessage httpRequest)
+    {
+        if (!string.IsNullOrEmpty(ApiKey))
+            httpRequest.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ApiKey);
+    }
 
     /// <summary>Parses the provider response stream into canonical events.</summary>
     /// <param name="stream">The response body stream.</param>
@@ -360,21 +375,8 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
     /// <returns>An owned clone of the parsed root element.</returns>
     protected static JsonElement ParseJsonElement(
         string? json,
-        string context)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new LlmClientException($"Missing JSON for {context}.");
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            throw new LlmClientException($"Failed to parse {context}: {json}", ex);
-        }
-    }
+        string context) =>
+        LlmJson.ParseElement(json, context);
 
     private static int? ReadIntHeader(
         HttpResponseMessage response,

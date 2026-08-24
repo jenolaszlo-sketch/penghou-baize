@@ -52,7 +52,7 @@ public sealed class GeminiGenerationClient : GenerationClientBase
 
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         var lastSegment = normalizedBaseUrl[(normalizedBaseUrl.LastIndexOf('/') + 1)..];
-        var includeVersionSegment = !LooksLikeApiVersion(lastSegment);
+        var includeVersionSegment = !GeminiUrl.LooksLikeApiVersion(lastSegment);
         _interactionsUri = new Uri(
             $"{normalizedBaseUrl}" +
             $"{(includeVersionSegment ? "/v1beta" : string.Empty)}" +
@@ -256,20 +256,5 @@ public sealed class GeminiGenerationClient : GenerationClientBase
             httpRequest.Headers.Add("x-goog-api-key", ApiKey);
     }
 
-    private void EnsureHandleOwnership(GenerationOperationHandle handle)
-    {
-        ArgumentNullException.ThrowIfNull(handle);
-        if (!string.Equals(handle.Provider, "Gemini", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(handle.EndpointId, EndpointId, StringComparison.Ordinal))
-        {
-            throw BaizeException.InvalidRequest(
-                $"Handle '{handle.Provider}/{handle.EndpointId}/{handle.Id}' does not belong to " +
-                $"Gemini endpoint '{EndpointId}'.");
-        }
-    }
 
-    private static bool LooksLikeApiVersion(string segment) =>
-        segment.Length >= 2 &&
-        segment[0] == 'v' &&
-        segment.Skip(1).TakeWhile(char.IsDigit).Any();
 }

@@ -1437,9 +1437,9 @@ public sealed class ClaudeChatClientTests
                     : await request.Content
                         .ReadAsStringAsync(
                             cancellationToken);
-            ApiKey = request.Headers
-                .GetValues("x-api-key")
-                .SingleOrDefault();
+            ApiKey = request.Headers.TryGetValues("x-api-key", out var apiKeyValues)
+                ? apiKeyValues.FirstOrDefault()
+                : null;
 
             var response = new HttpResponseMessage(
                 statusCode)
