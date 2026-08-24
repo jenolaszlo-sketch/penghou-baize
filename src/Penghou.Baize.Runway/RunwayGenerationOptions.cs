@@ -15,6 +15,12 @@ public sealed class RunwayGenerationOptions
     /// </summary>
     public string BaseUrl { get; set; } = "https://api.dev.runwayml.com/v1";
 
+    /// <summary>
+    /// The per-model HTTP request timeout applied to submissions and status polls
+    /// against this endpoint. When null the shared transport default applies.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; set; }
+
     /// <summary>The Runway API secret.</summary>
     public string ApiKey { get; set; } = string.Empty;
 

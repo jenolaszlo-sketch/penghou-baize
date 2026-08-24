@@ -12,6 +12,12 @@ public sealed class GeminiGenerationOptions
     /// <summary>API base URL; <c>v1beta</c> is appended when not already present.</summary>
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
 
+    /// <summary>
+    /// The per-model HTTP request timeout applied to submissions and status polls
+    /// against this endpoint. When null the shared transport default applies.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; set; }
+
     /// <summary>The Gemini API key.</summary>
     public string ApiKey { get; set; } = string.Empty;
 

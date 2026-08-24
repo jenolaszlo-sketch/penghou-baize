@@ -356,6 +356,63 @@ public sealed class LlmRouterTests
     }
 
     [Fact]
+    public void TryValidate_RejectsNonPositiveRequestTimeout()
+    {
+        var options = new LlmRoutingOptions
+        {
+            Models =
+            [
+                new LlmModelOptions
+                {
+                    Name = "m",
+                    Endpoints =
+                    [
+                        new LlmEndpointOptions
+                        {
+                            ApiStyle = ApiStyle.OpenAi,
+                            RequestTimeout = TimeSpan.Zero
+                        }
+                    ]
+                }
+            ]
+        };
+
+        ServiceCollectionExtensions.TryValidate(
+            options,
+            out var error).Should().BeFalse();
+        error.Should().Contain("RequestTimeout").And.Contain("positive");
+    }
+
+    [Fact]
+    public void TryValidate_AcceptsPositiveRequestTimeout()
+    {
+        var options = new LlmRoutingOptions
+        {
+            Retry = new LlmRouterRetryOptions(),
+            Models =
+            [
+                new LlmModelOptions
+                {
+                    Name = "m",
+                    Endpoints =
+                    [
+                        new LlmEndpointOptions
+                        {
+                            ApiStyle = ApiStyle.OpenAi,
+                            RequestTimeout = TimeSpan.FromMinutes(5)
+                        }
+                    ]
+                }
+            ]
+        };
+
+        ServiceCollectionExtensions.TryValidate(
+            options,
+            out var error).Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Router_RecordsCallForStreamedEndpoint()
     {
         var client = new StubClient("ok");

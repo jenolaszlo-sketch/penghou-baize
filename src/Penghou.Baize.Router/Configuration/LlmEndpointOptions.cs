@@ -62,6 +62,15 @@ public sealed class LlmEndpointOptions
     public LlmEndpointCapabilitiesOptions? Capabilities { get; init; }
 
     /// <summary>
+    /// The per-model HTTP request timeout applied to every call made through
+    /// this endpoint (for example <c>"00:02:00"</c> in configuration). When
+    /// null the shared transport default applies. Long-generation models such
+    /// as reasoning or large-context models can raise this without slowing
+    /// every other endpoint down.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; init; }
+
+    /// <summary>
     /// The name of a capability profile declared in
     /// <see cref="LlmRoutingOptions.Profiles"/>. A referenced profile is
     /// overlaid on the provider's conservative defaults before

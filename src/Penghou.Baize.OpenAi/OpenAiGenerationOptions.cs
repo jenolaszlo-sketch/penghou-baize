@@ -12,6 +12,12 @@ public sealed class OpenAiGenerationOptions
     /// <summary>API base address; the provider paths are appended (for example <c>https://api.openai.com/v1</c>).</summary>
     public Uri BaseAddress { get; set; } = new("https://api.openai.com/v1");
 
+    /// <summary>
+    /// The per-model HTTP request timeout applied to submissions and status
+    /// polls against this endpoint. When null the shared transport default applies.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; set; }
+
     /// <summary>The OpenAI API key. Leave empty for anonymous or local endpoints.</summary>
     public string ApiKey { get; set; } = string.Empty;
 

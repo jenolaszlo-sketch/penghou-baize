@@ -276,9 +276,15 @@ public static class ServiceCollectionExtensions
         var baseUrl = endpoint.BaseUrl ?? provider.DefaultBaseUrl;
         var settings = ResolveProviderSettings(endpoint);
 
+        // Per-model request timeout: wrap the shared factory so every client
+        // this endpoint creates (chat and batch alike) enforces it.
+        var effectiveFactory = endpoint.RequestTimeout is { } requestTimeout
+            ? httpClientFactory.WithRequestTimeout(requestTimeout)
+            : httpClientFactory;
+
         return new LlmClientProviderContext(
             providerModel,
-            httpClientFactory,
+            effectiveFactory,
             apiKey,
             baseUrl,
             capabilities,
@@ -525,6 +531,15 @@ public static class ServiceCollectionExtensions
                     error =
                         $"Endpoint '{model.Name}' with provider '{provider}' " +
                         $"references unknown capability profile '{endpoint.Profile}'.";
+                    return false;
+                }
+
+                if (endpoint.RequestTimeout is { } timeout &&
+                    timeout <= TimeSpan.Zero)
+                {
+                    error =
+                        $"Endpoint '{model.Name}' with provider '{provider}' " +
+                        "has a RequestTimeout that must be positive.";
                     return false;
                 }
             }

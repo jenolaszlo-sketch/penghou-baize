@@ -16,6 +16,12 @@ public sealed class FalGenerationOptions
     /// </summary>
     public string BaseUrl { get; set; } = "https://queue.fal.run";
 
+    /// <summary>
+    /// The per-model HTTP request timeout applied to submissions and status polls
+    /// against this endpoint. When null the shared transport default applies.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; set; }
+
     /// <summary>The fal.ai API secret.</summary>
     public string ApiKey { get; set; } = string.Empty;
 

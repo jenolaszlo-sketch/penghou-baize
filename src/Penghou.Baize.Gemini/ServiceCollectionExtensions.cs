@@ -44,6 +44,13 @@ public static class ServiceCollectionExtensions
                     .Get(endpointId);
                 ValidateEndpointOptions(endpointId, options);
 
+                // Per-model timeout: wrap once so every call this client makes enforces it.
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                if (options.RequestTimeout is { } requestTimeout)
+                {
+                    httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
+                }
+
                 var capabilities = new GenerationCapabilities
                 {
                     Features = options.Features,
@@ -55,7 +62,7 @@ public static class ServiceCollectionExtensions
                 };
                 var client = new GeminiGenerationClient(
                     options.Model,
-                    sp.GetRequiredService<IHttpClientFactory>(),
+                    httpClientFactory,
                     options.ApiKey,
                     options.BaseUrl,
                     capabilities,

@@ -12,6 +12,12 @@ public sealed class OpenAiCompatibleGenerationOptions
     /// <summary>API base address, including any version prefix (for example <c>http://localhost:8000/v1</c>).</summary>
     public Uri BaseAddress { get; set; } = new("http://localhost:8000/v1");
 
+    /// <summary>
+    /// The per-model HTTP request timeout applied to submissions and status
+    /// polls against this endpoint. When null the shared transport default applies.
+    /// </summary>
+    public TimeSpan? RequestTimeout { get; set; }
+
     /// <summary>The API key, when the endpoint requires one.</summary>
     public string ApiKey { get; set; } = string.Empty;
 
