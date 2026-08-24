@@ -23,4 +23,20 @@ public interface IGenerationExecutor
         GenerationRequest request,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resumes an operation accepted earlier — for example one whose wait hit
+    /// the executor timeout or whose handle was persisted across restarts — by
+    /// polling the endpoint pinned in the handle until it reaches a terminal
+    /// state. The pinned endpoint is resolved from the registry; routing is
+    /// never re-run, so the operation cannot be submitted twice.
+    /// </summary>
+    /// <param name="handle">The handle returned by the original submission.</param>
+    /// <param name="progress">Optional progress reporting (0.0–1.0 scale).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The final generation result.</returns>
+    Task<GenerationResult> WaitAsync(
+        GenerationOperationHandle handle,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
 }

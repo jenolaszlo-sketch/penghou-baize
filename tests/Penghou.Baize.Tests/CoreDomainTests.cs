@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Penghou.Baize.Generation;
 
 namespace Penghou.Baize.Tests;
 
@@ -215,7 +216,7 @@ public sealed class LlmClientExceptionTests
     [Theory]
     [InlineData(400, LlmClientFailureKind.InvalidRequest)]
     [InlineData(401, LlmClientFailureKind.Authentication)]
-    [InlineData(403, LlmClientFailureKind.Authentication)]
+    [InlineData(403, LlmClientFailureKind.Authorization)]
     [InlineData(404, LlmClientFailureKind.InvalidRequest)]
     [InlineData(429, LlmClientFailureKind.RateLimit)]
     [InlineData(500, LlmClientFailureKind.Availability)]
@@ -242,10 +243,39 @@ public sealed class LlmClientExceptionTests
     {
         new LlmClientException("nope", statusCode: 400).CanFallback.Should().BeFalse();
         new LlmClientException("nope", statusCode: 401).CanFallback.Should().BeFalse();
+        new LlmClientException("nope", statusCode: 403).CanFallback.Should().BeFalse();
         new LlmClientException("nope", LlmClientFailureKind.InvalidRequest)
             .CanFallback.Should().BeFalse();
         new LlmClientException("nope", LlmClientFailureKind.Content)
             .CanFallback.Should().BeFalse();
+    }
+
+    public static TheoryData<int, GenerationErrorKind, LlmClientFailureKind> SharedStatusCodes => new()
+    {
+        // Both taxonomies must classify shared provider responses identically
+        // (401 = Authentication, 403 = Authorization) — this test guards
+        // against drift between the two mappers.
+        { 401, GenerationErrorKind.Authentication, LlmClientFailureKind.Authentication },
+        { 403, GenerationErrorKind.Authorization, LlmClientFailureKind.Authorization },
+        { 429, GenerationErrorKind.RateLimited, LlmClientFailureKind.RateLimit },
+        { 400, GenerationErrorKind.InvalidRequest, LlmClientFailureKind.InvalidRequest },
+        { 404, GenerationErrorKind.InvalidRequest, LlmClientFailureKind.InvalidRequest },
+        { 405, GenerationErrorKind.InvalidRequest, LlmClientFailureKind.InvalidRequest },
+        { 422, GenerationErrorKind.InvalidRequest, LlmClientFailureKind.InvalidRequest },
+        { 408, GenerationErrorKind.ProviderUnavailable, LlmClientFailureKind.Availability },
+        { 500, GenerationErrorKind.ProviderUnavailable, LlmClientFailureKind.Availability },
+        { 503, GenerationErrorKind.ProviderUnavailable, LlmClientFailureKind.Availability }
+    };
+
+    [Theory]
+    [MemberData(nameof(SharedStatusCodes))]
+    public void SharedStatusCodeClassification_StaysAlignedAcrossTaxonomies(
+        int statusCode,
+        GenerationErrorKind generationKind,
+        LlmClientFailureKind chatKind)
+    {
+        BaizeException.ClassifyStatusCode(statusCode).Should().Be(generationKind);
+        LlmClientException.ClassifyStatusCode(statusCode).Should().Be(chatKind);
     }
 
     [Fact]

@@ -21,6 +21,7 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
     private readonly IGenerationClientRegistry _registry;
     private readonly IGenerationRoutingPolicy _routingPolicy;
     private readonly GenerationExecutorOptions _pollOptions;
+    private readonly GenerationExecutorCore _core;
 
     /// <summary>Initializes the batch executor.</summary>
     /// <param name="registry">The registry of registered generation endpoints.</param>
@@ -35,7 +36,8 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _routingPolicy = routingPolicy ?? new DefaultGenerationRoutingPolicy();
         _pollOptions = options?.Value ?? new GenerationExecutorOptions();
-        ValidateOptions(_pollOptions);
+        GenerationExecutorCore.ValidateOptions(_pollOptions);
+        _core = new GenerationExecutorCore(_registry, _routingPolicy, _pollOptions);
     }
 
     /// <inheritdoc />
@@ -75,6 +77,13 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         progress?.Report(1.0);
         return new GenerationBatchResult(chunks, request.TotalCount);
     }
+
+    /// <inheritdoc />
+    public Task<GenerationResult> WaitAsync(
+        GenerationOperationHandle handle,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        _core.WaitAsync(handle, progress, cancellationToken);
 
     private async Task SubmitAllChunksAsync(
         GenerationBatchRequest request,
@@ -274,36 +283,14 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         }
     }
 
-    private GenerationEndpoint SelectEndpoint(GenerationRequest request)
-    {
-        var candidates = _registry.Endpoints
-            .Where(endpoint => Supports(endpoint, request))
-            .ToArray();
+    private GenerationEndpoint SelectEndpoint(GenerationRequest request) =>
+        _core.SelectEndpoint(request);
 
-        return _routingPolicy.Select(request, candidates)
-            ?? throw new BaizeException(
-                "No configured generation endpoint can satisfy the batch request.",
-                GenerationErrorKind.InvalidRequest);
-    }
-
-    private static bool Supports(GenerationEndpoint endpoint, GenerationRequest request)
-    {
-        try
-        {
-            GenerationRequestValidator.Validate(
-                endpoint.Client.Capabilities,
-                request,
-                Describe(endpoint));
-            return true;
-        }
-        catch (BaizeException)
-        {
-            return false;
-        }
-    }
+    private static bool Supports(GenerationEndpoint endpoint, GenerationRequest request) =>
+        GenerationExecutorCore.Supports(endpoint, request);
 
     private static string Describe(GenerationEndpoint endpoint) =>
-        $"{endpoint.Provider}/{endpoint.EndpointId}";
+        GenerationExecutorCore.Describe(endpoint);
 
     private static int ChunkSize(
         GenerationCapabilities capabilities,
@@ -350,27 +337,13 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         };
 
     private static GenerationResult RequireResult(GenerationOperation operation) =>
-        operation.Result is { } result
-            ? result
-            : throw new BaizeException(
-                $"Generation operation '{operation.Handle.Id}' succeeded but returned no assets.",
-                GenerationErrorKind.GenerationFailed);
+        GenerationExecutorCore.RequireTerminalResult(operation);
 
     private static BaizeException CreateFailure(GenerationOperation operation) =>
-        operation.Error is { } error
-            ? new BaizeException(
-                error.Message ?? "Generation failed.",
-                error.Kind,
-                error.StatusCode,
-                providerStatus: error.ProviderStatus)
-            : new BaizeException(
-                $"Generation operation '{operation.Handle.Id}' failed.",
-                GenerationErrorKind.GenerationFailed);
+        GenerationExecutorCore.CreateFailure(operation);
 
     private static BaizeException CreateCanceled(GenerationOperation operation) =>
-        new(
-            $"Generation operation '{operation.Handle.Id}' was canceled.",
-            GenerationErrorKind.Canceled);
+        GenerationExecutorCore.CreateCanceled(operation);
 
     private static BaizeException CreateTimeout(
         GenerationOperationHandle handle,
@@ -378,25 +351,8 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         new(
             $"Generation operation '{handle.Id}' on endpoint '{endpointDescription}' did not " +
             "complete within the configured timeout. It may still be running; resume it later " +
-            "with this handle.",
+            "by calling WaitAsync with this handle.",
             GenerationErrorKind.TimeoutExceeded);
-
-    private static void ValidateOptions(GenerationExecutorOptions options)
-    {
-        if (options.Timeout <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(
-                nameof(options), "Timeout must be positive.");
-        if (options.InitialPollingInterval <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(
-                nameof(options), "InitialPollingInterval must be positive.");
-        if (options.MaxPollingInterval < options.InitialPollingInterval)
-            throw new ArgumentOutOfRangeException(
-                nameof(options),
-                "MaxPollingInterval must be at least InitialPollingInterval.");
-        if (options.PollingBackoffMultiplier < 1.0)
-            throw new ArgumentOutOfRangeException(
-                nameof(options), "PollingBackoffMultiplier must be at least 1.0.");
-    }
 
     private sealed record PendingChunk(
         int Chunk,

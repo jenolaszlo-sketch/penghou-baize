@@ -11,7 +11,10 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers a Runway artifact-generation endpoint as a keyed
     /// <see cref="IGenerationClient"/>. Multiple generation endpoints can be
-    /// registered under distinct <paramref name="endpointId"/> values.
+    /// registered under distinct <paramref name="endpointId"/> values. Endpoint
+    /// options are validated and the client is registered with routing when
+    /// the <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
+    /// first use.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="endpointId">The configured endpoint identity.</param>
@@ -26,35 +29,62 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
         services.AddBaizeGeneration();
         services.Configure(endpointId, configure);
-        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
-        {
-            var options = sp.GetRequiredService<IOptionsMonitor<RunwayGenerationOptions>>()
-                .Get(endpointId);
-            var capabilities = new GenerationCapabilities
+        services.AddSingleton<IGenerationEndpointDescriptor>(
+            new DelegateGenerationEndpointDescriptor((sp, registry) =>
             {
-                Features = options.Features,
-                InputTransports = new HashSet<LlmContentTransport>
+                var options = sp.GetRequiredService<IOptionsMonitor<RunwayGenerationOptions>>()
+                    .Get(endpointId);
+                ValidateEndpointOptions(endpointId, options);
+
+                var capabilities = new GenerationCapabilities
                 {
-                    LlmContentTransport.Uri,
-                    LlmContentTransport.InlineData,
-                    LlmContentTransport.ProviderFile
-                }
-            };
-            var client = new RunwayGenerationClient(
-                options.Model,
-                sp.GetRequiredService<IHttpClientFactory>(),
-                options.ApiKey,
-                new Uri(options.BaseUrl),
-                capabilities,
-                endpointId,
-                options.ApiVersion,
-                options.DefaultInputImageMimeType,
-                options.DefaultRatio,
-                options.DefaultOutputFormat);
-            sp.GetRequiredService<IGenerationClientRegistry>()
-                .Register("Runway", endpointId, client);
-            return client;
-        });
+                    Features = options.Features,
+                    InputTransports = new HashSet<LlmContentTransport>
+                    {
+                        LlmContentTransport.Uri,
+                        LlmContentTransport.InlineData,
+                        LlmContentTransport.ProviderFile
+                    }
+                };
+                var client = new RunwayGenerationClient(
+                    options.Model,
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    options.ApiKey,
+                    new Uri(options.BaseUrl),
+                    capabilities,
+                    endpointId,
+                    options.ApiVersion,
+                    options.DefaultInputImageMimeType,
+                    options.DefaultRatio,
+                    options.DefaultOutputFormat);
+                registry.Register("Runway", endpointId, client);
+            }));
+        services.AddKeyedSingleton<IGenerationClient>(endpointId, (sp, _) =>
+            ResolveRegisteredClient(sp, "Runway", endpointId));
         return services;
+    }
+
+    internal static void ValidateEndpointOptions(
+        string endpointId,
+        RunwayGenerationOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.Model))
+            throw new InvalidOperationException(
+                $"Runway generation endpoint '{endpointId}' requires a Model.");
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+            throw new InvalidOperationException(
+                $"Runway generation endpoint '{endpointId}' requires an ApiKey.");
+    }
+
+    internal static IGenerationClient ResolveRegisteredClient(
+        IServiceProvider sp,
+        string provider,
+        string endpointId)
+    {
+        var registry = sp.GetRequiredService<IGenerationClientRegistry>();
+        return registry.Endpoints.First(endpoint =>
+                string.Equals(endpoint.EndpointId, endpointId, StringComparison.Ordinal) &&
+                string.Equals(endpoint.Provider, provider, StringComparison.Ordinal))
+            .Client;
     }
 }

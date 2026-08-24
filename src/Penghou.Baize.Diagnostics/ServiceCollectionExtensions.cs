@@ -72,6 +72,11 @@ public static class ServiceCollectionExtensions
                 descriptor.ServiceType == typeof(HttpDiagnosticsRegistrationMarker)))
         {
             services.AddSingleton<HttpDiagnosticsRegistrationMarker>();
+
+            // Core owns the "llm" named client (AddBaizeTransport). Named-client
+            // configuration accumulates, so this layers capture on top of the
+            // core registration — or creates the client when diagnostics are
+            // used standalone.
             services.AddHttpClient("llm")
                 .AddHttpMessageHandler<HttpTrafficCaptureHandler>();
         }

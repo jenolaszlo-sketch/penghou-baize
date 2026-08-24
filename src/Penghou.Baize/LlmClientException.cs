@@ -122,13 +122,17 @@ public sealed class LlmClientException : Exception
     /// <see cref="LlmClientFailureKind"/> using the same mapping applied to
     /// failed HTTP responses. Reused by the asynchronous batch adapters so
     /// per-item batch failures are classified identically to direct calls.
+    /// The mapping is aligned with <c>BaizeException.ClassifyStatusCode</c>
+    /// (401 = Authentication, 403 = Authorization) — a parity test guards the
+    /// shared codes against drift.
     /// </summary>
     /// <param name="statusCode">The provider HTTP status code.</param>
     /// <returns>The normalized failure classification.</returns>
     public static LlmClientFailureKind ClassifyStatusCode(int statusCode) =>
         statusCode switch
         {
-            401 or 403 => LlmClientFailureKind.Authentication,
+            401 => LlmClientFailureKind.Authentication,
+            403 => LlmClientFailureKind.Authorization,
             429 => LlmClientFailureKind.RateLimit,
             400 or 404 or 405 or 422 => LlmClientFailureKind.InvalidRequest,
             408 or >= 500 => LlmClientFailureKind.Availability,

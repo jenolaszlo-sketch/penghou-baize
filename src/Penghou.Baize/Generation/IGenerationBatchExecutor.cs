@@ -27,4 +27,19 @@ public interface IGenerationBatchExecutor
         GenerationBatchRequest request,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resumes a single batch-chunk operation accepted earlier — for example
+    /// one whose wait hit the executor timeout — by polling the endpoint
+    /// pinned in the handle until it reaches a terminal state. The pinned
+    /// endpoint is resolved from the registry; routing is never re-run.
+    /// </summary>
+    /// <param name="handle">The chunk operation's handle.</param>
+    /// <param name="progress">Optional progress reporting (0.0–1.0 scale).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The final generation result of the chunk.</returns>
+    Task<GenerationResult> WaitAsync(
+        GenerationOperationHandle handle,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
 }

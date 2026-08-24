@@ -23,9 +23,18 @@ public enum LlmClientFailureKind
     RateLimit,
 
     /// <summary>
-    /// The request failed authentication or authorization (HTTP 401/403).
+    /// The request failed authentication (HTTP 401): the credentials are
+    /// missing, malformed, or rejected. Retrying with the same credentials
+    /// cannot succeed.
     /// </summary>
     Authentication,
+
+    /// <summary>
+    /// The request was authorized against valid credentials but denied
+    /// permission (HTTP 403): the key may not access the model or resource.
+    /// Retrying cannot succeed without an entitlement change.
+    /// </summary>
+    Authorization,
 
     /// <summary>
     /// The request itself was rejected as invalid (HTTP 400/404/405 for

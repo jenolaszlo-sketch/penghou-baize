@@ -1,4 +1,6 @@
-namespace Penghou.Baize.Generation;
+using Penghou.Baize.Generation;
+
+namespace Penghou.Baize;
 
 /// <summary>
 /// The exception thrown when a generation operation fails before it is
