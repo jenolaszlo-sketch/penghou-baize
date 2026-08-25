@@ -15,6 +15,10 @@ internal sealed class OllamaMessage
     [JsonPropertyName("content")]
     public string? Content { get; init; }
 
+    /// <summary>Model reasoning emitted separately from user-visible content.</summary>
+    [JsonPropertyName("thinking")]
+    public string? Thinking { get; init; }
+
     /// <summary>Native tool calls produced by the model.</summary>
     [JsonPropertyName("tool_calls")]
     public IReadOnlyList<OllamaToolCall>? ToolCalls { get; init; }

@@ -4,7 +4,7 @@ namespace Penghou.Baize.OpenAi;
 internal static class OpenAiStructuredOutput
 {
     /// <summary>The reserved synthetic function name.</summary>
-    public const string ToolName = "structured_output";
+    public const string ToolName = LlmProtocolNames.StructuredOutputTool;
 
     /// <summary>Returns whether the request must use the synthetic tool.</summary>
     public static bool UsesSyntheticTool(

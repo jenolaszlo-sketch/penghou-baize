@@ -20,6 +20,8 @@ public sealed class BaizeImageGenerator : IImageGenerator
     private readonly ImageGeneratorMetadata _metadata;
     private readonly string _providerName;
     private readonly BaizeImageGeneratorOptions _options;
+    private readonly bool _ownsClient;
+    private int _disposed;
 
     /// <summary>
     /// Initializes the adapter.
@@ -29,16 +31,19 @@ public sealed class BaizeImageGenerator : IImageGenerator
     /// <param name="providerUri">The provider base URI for metadata, when known.</param>
     /// <param name="modelId">The configured model for metadata, when known.</param>
     /// <param name="options">Polling interval and completion timeout for queued providers.</param>
+    /// <param name="ownsClient">Whether disposing the adapter also disposes a disposable wrapped client.</param>
     /// <exception cref="ArgumentNullException"><paramref name="client"/> is null.</exception>
     public BaizeImageGenerator(
         IGenerationClient client,
         string? providerName = null,
         Uri? providerUri = null,
         string? modelId = null,
-        BaizeImageGeneratorOptions? options = null)
+        BaizeImageGeneratorOptions? options = null,
+        bool ownsClient = false)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _options = options ?? new BaizeImageGeneratorOptions();
+        _ownsClient = ownsClient;
         _providerName = providerName ?? "Unknown";
         _metadata = new ImageGeneratorMetadata(providerName, providerUri, modelId);
     }
@@ -135,8 +140,14 @@ public sealed class BaizeImageGenerator : IImageGenerator
         return null;
     }
 
-    /// <summary>The adapter owns no disposable provider resources.</summary>
-    public void Dispose() { }
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (!_ownsClient || Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+        if (_client is IDisposable disposable)
+            disposable.Dispose();
+    }
 
     private Penghou.Baize.Generation.ImageGenerationRequest ToBaizeRequest(
         Microsoft.Extensions.AI.ImageGenerationRequest source,

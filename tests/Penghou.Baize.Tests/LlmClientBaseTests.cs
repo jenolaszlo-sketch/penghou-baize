@@ -60,6 +60,16 @@ public sealed class LlmClientBaseTests
     }
 
     [Fact]
+    public void ErrorFormatting_BoundsPayloadsAndRemovesSignedUrlParameters()
+    {
+        LlmJson.FormatForError(new string('x', 2_000))
+            .Should().HaveLength(1_025).And.EndWith("…");
+        LlmJson.FormatUrlForError(
+                "https://cdn.test/output.mp4?token=secret#fragment")
+            .Should().Be("https://cdn.test/output.mp4");
+    }
+
+    [Fact]
     public void ReadRateLimitInfo_CombinesOpenAiAnthropicAndRetryHeaders()
     {
         using var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);

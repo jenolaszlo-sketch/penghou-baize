@@ -13,7 +13,7 @@ public static class ServiceCollectionExtensions
     /// <see cref="IGenerationClient"/>. Multiple generation endpoints can be
     /// registered under distinct <paramref name="endpointId"/> values. Endpoint
     /// options are validated and the client is registered with routing when
-    /// the <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
+    /// the <see cref="IGenerationClientRegistry"/> is resolved â€” not lazily on
     /// first use.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -32,32 +32,15 @@ public static class ServiceCollectionExtensions
             (sp, options) => ValidateEndpointOptions(endpointId, options),
             (sp, options) =>
             {
-                var capabilities = new GenerationCapabilities
-                {
-                    Features = options.Features,
-                    InputTransports = new HashSet<LlmContentTransport>
-                    {
-                        LlmContentTransport.Uri,
-                        LlmContentTransport.InlineData,
-                        LlmContentTransport.ProviderFile
-                    }
-                };
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 if (options.RequestTimeout is { } requestTimeout)
                 {
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
                 }
                 return new RunwayGenerationClient(
-                    options.Model,
                     httpClientFactory,
-                    options.ApiKey,
-                    new Uri(options.BaseUrl),
-                    capabilities,
-                    endpointId,
-                    options.ApiVersion,
-                    options.DefaultInputImageMimeType,
-                    options.DefaultRatio,
-                    options.DefaultOutputFormat);
+                    options,
+                    endpointId);
             });
     }
     internal static void ValidateEndpointOptions(

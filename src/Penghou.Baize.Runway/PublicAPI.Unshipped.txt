@@ -1,0 +1,119 @@
+#nullable enable
+override Penghou.Baize.Runway.RunwayGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Runway.RunwayGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Runway.RunwayGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Runway.RunwayCost
+Penghou.Baize.Runway.RunwayCost.Credits.get -> double?
+Penghou.Baize.Runway.RunwayCost.Credits.init -> void
+Penghou.Baize.Runway.RunwayCost.RunwayCost(double? Credits) -> void
+Penghou.Baize.Runway.RunwayEstimatedCost
+Penghou.Baize.Runway.RunwayEstimatedCost.Credits.get -> double?
+Penghou.Baize.Runway.RunwayEstimatedCost.Credits.init -> void
+Penghou.Baize.Runway.RunwayEstimatedCost.RunwayEstimatedCost(double? Credits) -> void
+Penghou.Baize.Runway.RunwayGenerationClient
+Penghou.Baize.Runway.RunwayGenerationClient.CancelTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Runway.RunwayGenerationClient.CreateEphemeralUploadAsync(string! filename, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Runway.RunwayUploadCreateResponse!>!
+Penghou.Baize.Runway.RunwayGenerationClient.CreateImageToVideoAsync(Penghou.Baize.Runway.RunwayImageToVideoRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Runway.RunwayTaskCreateResponse!>!
+Penghou.Baize.Runway.RunwayGenerationClient.CreateTextToVideoAsync(Penghou.Baize.Runway.RunwayTextToVideoRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Runway.RunwayTaskCreateResponse!>!
+Penghou.Baize.Runway.RunwayGenerationClient.GetTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Runway.RunwayTask!>!
+Penghou.Baize.Runway.RunwayGenerationClient.RunwayGenerationClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, System.Uri! baseAddress, Penghou.Baize.Generation.GenerationCapabilities! capabilities, string! endpointId, string? apiVersion = null, string? defaultInputImageMimeType = null, string? defaultRatio = null, string? defaultOutputFormat = null) -> void
+Penghou.Baize.Runway.RunwayGenerationClient.RunwayGenerationClient(System.Net.Http.IHttpClientFactory! httpClientFactory, Penghou.Baize.Runway.RunwayGenerationOptions! options, string! endpointId) -> void
+Penghou.Baize.Runway.RunwayGenerationClient.UploadFileAsync(Penghou.Baize.Runway.RunwayUploadCreateResponse! upload, System.ReadOnlyMemory<byte> data, string! filename, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Penghou.Baize.Runway.RunwayGenerationOptions
+Penghou.Baize.Runway.RunwayGenerationOptions.ApiKey.get -> string!
+Penghou.Baize.Runway.RunwayGenerationOptions.ApiKey.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.ApiVersion.get -> string!
+Penghou.Baize.Runway.RunwayGenerationOptions.ApiVersion.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.BaseUrl.get -> string!
+Penghou.Baize.Runway.RunwayGenerationOptions.BaseUrl.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultInputImageMimeType.get -> string!
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultInputImageMimeType.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultOutputFormat.get -> string?
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultOutputFormat.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultRatio.get -> string?
+Penghou.Baize.Runway.RunwayGenerationOptions.DefaultRatio.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Runway.RunwayGenerationOptions.Features.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.Model.get -> string!
+Penghou.Baize.Runway.RunwayGenerationOptions.Model.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.Runway.RunwayGenerationOptions.RequestTimeout.set -> void
+Penghou.Baize.Runway.RunwayGenerationOptions.RunwayGenerationOptions() -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Audio.get -> bool?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Audio.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Duration.get -> int?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Duration.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Model.get -> string!
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Model.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.NegativePrompt.get -> string?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.NegativePrompt.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.OutputFormat.get -> string?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.OutputFormat.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.PromptImage.get -> string!
+Penghou.Baize.Runway.RunwayImageToVideoRequest.PromptImage.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.PromptText.get -> string!
+Penghou.Baize.Runway.RunwayImageToVideoRequest.PromptText.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Ratio.get -> string?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Ratio.init -> void
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Seed.get -> int?
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Seed.init -> void
+Penghou.Baize.Runway.RunwayTask
+Penghou.Baize.Runway.RunwayTask.Cost.get -> Penghou.Baize.Runway.RunwayCost?
+Penghou.Baize.Runway.RunwayTask.Cost.init -> void
+Penghou.Baize.Runway.RunwayTask.CreatedAt.get -> string?
+Penghou.Baize.Runway.RunwayTask.CreatedAt.init -> void
+Penghou.Baize.Runway.RunwayTask.EstimatedCost.get -> Penghou.Baize.Runway.RunwayEstimatedCost?
+Penghou.Baize.Runway.RunwayTask.EstimatedCost.init -> void
+Penghou.Baize.Runway.RunwayTask.Failure.get -> string?
+Penghou.Baize.Runway.RunwayTask.Failure.init -> void
+Penghou.Baize.Runway.RunwayTask.FailureCode.get -> string?
+Penghou.Baize.Runway.RunwayTask.FailureCode.init -> void
+Penghou.Baize.Runway.RunwayTask.Id.get -> string?
+Penghou.Baize.Runway.RunwayTask.Id.init -> void
+Penghou.Baize.Runway.RunwayTask.Output.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Penghou.Baize.Runway.RunwayTask.Output.init -> void
+Penghou.Baize.Runway.RunwayTask.Progress.get -> double?
+Penghou.Baize.Runway.RunwayTask.Progress.init -> void
+Penghou.Baize.Runway.RunwayTask.RunwayTask(string? Id, string? Status, string? CreatedAt, double? Progress, System.Collections.Generic.IReadOnlyList<string!>? Output, string? Failure, string? FailureCode, Penghou.Baize.Runway.RunwayEstimatedCost? EstimatedCost, Penghou.Baize.Runway.RunwayCost? Cost) -> void
+Penghou.Baize.Runway.RunwayTask.Status.get -> string?
+Penghou.Baize.Runway.RunwayTask.Status.init -> void
+Penghou.Baize.Runway.RunwayTaskCreateResponse
+Penghou.Baize.Runway.RunwayTaskCreateResponse.EstimatedCost.get -> Penghou.Baize.Runway.RunwayEstimatedCost?
+Penghou.Baize.Runway.RunwayTaskCreateResponse.EstimatedCost.init -> void
+Penghou.Baize.Runway.RunwayTaskCreateResponse.Id.get -> string?
+Penghou.Baize.Runway.RunwayTaskCreateResponse.Id.init -> void
+Penghou.Baize.Runway.RunwayTaskCreateResponse.RunwayTaskCreateResponse(string? Id, Penghou.Baize.Runway.RunwayEstimatedCost? EstimatedCost) -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Audio.get -> bool?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Audio.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Duration.get -> int?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Duration.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Model.get -> string!
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Model.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.NegativePrompt.get -> string?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.NegativePrompt.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.OutputFormat.get -> string?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.OutputFormat.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.PromptText.get -> string!
+Penghou.Baize.Runway.RunwayTextToVideoRequest.PromptText.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Ratio.get -> string?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Ratio.init -> void
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Seed.get -> int?
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Seed.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateRequest
+Penghou.Baize.Runway.RunwayUploadCreateRequest.Filename.get -> string!
+Penghou.Baize.Runway.RunwayUploadCreateRequest.Filename.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateRequest.Type.get -> string!
+Penghou.Baize.Runway.RunwayUploadCreateRequest.Type.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateResponse
+Penghou.Baize.Runway.RunwayUploadCreateResponse.Fields.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.Runway.RunwayUploadCreateResponse.Fields.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateResponse.Id.get -> string?
+Penghou.Baize.Runway.RunwayUploadCreateResponse.Id.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateResponse.RunwayUri.get -> string?
+Penghou.Baize.Runway.RunwayUploadCreateResponse.RunwayUri.init -> void
+Penghou.Baize.Runway.RunwayUploadCreateResponse.UploadUrl.get -> string?
+Penghou.Baize.Runway.RunwayUploadCreateResponse.UploadUrl.init -> void
+Penghou.Baize.Runway.ServiceCollectionExtensions
+static Penghou.Baize.Runway.ServiceCollectionExtensions.AddBaizeRunwayGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! endpointId, System.Action<Penghou.Baize.Runway.RunwayGenerationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Penghou.Baize;
+using Penghou.Baize.Generation;
 using Penghou.Baize.Router.Configuration;
 
 namespace Penghou.Baize.Router.Extensions;
@@ -94,6 +95,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ILlmRouterMemory, InMemoryLlmRouterMemory>();
         services.TryAddSingleton<ILlmEndpointSelectionPolicy,
             ReliabilityEndpointSelectionPolicy>();
+        services.TryAddSingleton<IGenerationEndpointOrderer,
+            RouterGenerationEndpointOrderer>();
         services.TryAddSingleton<ILlmClientProviderRegistry, LlmClientProviderRegistry>();
 
         services.AddSingleton(sp => new ReloadingLlmRoutingState(
@@ -424,10 +427,10 @@ public static class ServiceCollectionExtensions
             StringComparer.OrdinalIgnoreCase);
 
         if (endpoint.Dialect is not null)
-            settings.TryAdd("Dialect", endpoint.Dialect);
+            settings.TryAdd(LlmSettingNames.Dialect, endpoint.Dialect);
 
         if (endpoint.ThinkingStyle is not null)
-            settings.TryAdd("ThinkingStyle", endpoint.ThinkingStyle);
+            settings.TryAdd(LlmSettingNames.ThinkingStyle, endpoint.ThinkingStyle);
 
         return settings;
     }

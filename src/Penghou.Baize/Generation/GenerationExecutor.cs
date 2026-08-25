@@ -16,17 +16,20 @@ public sealed class GenerationExecutor : IGenerationExecutor
     /// <param name="registry">The registry of registered generation endpoints.</param>
     /// <param name="routingPolicy">The routing policy, or the deterministic default when null.</param>
     /// <param name="options">The polling configuration, or defaults when null.</param>
+    /// <param name="endpointOrderer">Optional shared reliability ordering applied before routing selection.</param>
     public GenerationExecutor(
         IGenerationClientRegistry registry,
         IGenerationRoutingPolicy? routingPolicy = null,
-        IOptions<GenerationExecutorOptions>? options = null)
+        IOptions<GenerationExecutorOptions>? options = null,
+        IGenerationEndpointOrderer? endpointOrderer = null)
     {
         var effectiveOptions = options?.Value ?? new GenerationExecutorOptions();
         GenerationExecutorCore.ValidateOptions(effectiveOptions);
         _core = new GenerationExecutorCore(
             registry ?? throw new ArgumentNullException(nameof(registry)),
             routingPolicy ?? new DefaultGenerationRoutingPolicy(),
-            effectiveOptions);
+            effectiveOptions,
+            endpointOrderer);
     }
 
     /// <inheritdoc />
@@ -37,7 +40,9 @@ public sealed class GenerationExecutor : IGenerationExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var endpoint = _core.SelectEndpoint(request);
+        var endpoint = await _core
+            .SelectEndpointAsync(request, cancellationToken)
+            .ConfigureAwait(false);
         var operation = await endpoint.Client
             .SubmitAsync(request, cancellationToken)
             .ConfigureAwait(false);

@@ -28,6 +28,21 @@ public sealed class JsonSchemaGeneratorTests
             .Should().Contain(["name", "items", "labels"]);
     }
 
+    [Fact]
+    public void GenerateSchemaNode_ProducesCanonicalEnumShapeAcrossTargetFrameworks()
+    {
+        var schema = JsonSchemaGenerator.GenerateSchemaNode<EnumPayload>();
+        var mode = schema!["properties"]!["mode"]!;
+
+        mode["type"]!.GetValue<string>().Should().Be("string");
+        mode["enum"]!.AsArray()
+            .Select(value => value!.GetValue<string>())
+            .Should().Equal("Fast", "Careful");
+        schema["required"]!.AsArray()
+            .Select(value => value!.GetValue<string>())
+            .Should().Contain("mode");
+    }
+
     private sealed class Payload
     {
         [JsonPropertyName("name")]
@@ -48,5 +63,18 @@ public sealed class JsonSchemaGeneratorTests
     {
         [JsonPropertyName("count")]
         public required int Count { get; init; }
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    private enum Mode
+    {
+        Fast,
+        Careful
+    }
+
+    private sealed class EnumPayload
+    {
+        [JsonPropertyName("mode")]
+        public required Mode Mode { get; init; }
     }
 }

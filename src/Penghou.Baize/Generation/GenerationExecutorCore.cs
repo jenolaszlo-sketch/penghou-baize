@@ -10,13 +10,23 @@ namespace Penghou.Baize.Generation;
 internal sealed class GenerationExecutorCore(
     IGenerationClientRegistry registry,
     IGenerationRoutingPolicy routingPolicy,
-    GenerationExecutorOptions options)
+    GenerationExecutorOptions options,
+    IGenerationEndpointOrderer? endpointOrderer = null)
 {
-    public GenerationEndpoint SelectEndpoint(GenerationRequest request)
+    public async Task<GenerationEndpoint> SelectEndpointAsync(
+        GenerationRequest request,
+        CancellationToken cancellationToken)
     {
-        var candidates = registry.Endpoints
+        IReadOnlyList<GenerationEndpoint> candidates = registry.Endpoints
             .Where(endpoint => Supports(endpoint, request))
             .ToArray();
+
+        if (endpointOrderer is not null && candidates.Count > 1)
+        {
+            candidates = await endpointOrderer
+                .OrderAsync(candidates, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return routingPolicy.Select(request, candidates)
             ?? throw new BaizeException(

@@ -74,6 +74,20 @@ internal sealed class HttpDiagnosticSession
         }
     }
 
+    public void TryAppendText(string content)
+    {
+        try
+        {
+            File.AppendAllText(
+                ResponseLogPath,
+                content,
+                new UTF8Encoding(false));
+        }
+        catch (Exception exception) when (HandleCaptureFailure(exception, "append"))
+        {
+        }
+    }
+
     public bool HandleCaptureFailure(Exception exception, string operation)
     {
         DiagnosticsTelemetry.Failures.Add(

@@ -18,4 +18,11 @@ public sealed record GenerationOperation(
     GenerationResult? Result = null,
     GenerationError? Error = null,
     double? Progress = null,
-    IReadOnlyDictionary<string, object?>? ProviderMetadata = null);
+    IReadOnlyDictionary<string, object?>? ProviderMetadata = null)
+{
+    /// <summary>
+    /// Typed progress details. <see cref="Progress"/> remains the compatibility
+    /// projection of <see cref="GenerationProgress.Fraction"/>.
+    /// </summary>
+    public GenerationProgress? ProgressDetails { get; init; }
+}

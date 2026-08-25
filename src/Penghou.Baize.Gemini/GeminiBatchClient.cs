@@ -222,7 +222,8 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
                 if (line is null || string.IsNullOrWhiteSpace(line.Key))
                 {
                     throw new LlmClientException(
-                        $"Gemini inline batch result has no correlation key: {element.GetRawText()}",
+                        $"Gemini inline batch result has no correlation key: " +
+                        LlmJson.FormatForError(element.GetRawText()),
                         LlmClientFailureKind.Protocol);
                 }
 
@@ -424,14 +425,14 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
             catch (JsonException ex)
             {
                 throw new LlmClientException(
-                    $"Failed to parse Gemini batch result line: {rawLine}",
+                    $"Failed to parse Gemini batch result line: {LlmJson.FormatForError(rawLine)}",
                     ex);
             }
 
             if (line is null || string.IsNullOrWhiteSpace(line.Key))
             {
                 throw new LlmClientException(
-                    $"Gemini batch result line has no correlation key: {rawLine}",
+                    $"Gemini batch result line has no correlation key: {LlmJson.FormatForError(rawLine)}",
                     LlmClientFailureKind.Protocol);
             }
 
@@ -510,7 +511,8 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
             catch (JsonException ex)
             {
                 throw new LlmClientException(
-                    $"Failed to parse Gemini batch response body: {response.GetRawText()}",
+                    $"Failed to parse Gemini batch response body: " +
+                    LlmJson.FormatForError(response.GetRawText()),
                     ex);
             }
 

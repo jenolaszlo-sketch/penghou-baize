@@ -1,9 +1,8 @@
 # Architecture & quality review — findings
 
-Reviewed: 2026-08 against release 0.3.0-preview.2 line.
-**Ledger updated after remediation:** P0, P1, and P2 are fully resolved; P3 is
-nearly complete. This document now tracks only what is still open — resolved
-work is summarized once below and no longer itemized.
+Reviewed: 2026-08 against release 0.3.0-preview.4 line.
+**Ledger updated after remediation:** all actionable review findings are
+resolved. This document is now a completion record rather than an open backlog.
 
 Scope: all 12 src projects — core chat stack (`ILlmClient`), Generation,
 Batch, Tools, Router, Diagnostics, Extensions.AI bridge, and the OpenAI /
@@ -44,92 +43,44 @@ batch; generic `AddBaizeGenerationEndpoint<TOptions>` DI helper;
 system_fingerprint/service_tier surfaced, per-chunk diagnostic events);
 honest XML docs; `LlmClientBase` state as properties.
 
-**P3 — robustness (5 of 6):**
+**P3 — robustness closes:**
 Caller cancellation excluded from failure metrics; fal multi-input mapped to
 references; Runway unparseable outputs fail loudly; deterministic Gemini
 tool-call ids (`call_{n}`); mid-poll unexpected exceptions wrapped as typed
 batch-chunk failures. OpenAI first-choice reads documented as contractual
-(no `n` parameter is ever sent).
+(no `n` parameter is ever sent). Error bodies are bounded, signed asset URLs
+are sanitized, OpenAI tool-call diagnostics include the current chunk and an
+authoritative `[DONE]` snapshot, robustness paths have direct regression tests,
+corrupted XML punctuation has been repaired, and Ollama's separate `thinking`
+field is preserved as ordered canonical reasoning content.
 
-## Open — carry-over from P1
+## Final remediation closes
 
-### 1. Generation does not yet inherit Router reliability primitives
-
-Shared executor/descriptor plumbing landed, but generation routing still uses
-first-candidate selection rather than the Router's reliability-ranked
-selection, cooldown memory, and `ISecretProvider`. Extract or bridge those
-primitives so both stacks share them.
-
-## Open — P3 remainder
-
-### 2. Ollama reasoning content not surfaced
-
-Ollama models can emit thinking output; the client neither streams nor
-projects it into `ReasoningContent`, unlike every other provider.
-
-### 3. fal rebuilds provider-supplied URIs manually
-
-`response_url`/`status_url`/`cancel_url` are deserialized then reconstructed
-from a base prefix. Use the URLs the provider returns.
-
-### 4. Schema generator TFM parity test
-
-net9/net10 use the JSON Schema exporter path; net8 falls back to reflection
-that can emit enums differently. Needs a golden-schema parity harness across
-target frameworks.
-
-## Open — P4 polish
-
-### 5. ConfigureAwait policy inconsistent solution-wide
-
-Present in generation executors/streaming extensions; absent in client bases,
-Router, Batch, Tools, Extensions.AI. Pick one policy and enforce via analyzer.
-
-### 6. Sync-over-async residue in diagnostics capture dispose paths.
-
-### 7. Error messages embed full payloads
-
-`LlmJson.ParseElement` and batch send failures echo entire bodies — truncate
-before logging/throwing (log-bloat/PII risk).
-
-### 8. `RunwayUploadFileAsync` copies memory needlessly — use `ReadOnlyMemoryContent`.
-
-### 9. Fragile non-null invariant in `OpenAiBatchClient.NormalizeResult`.
-
-### 10. Primitive obsession — raw string API keys end-to-end; free-string
-aspect ratios/formats (`LlmProviderKey` shows the right pattern).
-
-## Open — usability
-
-### 11. Constructor explosion in direct construction
-
-`RunwayGenerationClient` takes 10 positional parameters including
-consecutive nullable strings; an options object exists at the DI layer but
-not for direct construction/tests.
-
-### 12. Magic settings keys discovered only by reading code
-
-`"structured_output"` (duplicated), `"Dialect"`, `"ThinkingStyle"` parsed late
-via `Enum.TryParse` with throw-at-resolution.
-
-### 13. Typed progress missing — fal queue position buried in
-`ProviderMetadata`; a typed `GenerationProgress` (state/phase/position) would
-serve UIs better than bare `IProgress<double>`.
-
-### 14. Repair decorator silently destroys streaming for schema requests
-(full buffering, no opt-out knob).
-
-### 15. M.E.AI adapter brittleness — unknown `AIContent` types throw
-mid-request; tool-call argument parse errors propagate unguarded; adapters
-never dispose disposable wrapped clients.
-
-## Open — release engineering
-
-### 16. No PublicApi baselines — adopt Zhinu's `PublicApiAnalyzers` +
-`PublicAPI.*.txt` pattern.
-
-### 17. No benchmarks project — token throughput, SSE parse rate, router
-failover latency, batch scaling (Zhinu pattern portable).
+- Generation can consume Router reliability ordering through
+  `IGenerationEndpointOrderer`; the default bridge uses the same cooldown and
+  failure memory as chat routing while preserving submit-at-most-once safety.
+- fal-issued status/result/cancel URLs travel with persisted operation handles
+  and are used verbatim after validating their HTTP(S) scheme.
+- Multi-target schema tests enforce a canonical enum shape; the .NET 8 fallback
+  and .NET 9+ exporter are normalized consistently.
+- The async policy is explicit in `docs/async-policy.md`; diagnostics dispose
+  paths no longer block on asynchronous writes.
+- Runway uploads use `ReadOnlyMemoryContent`; OpenAI batch normalization checks
+  its successful-response invariant explicitly.
+- Runway offers cohesive options-based direct construction, well-known setting
+  and protocol names are public constants, and typed generation progress
+  surfaces phase and queue position without removing the numeric compatibility
+  projection.
+- Structured-output repair has an explicit native-streaming opt-out. The M.E.AI
+  bridge preserves malformed tool arguments as `$raw` and supports explicit
+  ownership/disposal of wrapped clients; unknown content remains a deliberate,
+  early validation error rather than being silently discarded.
+- Public API analyzers and baselines cover every shipped package. A BenchmarkDotNet
+  project covers stream assembly, schema generation, and registry scaling.
+- Raw strings remain at provider wire/configuration boundaries intentionally:
+  API keys integrate naturally with configuration and secret providers, while
+  aspect-ratio and format vocabularies vary by model. Validation and capability
+  descriptors provide the type-safe boundary without freezing provider vocabularies.
 
 ## Done well (preserve)
 
@@ -148,16 +99,7 @@ failover latency, batch scaling (Zhinu pattern portable).
 7. Modern hygiene: nullable + TreatWarningsAsErrors + deterministic builds,
    immutable sealed records, discriminated unions for media/asset sources.
 
-## Suggested priority
+## Remaining roadmap
 
-1. **Small robustness closes**: Ollama reasoning surfacing (#2), fal
-   provider-supplied URLs (#3), payload truncation in errors (#7).
-2. **Release engineering**: PublicApi baselines + benchmarks (#16, #17) —
-   port tooling from Zhinu.
-3. **Usability batch**: Runway options object (#11), named settings keys
-   (#12), M.E.AI adapter hardening (#15), repair streaming opt-out (#14).
-4. **Deeper convergence**: generation inheriting Router reliability
-   primitives (#1); ConfigureAwait analyzer decision (#5).
-5. **Nice-to-have**: typed progress (#13), primitive-obsession types (#10),
-   schema parity harness (#4), sync-over-async residue (#6),
-   `NormalizeResult` invariant (#9), upload copy (#8).
+No architecture-review findings remain open. Future feature work belongs in
+the product roadmap and should be added only when backed by a concrete use case.

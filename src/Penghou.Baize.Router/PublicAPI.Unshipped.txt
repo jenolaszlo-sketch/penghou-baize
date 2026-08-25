@@ -1,0 +1,406 @@
+#nullable enable
+abstract Penghou.Baize.Router.LlmRouteProviderBase.ResolveAsync(Penghou.Baize.Router.LlmRoutingContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Baize.Router.LlmRouteResolution!>
+override Penghou.Baize.Router.ConfiguredLlmRouteProvider.ResolveAsync(Penghou.Baize.Router.LlmRoutingContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Baize.Router.LlmRouteResolution!>
+override Penghou.Baize.Router.LlmRouteTarget.ToString() -> string!
+Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ApiStyle.Claude = 1 -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ApiStyle.Gemini = 3 -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ApiStyle.Ollama = 2 -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ApiStyle.OpenAi = 0 -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ApiStyleExtensions
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.ConfigureCapabilities(System.Action<Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!>! configure) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.LlmEndpointBuilder(string! provider) -> void
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.UseBaseUrl(string! baseUrl) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.UseProfile(string! profile) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.UseProviderModel(string! model) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.UseSecret(string! secretName) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.WithId(string! id) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointBuilder.WithSetting(string! key, string! value) -> Penghou.Baize.Router.Configuration.LlmEndpointBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.LlmEndpointCapabilitiesBuilder() -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.StreamsToolCallArguments(bool enabled = true) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.SupportsBatch(Penghou.Baize.BatchCapabilities capabilities) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.SupportsContent(Penghou.Baize.LlmContentType type, Penghou.Baize.LlmContentTransport transports = Penghou.Baize.LlmContentTransport.None) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.SupportsStructuredOutput(bool native = true, bool viaTool = false) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.SupportsThinking(bool enabled = true, bool canDisable = true, int? tokenBudget = null, params Penghou.Baize.LlmThinkingEffort[]! efforts) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder.SupportsTools(bool enabled = true, bool parallel = false, bool withStructuredOutput = false, bool strictArguments = false) -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.Batch.get -> Penghou.Baize.BatchCapabilities?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.Batch.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ContentTransports.get -> System.Collections.Generic.Dictionary<Penghou.Baize.LlmContentType, Penghou.Baize.LlmContentTransport>?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ContentTransports.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ContentTypes.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmContentType>?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ContentTypes.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.LlmEndpointCapabilitiesOptions() -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.NativeStructuredOutput.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.NativeStructuredOutput.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.NativeToolCalling.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.NativeToolCalling.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ParallelToolCalls.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ParallelToolCalls.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StreamingToolCallArguments.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StreamingToolCallArguments.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StrictToolArguments.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StrictToolArguments.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StructuredOutputViaTool.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.StructuredOutputViaTool.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.SupportedThinkingEfforts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmThinkingEffort>?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.SupportedThinkingEfforts.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.Thinking.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.Thinking.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ThinkingBudget.get -> int?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ThinkingBudget.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ThinkingDisable.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ThinkingDisable.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ToolsWithStructuredOutput.get -> bool?
+Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions.ToolsWithStructuredOutput.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ApiKeySecretName.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ApiKeySecretName.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ApiStyle.get -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ApiStyle.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.BaseUrl.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.BaseUrl.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Capabilities.get -> Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Capabilities.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Dialect.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Dialect.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Id.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Id.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.LlmEndpointOptions() -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Profile.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Profile.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Provider.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Provider.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ProviderKey.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ProviderModel.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ProviderModel.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.RequestTimeout.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Settings.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.Settings.init -> void
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ThinkingStyle.get -> string?
+Penghou.Baize.Router.Configuration.LlmEndpointOptions.ThinkingStyle.init -> void
+Penghou.Baize.Router.Configuration.LlmModelBuilder
+Penghou.Baize.Router.Configuration.LlmModelBuilder.AddEndpoint(string! provider, System.Action<Penghou.Baize.Router.Configuration.LlmEndpointBuilder!>? configure = null) -> Penghou.Baize.Router.Configuration.LlmModelBuilder!
+Penghou.Baize.Router.Configuration.LlmModelBuilder.LlmModelBuilder(string! name) -> void
+Penghou.Baize.Router.Configuration.LlmModelOptions
+Penghou.Baize.Router.Configuration.LlmModelOptions.Endpoints.get -> System.Collections.Generic.List<Penghou.Baize.Router.Configuration.LlmEndpointOptions!>!
+Penghou.Baize.Router.Configuration.LlmModelOptions.Endpoints.init -> void
+Penghou.Baize.Router.Configuration.LlmModelOptions.LlmModelOptions() -> void
+Penghou.Baize.Router.Configuration.LlmModelOptions.Name.get -> string!
+Penghou.Baize.Router.Configuration.LlmModelOptions.Name.init -> void
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions.Assembly.get -> string!
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions.Assembly.init -> void
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions.LlmProviderModuleOptions() -> void
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions.Type.get -> string?
+Penghou.Baize.Router.Configuration.LlmProviderModuleOptions.Type.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.AddModel(string! name, System.Action<Penghou.Baize.Router.Configuration.LlmModelBuilder!>! configure) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.AddNamedRoute(string! name, params string![]! models) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.AddProfile(string! name, System.Action<Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesBuilder!>! configure) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.AddProviderModule(string! assemblyName) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.AddStrategy(Penghou.Baize.ModelStrategy strategy, params string![]! models) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.LlmRoutingBuilder() -> void
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.ValidateEndpointsOnStart() -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.WithMaxPendingRequests(int maximum) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.WithRequestTimeout(System.TimeSpan timeout) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingBuilder.WithTransientRetries(int maximumAttempts, System.TimeSpan initialDelay, double backoffFactor = 2, System.TimeSpan? maximumDelay = null) -> Penghou.Baize.Router.Configuration.LlmRoutingBuilder!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.LlmRoutingOptions() -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.MaxPendingRequests.get -> int
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.MaxPendingRequests.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Models.get -> System.Collections.Generic.List<Penghou.Baize.Router.Configuration.LlmModelOptions!>!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Models.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.NamedRoutes.get -> System.Collections.Generic.Dictionary<string!, System.Collections.Generic.List<string!>!>!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.NamedRoutes.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Profiles.get -> System.Collections.Generic.Dictionary<string!, Penghou.Baize.Router.Configuration.LlmEndpointCapabilitiesOptions!>!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Profiles.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.ProviderModules.get -> System.Collections.Generic.List<Penghou.Baize.Router.Configuration.LlmProviderModuleOptions!>!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.ProviderModules.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.RequestTimeout.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Retry.get -> Penghou.Baize.Router.LlmRouterRetryOptions!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.Retry.init -> void
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.StrategyFallbacks.get -> System.Collections.Generic.Dictionary<Penghou.Baize.ModelStrategy, System.Collections.Generic.List<string!>!>!
+Penghou.Baize.Router.Configuration.LlmRoutingOptions.StrategyFallbacks.init -> void
+Penghou.Baize.Router.ConfiguredLlmRouteProvider
+Penghou.Baize.Router.ConfiguredLlmRouteProvider.ConfiguredLlmRouteProvider(Penghou.Baize.Router.ILlmModelLookup! modelLookup, System.Collections.Generic.IReadOnlyDictionary<Penghou.Baize.ModelStrategy, System.Collections.Generic.IReadOnlyList<string!>!>! strategies, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<string!>!>! namedRoutes, Penghou.Baize.Router.ILlmRouterMemory! memory, Penghou.Baize.Router.ILlmEndpointSelectionPolicy! selectionPolicy) -> void
+Penghou.Baize.Router.EnvironmentSecretProvider
+Penghou.Baize.Router.EnvironmentSecretProvider.EnvironmentSecretProvider() -> void
+Penghou.Baize.Router.EnvironmentSecretProvider.GetSecretAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+Penghou.Baize.Router.Extensions.ServiceCollectionExtensions
+Penghou.Baize.Router.ILlmClientProviderRegistry
+Penghou.Baize.Router.ILlmClientProviderRegistry.GetRequiredProvider(Penghou.Baize.LlmProviderKey key) -> Penghou.Baize.ILlmClientProvider!
+Penghou.Baize.Router.ILlmClientProviderRegistry.Keys.get -> System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmProviderKey>!
+Penghou.Baize.Router.ILlmEndpointSelectionPolicy
+Penghou.Baize.Router.ILlmEndpointSelectionPolicy.OrderAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>! candidates, Penghou.Baize.LlmRequest? request, Penghou.Baize.ModelStrategy strategy, Penghou.Baize.Router.ILlmRouterMemory! memory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!>!
+Penghou.Baize.Router.ILlmEndpointValidator
+Penghou.Baize.Router.ILlmEndpointValidator.ValidateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmEndpointValidationReport!>!
+Penghou.Baize.Router.ILlmModelLookup
+Penghou.Baize.Router.ILlmModelLookup.GetApiStyles(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ApiStyle>!
+Penghou.Baize.Router.ILlmModelLookup.GetBatchClientByEndpointId(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Router.ILlmModelLookup.GetClient(string! model) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ILlmModelLookup.GetClient(string! model, Penghou.Baize.LlmProviderKey provider) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ILlmModelLookup.GetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ILlmModelLookup.GetClientByEndpointId(string! endpointId) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ILlmModelLookup.GetEndpoints(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ILlmModelLookup.GetProviders(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmProviderKey>!
+Penghou.Baize.Router.ILlmModelLookup.TryGetBatchClientByEndpointId(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Router.ILlmModelLookup.TryGetClient(string! model, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ILlmModelLookup.TryGetClient(string! model, Penghou.Baize.LlmProviderKey provider, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ILlmModelLookup.TryGetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ILlmModelLookup.TryGetClientByEndpointId(string! endpointId, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ILlmRouteProvider
+Penghou.Baize.Router.ILlmRouteProvider.ResolveAsync(Penghou.Baize.Router.LlmRoutingContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Baize.Router.LlmRouteResolution!>
+Penghou.Baize.Router.ILlmRouter
+Penghou.Baize.Router.ILlmRouter.ExplainModelAsync(string! model, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ILlmRouter.ExplainRouteAsync(string! route, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ILlmRouter.ExplainStrategyAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ILlmRouter.Resolve(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.ILlmRouter.Resolve(string! model) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.ILlmRouter.ResolveAsync(Penghou.Baize.ModelStrategy strategy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ILlmRouter.ResolveAsync(string! model, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ILlmRouter.ResolveRouteAsync(string! route, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ILlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouter.StreamAsync(string! model, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouter.StreamAsync(string! model, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouter.StreamRouteAsync(string! route, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouter.StreamRouteAsync(string! route, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ILlmRouterMemory
+Penghou.Baize.Router.ILlmRouterMemory.GetStatsAsync(string! endpointId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmEndpointStats!>!
+Penghou.Baize.Router.ILlmRouterMemory.RecordCallAsync(string! endpointId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Router.ILlmRouterMemory.RecordFailureAsync(string! endpointId, Penghou.Baize.Router.LlmFailureCategory category, System.DateTimeOffset? unavailableUntil = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Router.InMemoryLlmRouterMemory
+Penghou.Baize.Router.InMemoryLlmRouterMemory.GetStats(string! endpointId) -> Penghou.Baize.Router.LlmEndpointStats!
+Penghou.Baize.Router.InMemoryLlmRouterMemory.GetStatsAsync(string! endpointId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmEndpointStats!>!
+Penghou.Baize.Router.InMemoryLlmRouterMemory.InMemoryLlmRouterMemory(System.TimeSpan? availabilityWindow = null) -> void
+Penghou.Baize.Router.InMemoryLlmRouterMemory.RecordCallAsync(string! endpointId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Router.InMemoryLlmRouterMemory.RecordFailureAsync(string! endpointId, Penghou.Baize.Router.LlmFailureCategory category, System.DateTimeOffset? unavailableUntil = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Router.ISecretProvider
+Penghou.Baize.Router.ISecretProvider.GetSecretAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+Penghou.Baize.Router.LlmClientProviderRegistry
+Penghou.Baize.Router.LlmClientProviderRegistry.GetRequiredProvider(Penghou.Baize.LlmProviderKey key) -> Penghou.Baize.ILlmClientProvider!
+Penghou.Baize.Router.LlmClientProviderRegistry.Keys.get -> System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmProviderKey>!
+Penghou.Baize.Router.LlmClientProviderRegistry.LlmClientProviderRegistry(System.Collections.Generic.IEnumerable<Penghou.Baize.ILlmClientProvider!>! providers) -> void
+Penghou.Baize.Router.LlmConfigurationException
+Penghou.Baize.Router.LlmConfigurationException.EndpointFailures.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmEndpointValidationResult!>!
+Penghou.Baize.Router.LlmConfigurationException.FailureKind.get -> Penghou.Baize.Router.LlmConfigurationFailureKind
+Penghou.Baize.Router.LlmConfigurationException.LlmConfigurationException(Penghou.Baize.Router.LlmConfigurationFailureKind failureKind, string! message, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmEndpointValidationResult!>? endpointFailures = null) -> void
+Penghou.Baize.Router.LlmConfigurationFailureKind
+Penghou.Baize.Router.LlmConfigurationFailureKind.EndpointInitialization = 1 -> Penghou.Baize.Router.LlmConfigurationFailureKind
+Penghou.Baize.Router.LlmConfigurationFailureKind.Structural = 0 -> Penghou.Baize.Router.LlmConfigurationFailureKind
+Penghou.Baize.Router.LlmEndpointStats
+Penghou.Baize.Router.LlmEndpointStats.AvailabilityFailures.get -> long
+Penghou.Baize.Router.LlmEndpointStats.AvailabilityFailures.init -> void
+Penghou.Baize.Router.LlmEndpointStats.EndpointId.get -> string!
+Penghou.Baize.Router.LlmEndpointStats.EndpointId.init -> void
+Penghou.Baize.Router.LlmEndpointStats.LlmEndpointStats(string! EndpointId, long TotalCalls, long AvailabilityFailures, long ToolRepairFailures, long StructuredOutputFailures, System.DateTimeOffset? UnavailableUntil = null) -> void
+Penghou.Baize.Router.LlmEndpointStats.StructuredOutputFailures.get -> long
+Penghou.Baize.Router.LlmEndpointStats.StructuredOutputFailures.init -> void
+Penghou.Baize.Router.LlmEndpointStats.ToolRepairFailures.get -> long
+Penghou.Baize.Router.LlmEndpointStats.ToolRepairFailures.init -> void
+Penghou.Baize.Router.LlmEndpointStats.TotalCalls.get -> long
+Penghou.Baize.Router.LlmEndpointStats.TotalCalls.init -> void
+Penghou.Baize.Router.LlmEndpointStats.UnavailableUntil.get -> System.DateTimeOffset?
+Penghou.Baize.Router.LlmEndpointStats.UnavailableUntil.init -> void
+Penghou.Baize.Router.LlmEndpointValidationReport
+Penghou.Baize.Router.LlmEndpointValidationReport.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmEndpointValidationResult!>!
+Penghou.Baize.Router.LlmEndpointValidationReport.Endpoints.init -> void
+Penghou.Baize.Router.LlmEndpointValidationReport.LlmEndpointValidationReport(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmEndpointValidationResult!>! Endpoints) -> void
+Penghou.Baize.Router.LlmEndpointValidationReport.Succeeded.get -> bool
+Penghou.Baize.Router.LlmEndpointValidationResult
+Penghou.Baize.Router.LlmEndpointValidationResult.EndpointId.get -> string!
+Penghou.Baize.Router.LlmEndpointValidationResult.EndpointId.init -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.Error.get -> string?
+Penghou.Baize.Router.LlmEndpointValidationResult.Error.init -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.LlmEndpointValidationResult(string! EndpointId, string! Provider, string! Model, bool Succeeded, string? Error = null) -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.Model.get -> string!
+Penghou.Baize.Router.LlmEndpointValidationResult.Model.init -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.Provider.get -> string!
+Penghou.Baize.Router.LlmEndpointValidationResult.Provider.init -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.Succeeded.get -> bool
+Penghou.Baize.Router.LlmEndpointValidationResult.Succeeded.init -> void
+Penghou.Baize.Router.LlmFailureCategory
+Penghou.Baize.Router.LlmFailureCategory.Availability = 0 -> Penghou.Baize.Router.LlmFailureCategory
+Penghou.Baize.Router.LlmFailureCategory.StructuredOutputMismatch = 2 -> Penghou.Baize.Router.LlmFailureCategory
+Penghou.Baize.Router.LlmFailureCategory.ToolRepairNeeded = 1 -> Penghou.Baize.Router.LlmFailureCategory
+Penghou.Baize.Router.LlmModelLookup
+Penghou.Baize.Router.LlmModelLookup.GetApiStyles(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ApiStyle>!
+Penghou.Baize.Router.LlmModelLookup.GetBatchClientByEndpointId(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Router.LlmModelLookup.GetClient(string! model) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.LlmModelLookup.GetClient(string! model, Penghou.Baize.LlmProviderKey provider) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.LlmModelLookup.GetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.LlmModelLookup.GetClientByEndpointId(string! endpointId) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.LlmModelLookup.GetEndpoints(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.LlmModelLookup.GetProviders(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmProviderKey>!
+Penghou.Baize.Router.LlmModelLookup.LlmModelLookup(System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.ILlmClient!>!>! defaults, System.Collections.Generic.IReadOnlyDictionary<(string! Model, Penghou.Baize.LlmProviderKey Provider), System.Func<Penghou.Baize.ILlmClient!>!>! byProvider, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmProviderKey>!>? providersByModel = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.ILlmClient!>!>? byEndpointId = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!>? endpointsByModel = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.IBaizeBatchClient!>!>? batchByEndpointId = null) -> void
+Penghou.Baize.Router.LlmModelLookup.LlmModelLookup(System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.ILlmClient!>!>! defaults, System.Collections.Generic.IReadOnlyDictionary<(string! Model, Penghou.Baize.Router.ApiStyle ApiStyle), System.Func<Penghou.Baize.ILlmClient!>!>! byStyle, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ApiStyle>!>? stylesByModel = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.ILlmClient!>!>? byEndpointId = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!>? endpointsByModel = null, System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.IBaizeBatchClient!>!>? batchByEndpointId = null) -> void
+Penghou.Baize.Router.LlmModelLookup.TryGetBatchClientByEndpointId(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Router.LlmModelLookup.TryGetClient(string! model, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.LlmModelLookup.TryGetClient(string! model, Penghou.Baize.LlmProviderKey provider, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.LlmModelLookup.TryGetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.LlmModelLookup.TryGetClientByEndpointId(string! endpointId, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.LlmRouteCandidateExplanation
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Compatible.get -> bool
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Compatible.init -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Endpoint.get -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Endpoint.init -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.LlmRouteCandidateExplanation(Penghou.Baize.Router.ResolvedEndpoint Endpoint, bool Compatible, string? RejectionReason, int? Rank, Penghou.Baize.Router.LlmEndpointStats! Stats) -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Rank.get -> int?
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Rank.init -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.RejectionReason.get -> string?
+Penghou.Baize.Router.LlmRouteCandidateExplanation.RejectionReason.init -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Stats.get -> Penghou.Baize.Router.LlmEndpointStats!
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Stats.init -> void
+Penghou.Baize.Router.LlmRouteExplanation
+Penghou.Baize.Router.LlmRouteExplanation.Candidates.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmRouteCandidateExplanation!>!
+Penghou.Baize.Router.LlmRouteExplanation.Candidates.init -> void
+Penghou.Baize.Router.LlmRouteExplanation.ConfiguredModels.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Baize.Router.LlmRouteExplanation.ConfiguredModels.init -> void
+Penghou.Baize.Router.LlmRouteExplanation.LlmRouteExplanation(Penghou.Baize.Router.LlmRouteTarget! Target, System.Collections.Generic.IReadOnlyList<string!>! ConfiguredModels, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmRouteCandidateExplanation!>! Candidates, Penghou.Baize.Router.ResolvedEndpoint? SelectedEndpoint) -> void
+Penghou.Baize.Router.LlmRouteExplanation.SelectedEndpoint.get -> Penghou.Baize.Router.ResolvedEndpoint?
+Penghou.Baize.Router.LlmRouteExplanation.SelectedEndpoint.init -> void
+Penghou.Baize.Router.LlmRouteExplanation.Succeeded.get -> bool
+Penghou.Baize.Router.LlmRouteExplanation.Target.get -> Penghou.Baize.Router.LlmRouteTarget!
+Penghou.Baize.Router.LlmRouteExplanation.Target.init -> void
+Penghou.Baize.Router.LlmRouteKind
+Penghou.Baize.Router.LlmRouteKind.Model = 0 -> Penghou.Baize.Router.LlmRouteKind
+Penghou.Baize.Router.LlmRouteKind.Named = 2 -> Penghou.Baize.Router.LlmRouteKind
+Penghou.Baize.Router.LlmRouteKind.Strategy = 1 -> Penghou.Baize.Router.LlmRouteKind
+Penghou.Baize.Router.LlmRouteProviderBase
+Penghou.Baize.Router.LlmRouteProviderBase.GetStatsAsync(Penghou.Baize.Router.ResolvedEndpoint endpoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmEndpointStats!>!
+Penghou.Baize.Router.LlmRouteProviderBase.LlmRouteProviderBase(Penghou.Baize.Router.ILlmRouterMemory! memory) -> void
+Penghou.Baize.Router.LlmRouteProviderBase.Memory.get -> Penghou.Baize.Router.ILlmRouterMemory!
+Penghou.Baize.Router.LlmRouter
+Penghou.Baize.Router.LlmRouter.ExplainModelAsync(string! model, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.LlmRouter.ExplainRouteAsync(string! route, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.LlmRouter.ExplainStrategyAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.LlmRouter.LlmRouter(Penghou.Baize.Router.ILlmModelLookup! modelLookup, Penghou.Baize.Router.ILlmRouteProvider! routeProvider, Penghou.Baize.Router.ILlmRouterMemory? memory = null, int maxPendingRequests = 0, System.TimeSpan? requestTimeout = null, Penghou.Baize.Router.LlmRouterRetryOptions? retryOptions = null) -> void
+Penghou.Baize.Router.LlmRouter.LlmRouter(Penghou.Baize.Router.ILlmModelLookup! modelLookup, System.Collections.Generic.IReadOnlyDictionary<Penghou.Baize.ModelStrategy, System.Collections.Generic.IReadOnlyList<string!>!>! strategyLookup, Penghou.Baize.Router.ILlmRouterMemory? memory = null, int maxPendingRequests = 0, System.TimeSpan? requestTimeout = null, Penghou.Baize.Router.ILlmEndpointSelectionPolicy? selectionPolicy = null, Penghou.Baize.Router.LlmRouterRetryOptions? retryOptions = null) -> void
+Penghou.Baize.Router.LlmRouter.LlmRouter(Penghou.Baize.Router.ILlmModelLookup! modelLookup, System.Collections.Generic.IReadOnlyDictionary<Penghou.Baize.ModelStrategy, System.Collections.Generic.IReadOnlyList<string!>!>! strategyLookup, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<string!>!>! namedRouteLookup, Penghou.Baize.Router.ILlmRouterMemory? memory = null, int maxPendingRequests = 0, System.TimeSpan? requestTimeout = null, Penghou.Baize.Router.ILlmEndpointSelectionPolicy? selectionPolicy = null, Penghou.Baize.Router.LlmRouterRetryOptions? retryOptions = null) -> void
+Penghou.Baize.Router.LlmRouter.Resolve(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.LlmRouter.Resolve(string! model) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.LlmRouter.ResolveAsync(Penghou.Baize.ModelStrategy strategy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.LlmRouter.ResolveAsync(string! model, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.LlmRouter.ResolveRouteAsync(string! route, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.LlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouter.StreamAsync(string! model, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouter.StreamAsync(string! model, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouter.StreamRouteAsync(string! route, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouter.StreamRouteAsync(string! route, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.LlmRouteResolution
+Penghou.Baize.Router.LlmRouteResolution.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.LlmRouteResolution.Endpoints.init -> void
+Penghou.Baize.Router.LlmRouteResolution.Explanation.get -> Penghou.Baize.Router.LlmRouteExplanation!
+Penghou.Baize.Router.LlmRouteResolution.Explanation.init -> void
+Penghou.Baize.Router.LlmRouteResolution.LlmRouteResolution(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>! Endpoints, Penghou.Baize.Router.LlmRouteExplanation! Explanation) -> void
+Penghou.Baize.Router.LlmRouterRetryOptions
+Penghou.Baize.Router.LlmRouterRetryOptions.BackoffFactor.get -> double
+Penghou.Baize.Router.LlmRouterRetryOptions.BackoffFactor.init -> void
+Penghou.Baize.Router.LlmRouterRetryOptions.InitialDelay.get -> System.TimeSpan
+Penghou.Baize.Router.LlmRouterRetryOptions.InitialDelay.init -> void
+Penghou.Baize.Router.LlmRouterRetryOptions.MaximumAttempts.get -> int
+Penghou.Baize.Router.LlmRouterRetryOptions.MaximumAttempts.init -> void
+Penghou.Baize.Router.LlmRouterRetryOptions.MaximumDelay.get -> System.TimeSpan
+Penghou.Baize.Router.LlmRouterRetryOptions.MaximumDelay.init -> void
+Penghou.Baize.Router.LlmRouterStreamingExtensions
+Penghou.Baize.Router.LlmRouterValidationExtensions
+Penghou.Baize.Router.LlmRouteTarget
+Penghou.Baize.Router.LlmRouteTarget.Kind.get -> Penghou.Baize.Router.LlmRouteKind
+Penghou.Baize.Router.LlmRouteTarget.Name.get -> string?
+Penghou.Baize.Router.LlmRouteTarget.Strategy.get -> Penghou.Baize.ModelStrategy?
+Penghou.Baize.Router.LlmRoutingContext
+Penghou.Baize.Router.LlmRoutingContext.LlmRoutingContext(Penghou.Baize.Router.LlmRouteTarget! Target, Penghou.Baize.LlmRequest? Request = null) -> void
+Penghou.Baize.Router.LlmRoutingContext.Request.get -> Penghou.Baize.LlmRequest?
+Penghou.Baize.Router.LlmRoutingContext.Request.init -> void
+Penghou.Baize.Router.LlmRoutingContext.Target.get -> Penghou.Baize.Router.LlmRouteTarget!
+Penghou.Baize.Router.LlmRoutingContext.Target.init -> void
+Penghou.Baize.Router.LlmRoutingException
+Penghou.Baize.Router.LlmRoutingException.Candidates.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmRouteCandidateExplanation!>!
+Penghou.Baize.Router.LlmRoutingException.ConfiguredModels.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Baize.Router.LlmRoutingException.FailureKind.get -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingException.LlmRoutingException(string! message, Penghou.Baize.Router.LlmRoutingFailureKind failureKind, Penghou.Baize.Router.LlmRouteTarget! target, System.Collections.Generic.IReadOnlyList<string!>? configuredModels = null, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmRouteCandidateExplanation!>? candidates = null) -> void
+Penghou.Baize.Router.LlmRoutingException.Target.get -> Penghou.Baize.Router.LlmRouteTarget!
+Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingFailureKind.InvalidProviderResult = 4 -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingFailureKind.ModelNotFound = 0 -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingFailureKind.NoCompatibleEndpoint = 3 -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingFailureKind.NoRegisteredEndpoint = 2 -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.LlmRoutingFailureKind.RouteNotFound = 1 -> Penghou.Baize.Router.LlmRoutingFailureKind
+Penghou.Baize.Router.ReliabilityEndpointSelectionPolicy
+Penghou.Baize.Router.ReliabilityEndpointSelectionPolicy.OrderAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>! candidates, Penghou.Baize.LlmRequest? request, Penghou.Baize.ModelStrategy strategy, Penghou.Baize.Router.ILlmRouterMemory! memory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!>!
+Penghou.Baize.Router.ReliabilityEndpointSelectionPolicy.ReliabilityEndpointSelectionPolicy() -> void
+Penghou.Baize.Router.ReloadingLlmModelLookup
+Penghou.Baize.Router.ReloadingLlmModelLookup.Dispose() -> void
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetApiStyles(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ApiStyle>!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetBatchClientByEndpointId(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetClient(string! model) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetClient(string! model, Penghou.Baize.LlmProviderKey provider) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetClientByEndpointId(string! endpointId) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetEndpoints(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ReloadingLlmModelLookup.GetProviders(string! model) -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmProviderKey>!
+Penghou.Baize.Router.ReloadingLlmModelLookup.ReloadingLlmModelLookup(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Router.Configuration.LlmRoutingOptions!>! options, System.IServiceProvider! services) -> void
+Penghou.Baize.Router.ReloadingLlmModelLookup.TryGetBatchClientByEndpointId(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Router.ReloadingLlmModelLookup.TryGetClient(string! model, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ReloadingLlmModelLookup.TryGetClient(string! model, Penghou.Baize.LlmProviderKey provider, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ReloadingLlmModelLookup.TryGetClient(string! model, Penghou.Baize.Router.ApiStyle apiStyle, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ReloadingLlmModelLookup.TryGetClientByEndpointId(string! endpointId, out Penghou.Baize.ILlmClient! client) -> bool
+Penghou.Baize.Router.ReloadingLlmRouter
+Penghou.Baize.Router.ReloadingLlmRouter.Dispose() -> void
+Penghou.Baize.Router.ReloadingLlmRouter.ExplainModelAsync(string! model, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ReloadingLlmRouter.ExplainRouteAsync(string! route, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ReloadingLlmRouter.ExplainStrategyAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest? request = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmRouteExplanation!>!
+Penghou.Baize.Router.ReloadingLlmRouter.ReloadingLlmRouter(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Router.Configuration.LlmRoutingOptions!>! options, Penghou.Baize.Router.ILlmModelLookup! lookup, Penghou.Baize.Router.ILlmRouterMemory! memory, Penghou.Baize.Router.ILlmEndpointSelectionPolicy? selectionPolicy = null) -> void
+Penghou.Baize.Router.ReloadingLlmRouter.ReloadingLlmRouter(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Router.Configuration.LlmRoutingOptions!>! options, System.IServiceProvider! services, Penghou.Baize.Router.ILlmRouterMemory! memory) -> void
+Penghou.Baize.Router.ReloadingLlmRouter.Resolve(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.ReloadingLlmRouter.Resolve(string! model) -> Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.ReloadingLlmRouter.ResolveAsync(Penghou.Baize.ModelStrategy strategy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ReloadingLlmRouter.ResolveAsync(string! model, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ReloadingLlmRouter.ResolveRouteAsync(string! route, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.ResolvedEndpoint>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamAsync(Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamAsync(string! model, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamAsync(string! model, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamRouteAsync(string! route, Penghou.Baize.ILlmPromptBuilder! builder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ReloadingLlmRouter.StreamRouteAsync(string! route, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.Router.ResolvedEndpoint
+Penghou.Baize.Router.ResolvedEndpoint.ApiStyle.get -> Penghou.Baize.Router.ApiStyle
+Penghou.Baize.Router.ResolvedEndpoint.Deconstruct(out string! endpointId, out string! model, out Penghou.Baize.Router.ApiStyle apiStyle) -> void
+Penghou.Baize.Router.ResolvedEndpoint.EndpointId.get -> string!
+Penghou.Baize.Router.ResolvedEndpoint.EndpointId.init -> void
+Penghou.Baize.Router.ResolvedEndpoint.Model.get -> string!
+Penghou.Baize.Router.ResolvedEndpoint.Model.init -> void
+Penghou.Baize.Router.ResolvedEndpoint.Provider.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.Router.ResolvedEndpoint.Provider.init -> void
+Penghou.Baize.Router.ResolvedEndpoint.ResolvedEndpoint() -> void
+Penghou.Baize.Router.ResolvedEndpoint.ResolvedEndpoint(string! EndpointId, string! Model, Penghou.Baize.LlmProviderKey Provider) -> void
+Penghou.Baize.Router.ResolvedEndpoint.ResolvedEndpoint(string! endpointId, string! model, Penghou.Baize.Router.ApiStyle apiStyle) -> void
+Penghou.Baize.Router.ResolvedEndpoint.TryGetApiStyle(out Penghou.Baize.Router.ApiStyle apiStyle) -> bool
+Penghou.Baize.Router.RouterGenerationEndpointOrderer
+Penghou.Baize.Router.RouterGenerationEndpointOrderer.OrderAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>! candidates, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>!>!
+Penghou.Baize.Router.RouterGenerationEndpointOrderer.RouterGenerationEndpointOrderer(Penghou.Baize.Router.ILlmRouterMemory! memory) -> void
+static Penghou.Baize.Router.ApiStyleExtensions.ToProviderKey(this Penghou.Baize.Router.ApiStyle apiStyle) -> Penghou.Baize.LlmProviderKey
+static Penghou.Baize.Router.ApiStyleExtensions.TryGetApiStyle(this Penghou.Baize.LlmProviderKey provider, out Penghou.Baize.Router.ApiStyle apiStyle) -> bool
+static Penghou.Baize.Router.Extensions.ServiceCollectionExtensions.AddLlmEndpointValidationOnStart(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Router.Extensions.ServiceCollectionExtensions.AddLlmRouting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! config) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Router.Extensions.ServiceCollectionExtensions.AddLlmRouting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Baize.Router.Configuration.LlmRoutingBuilder!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Router.LlmRouteProviderBase.IsCoolingDown(Penghou.Baize.Router.LlmEndpointStats! stats, System.DateTimeOffset now) -> bool
+static Penghou.Baize.Router.LlmRouterRetryOptions.Default.get -> Penghou.Baize.Router.LlmRouterRetryOptions!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteRouteAsync(this Penghou.Baize.Router.ILlmRouter! router, string! route, Penghou.Baize.ILlmPromptBuilder! builder, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteRouteAsync(this Penghou.Baize.Router.ILlmRouter! router, string! route, Penghou.Baize.LlmRequest! request, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, Penghou.Baize.ModelStrategy strategy, Penghou.Baize.ILlmPromptBuilder! builder, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest! request, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, Penghou.Baize.ModelStrategy strategy, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, string! model, Penghou.Baize.ILlmPromptBuilder! builder, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, string! model, Penghou.Baize.LlmRequest! request, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterStreamingExtensions.CompleteStreamingAsync(this Penghou.Baize.Router.ILlmRouter! router, string! model, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.Router.LlmRouterValidationExtensions.ValidateEndpointsAsync(this Penghou.Baize.Router.ILlmRouter! router, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Router.LlmEndpointValidationReport!>!
+static Penghou.Baize.Router.LlmRouteTarget.ForStrategy(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.Router.LlmRouteTarget!
+static Penghou.Baize.Router.LlmRouteTarget.Model(string! model) -> Penghou.Baize.Router.LlmRouteTarget!
+static Penghou.Baize.Router.LlmRouteTarget.Named(string! route) -> Penghou.Baize.Router.LlmRouteTarget!

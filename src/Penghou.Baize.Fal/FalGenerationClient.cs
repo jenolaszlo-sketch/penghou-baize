@@ -24,6 +24,9 @@ namespace Penghou.Baize.Fal;
 /// </summary>
 public sealed class FalGenerationClient : GenerationClientBase
 {
+    private const string ResponseUrlKey = "response_url";
+    private const string StatusUrlKey = "status_url";
+    private const string CancelUrlKey = "cancel_url";
     private readonly Uri _queueUri;
     private readonly string _requestsUriPrefix;
 
@@ -82,7 +85,10 @@ public sealed class FalGenerationClient : GenerationClientBase
             GenerationErrorKind.GenerationFailed);
 
         return new GenerationOperation(
-            CreateHandle(requestId),
+            CreateHandle(requestId) with
+            {
+                ProviderData = CreateProviderData(queued)
+            },
             GenerationOperationState.Queued,
             ProviderMetadata: new Dictionary<string, object?>
             {
@@ -101,7 +107,10 @@ public sealed class FalGenerationClient : GenerationClientBase
             throw BaizeException.UnsupportedCapability(
                 $"Fal endpoint '{EndpointId}' does not support operation retrieval.");
 
-        var snapshot = await GetStatusAsync(handle.Id, cancellationToken);
+        var snapshot = await GetStatusAsync(
+            handle.Id,
+            GetProviderUri(handle, StatusUrlKey),
+            cancellationToken);
         return await MapStatusAsync(handle, snapshot, cancellationToken);
     }
 
@@ -115,7 +124,10 @@ public sealed class FalGenerationClient : GenerationClientBase
             throw BaizeException.UnsupportedCapability(
                 $"Fal endpoint '{EndpointId}' does not support operation cancellation.");
 
-        await CancelQueueAsync(handle.Id, cancellationToken);
+        await CancelQueueAsync(
+            handle.Id,
+            GetProviderUri(handle, CancelUrlKey),
+            cancellationToken);
         return new GenerationOperation(handle, GenerationOperationState.Canceled);
     }
 
@@ -158,12 +170,18 @@ public sealed class FalGenerationClient : GenerationClientBase
     public async Task<FalRequestStatus> GetStatusAsync(
         string requestId,
         CancellationToken cancellationToken = default)
+        => await GetStatusAsync(requestId, providerUri: null, cancellationToken);
+
+    private async Task<FalRequestStatus> GetStatusAsync(
+        string requestId,
+        Uri? providerUri,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId) + "/status"));
+            providerUri ?? new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId) + "/status"));
         ApplyAuth(httpRequest);
 
         var response = await SendAsync(httpRequest, "queue status", submission: false, cancellationToken);
@@ -182,12 +200,18 @@ public sealed class FalGenerationClient : GenerationClientBase
     public async Task<JsonElement> GetResultAsync(
         string requestId,
         CancellationToken cancellationToken = default)
+        => await GetResultAsync(requestId, providerUri: null, cancellationToken);
+
+    private async Task<JsonElement> GetResultAsync(
+        string requestId,
+        Uri? providerUri,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId)));
+            providerUri ?? new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId)));
         ApplyAuth(httpRequest);
 
         var response = await SendAsync(httpRequest, "queue result", submission: false, cancellationToken);
@@ -204,12 +228,18 @@ public sealed class FalGenerationClient : GenerationClientBase
     public async Task<FalQueueResponse> CancelQueueAsync(
         string requestId,
         CancellationToken cancellationToken = default)
+        => await CancelQueueAsync(requestId, providerUri: null, cancellationToken);
+
+    private async Task<FalQueueResponse> CancelQueueAsync(
+        string requestId,
+        Uri? providerUri,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Put,
-            new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId) + "/cancel"));
+            providerUri ?? new Uri(_requestsUriPrefix + Uri.EscapeDataString(requestId) + "/cancel"));
         ApplyAuth(httpRequest);
 
         var response = await SendAsync(httpRequest, "queue cancellation", submission: false, cancellationToken);
@@ -362,7 +392,12 @@ public sealed class FalGenerationClient : GenerationClientBase
             case GenerationOperationState.Running:
             case GenerationOperationState.Canceled:
             case GenerationOperationState.Unknown:
-                return new GenerationOperation(handle, state, ProviderMetadata: metadata);
+                return new GenerationOperation(handle, state, ProviderMetadata: metadata)
+                {
+                    ProgressDetails = new GenerationProgress(
+                        Phase: snapshot.Status,
+                        QueuePosition: snapshot.Position)
+                };
 
             case GenerationOperationState.Failed:
                 return new GenerationOperation(
@@ -375,7 +410,10 @@ public sealed class FalGenerationClient : GenerationClientBase
                     ProviderMetadata: metadata);
 
             default:
-                var output = await GetResultAsync(handle.Id, cancellationToken);
+                var output = await GetResultAsync(
+                    handle.Id,
+                    GetProviderUri(handle, ResponseUrlKey),
+                    cancellationToken);
                 if (ExtractError(output) is { Length: > 0 } detail)
                 {
                     return new GenerationOperation(
@@ -405,6 +443,47 @@ public sealed class FalGenerationClient : GenerationClientBase
                         }),
                     ProviderMetadata: metadata);
         }
+    }
+
+    private static IReadOnlyDictionary<string, string>? CreateProviderData(
+        FalQueueResponse response)
+    {
+        var data = new Dictionary<string, string>(StringComparer.Ordinal);
+        AddProviderUrl(data, ResponseUrlKey, response.ResponseUrl);
+        AddProviderUrl(data, StatusUrlKey, response.StatusUrl);
+        AddProviderUrl(data, CancelUrlKey, response.CancelUrl);
+        return data.Count == 0 ? null : data;
+    }
+
+    private static void AddProviderUrl(
+        IDictionary<string, string> data,
+        string key,
+        string? value)
+    {
+        if (TryCreateHttpUri(value, out _))
+            data.Add(key, value!);
+    }
+
+    private static Uri? GetProviderUri(
+        GenerationOperationHandle handle,
+        string key) =>
+        handle.ProviderData is not null &&
+        handle.ProviderData.TryGetValue(key, out var value) &&
+        TryCreateHttpUri(value, out var uri)
+            ? uri
+            : null;
+
+    private static bool TryCreateHttpUri(string? value, out Uri? uri)
+    {
+        if (Uri.TryCreate(value, UriKind.Absolute, out var candidate) &&
+            candidate.Scheme is "http" or "https")
+        {
+            uri = candidate;
+            return true;
+        }
+
+        uri = null;
+        return false;
     }
 
     private static GenerationOperationState MapState(string? status) =>

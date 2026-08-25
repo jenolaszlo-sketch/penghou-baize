@@ -59,8 +59,8 @@ public sealed class OllamaChatClient : LlmClientBase
     /// <inheritdoc />
     /// <inheritdoc />
     /// <summary>
-    /// Enforces Ollama's media rules up front � inline-data images only, no
-    /// other media content � so rejection happens before any mapping work,
+    /// Enforces Ollama's media rules up front—inline-data images only, no
+    /// other media content—so rejection happens before any mapping work,
     /// consistent with the other providers' pre-flight validation.
     /// </summary>
     protected override void ValidateRequest(LlmRequest request)
@@ -257,6 +257,7 @@ public sealed class OllamaChatClient : LlmClientBase
         var contentLength = 0;
         var nativeToolCallCount = 0;
         var nextPartIndex = 0;
+        int? reasoningPartIndex = null;
         int? contentPartIndex = null;
         var toolPartIndices = new Dictionary<int, int>();
 
@@ -275,6 +276,19 @@ public sealed class OllamaChatClient : LlmClientBase
             receivedChunk = true;
             var chatResponse =
                 ParseResponseChunk(line);
+
+            if (!string.IsNullOrEmpty(
+                    chatResponse.Message?.Thinking))
+            {
+                reasoningPartIndex ??= nextPartIndex++;
+
+                yield return new LlmStreamEvent(
+                    ReasoningContent:
+                        chatResponse.Message.Thinking)
+                {
+                    PartIndex = reasoningPartIndex
+                };
+            }
 
             if (!string.IsNullOrEmpty(
                     chatResponse.Message?.Content))
@@ -377,7 +391,7 @@ public sealed class OllamaChatClient : LlmClientBase
         catch (JsonException ex)
         {
             throw new LlmClientException(
-                $"Failed to parse Ollama chat response chunk: {line}",
+                $"Failed to parse Ollama chat response chunk: {LlmJson.FormatForError(line)}",
                 ex);
         }
     }

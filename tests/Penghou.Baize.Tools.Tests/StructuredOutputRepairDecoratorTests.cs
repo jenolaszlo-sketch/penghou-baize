@@ -51,6 +51,30 @@ public sealed class StructuredOutputRepairDecoratorTests
     }
 
     [Fact]
+    public async Task Decorator_CanPreserveNativeStreamingForSchemaRequest()
+    {
+        var repairer = new ThrowingRepairer();
+        var client = new StructuredOutputRepairingLlmClientDecorator(
+                repairer,
+                new StructuredOutputRepairOptions
+                {
+                    BufferStreamingResponses = false
+                })
+            .Decorate(new EventClient(
+                new LlmStreamEvent(Delta: "{\"name\":"),
+                new LlmStreamEvent(Delta: "\"Ada\"}")));
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Return JSON")],
+            responseFormat: LlmResponseFormat.JsonSchema("""{"type":"object"}"""));
+
+        var events = await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        events.Select(item => item.Delta).Should().Equal("{\"name\":", "\"Ada\"}");
+    }
+
+    [Fact]
     public async Task Decorator_PreservesFinishReasonForRepairClassification()
     {
         var repairer = new CapturingRepairer();

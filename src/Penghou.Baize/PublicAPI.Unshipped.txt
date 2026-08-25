@@ -1,0 +1,1020 @@
+#nullable enable
+abstract Penghou.Baize.BaizeBatchClientBase.ApplyAuth(System.Net.Http.HttpRequestMessage! request) -> void
+abstract Penghou.Baize.BaizeBatchClientBase.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+abstract Penghou.Baize.BaizeBatchClientBase.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
+abstract Penghou.Baize.BaizeBatchClientBase.GetStatusAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchStatus!>!
+abstract Penghou.Baize.BaizeBatchClientBase.SubmitAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, Penghou.Baize.BatchSubmissionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchHandle!>!
+abstract Penghou.Baize.Generation.GenerationClientBase.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+abstract Penghou.Baize.Generation.GenerationClientBase.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+abstract Penghou.Baize.Generation.GenerationClientBase.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+abstract Penghou.Baize.LlmClientBase.CreateHttpRequest(Penghou.Baize.LlmRequest! request) -> System.Net.Http.HttpRequestMessage!
+abstract Penghou.Baize.LlmClientBase.ProcessStreamAsync(System.IO.Stream! stream, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+abstract Penghou.Baize.LlmMediaSource.Transport.get -> Penghou.Baize.LlmContentTransport
+const Penghou.Baize.BaizeHttp.ClientName = "llm" -> string!
+const Penghou.Baize.BaizeTelemetry.InstrumentationName = "Penghou.Baize" -> string!
+const Penghou.Baize.LlmProtocolNames.StructuredOutputTool = "structured_output" -> string!
+const Penghou.Baize.LlmSettingNames.Dialect = "Dialect" -> string!
+const Penghou.Baize.LlmSettingNames.ThinkingStyle = "ThinkingStyle" -> string!
+override Penghou.Baize.LlmInlineDataSource.Transport.get -> Penghou.Baize.LlmContentTransport
+override Penghou.Baize.LlmProviderFileSource.Transport.get -> Penghou.Baize.LlmContentTransport
+override Penghou.Baize.LlmProviderKey.Equals(object? obj) -> bool
+override Penghou.Baize.LlmProviderKey.GetHashCode() -> int
+override Penghou.Baize.LlmProviderKey.ToString() -> string!
+override Penghou.Baize.LlmUriSource.Transport.get -> Penghou.Baize.LlmContentTransport
+Penghou.Baize.BaizeBatchClientBase
+Penghou.Baize.BaizeBatchClientBase.ApiKey.get -> string!
+Penghou.Baize.BaizeBatchClientBase.ApplyBearerAuth(System.Net.Http.HttpRequestMessage! request) -> void
+Penghou.Baize.BaizeBatchClientBase.ApplyCredentialHeader(System.Net.Http.HttpRequestMessage! request, string! headerName) -> void
+Penghou.Baize.BaizeBatchClientBase.BaizeBatchClientBase(string! providerId, string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, Penghou.Baize.LlmEndpointCapabilities! capabilities) -> void
+Penghou.Baize.BaizeBatchClientBase.Capabilities.get -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BaizeBatchClientBase.CreateTransport() -> System.Net.Http.HttpClient!
+Penghou.Baize.BaizeBatchClientBase.Model.get -> string!
+Penghou.Baize.BaizeBatchClientBase.ProviderId.get -> string!
+Penghou.Baize.BaizeBatchClientBase.SendAsync<T>(System.Net.Http.HttpRequestMessage! request, System.Text.Json.JsonSerializerOptions! serializerOptions, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+Penghou.Baize.BaizeBatchItem
+Penghou.Baize.BaizeBatchItem.BaizeBatchItem(string! RequestId, Penghou.Baize.LlmRequest! Request) -> void
+Penghou.Baize.BaizeBatchItem.Request.get -> Penghou.Baize.LlmRequest!
+Penghou.Baize.BaizeBatchItem.Request.init -> void
+Penghou.Baize.BaizeBatchItem.RequestId.get -> string!
+Penghou.Baize.BaizeBatchItem.RequestId.init -> void
+Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchItemState.Cancelled = 3 -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchItemState.Expired = 4 -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchItemState.Failed = 2 -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchItemState.Pending = 0 -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchItemState.Succeeded = 1 -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchResult
+Penghou.Baize.BaizeBatchResult.BaizeBatchResult(string! RequestId, Penghou.Baize.BaizeBatchItemState State, Penghou.Baize.LlmResponse? Response = null, Penghou.Baize.BaizeError? Error = null) -> void
+Penghou.Baize.BaizeBatchResult.Error.get -> Penghou.Baize.BaizeError?
+Penghou.Baize.BaizeBatchResult.Error.init -> void
+Penghou.Baize.BaizeBatchResult.RequestId.get -> string!
+Penghou.Baize.BaizeBatchResult.RequestId.init -> void
+Penghou.Baize.BaizeBatchResult.Response.get -> Penghou.Baize.LlmResponse?
+Penghou.Baize.BaizeBatchResult.Response.init -> void
+Penghou.Baize.BaizeBatchResult.State.get -> Penghou.Baize.BaizeBatchItemState
+Penghou.Baize.BaizeBatchResult.State.init -> void
+Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Cancelled = 6 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Cancelling = 5 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Completed = 2 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Expired = 7 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Failed = 4 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.PartiallyCompleted = 3 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Pending = 0 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeBatchState.Running = 1 -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.BaizeError
+Penghou.Baize.BaizeError.BaizeError(string! Message, Penghou.Baize.LlmClientFailureKind FailureKind, int? StatusCode = null, string? ProviderStatus = null) -> void
+Penghou.Baize.BaizeError.FailureKind.get -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.BaizeError.FailureKind.init -> void
+Penghou.Baize.BaizeError.Message.get -> string!
+Penghou.Baize.BaizeError.Message.init -> void
+Penghou.Baize.BaizeError.ProviderStatus.get -> string?
+Penghou.Baize.BaizeError.ProviderStatus.init -> void
+Penghou.Baize.BaizeError.StatusCode.get -> int?
+Penghou.Baize.BaizeError.StatusCode.init -> void
+Penghou.Baize.BaizeException
+Penghou.Baize.BaizeException.BaizeException(string! message, Penghou.Baize.Generation.GenerationErrorKind errorKind, int? statusCode = null, string? providerStatus = null, System.Exception? innerException = null) -> void
+Penghou.Baize.BaizeException.ErrorKind.get -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.BaizeException.ProviderStatus.get -> string?
+Penghou.Baize.BaizeException.StatusCode.get -> int?
+Penghou.Baize.BaizeHttp
+Penghou.Baize.BaizeServiceCollectionExtensions
+Penghou.Baize.BaizeTelemetry
+Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchCapabilities.Cancellation = 4 -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchCapabilities.NativeBatch = 1 -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchCapabilities.None = 0 -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchCapabilities.PartialResults = 8 -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchCapabilities.Polling = 2 -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.BatchRequestValidator
+Penghou.Baize.BatchSubmissionOptions
+Penghou.Baize.BatchSubmissionOptions.IdempotencyKey.get -> string?
+Penghou.Baize.BatchSubmissionOptions.IdempotencyKey.init -> void
+Penghou.Baize.BatchSubmissionOptions.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.BatchSubmissionOptions.Metadata.init -> void
+Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationKind.Music = 2 -> Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationKind.SoundEffect = 1 -> Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationKind.Speech = 0 -> Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationKind.Transform = 3 -> Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationRequest
+Penghou.Baize.Generation.AudioGenerationRequest.Duration.get -> System.TimeSpan?
+Penghou.Baize.Generation.AudioGenerationRequest.Duration.init -> void
+Penghou.Baize.Generation.AudioGenerationRequest.Kind.get -> Penghou.Baize.Generation.AudioGenerationKind
+Penghou.Baize.Generation.AudioGenerationRequest.Kind.init -> void
+Penghou.Baize.Generation.AudioGenerationRequest.OutputFormat.get -> string?
+Penghou.Baize.Generation.AudioGenerationRequest.OutputFormat.init -> void
+Penghou.Baize.Generation.AudioGenerationRequest.Prompt.get -> string!
+Penghou.Baize.Generation.AudioGenerationRequest.Prompt.init -> void
+Penghou.Baize.Generation.AudioGenerationRequest.SourceAudio.get -> Penghou.Baize.LlmMediaSource?
+Penghou.Baize.Generation.AudioGenerationRequest.SourceAudio.init -> void
+Penghou.Baize.Generation.AudioGenerationRequest.Voice.get -> string?
+Penghou.Baize.Generation.AudioGenerationRequest.Voice.init -> void
+Penghou.Baize.Generation.DefaultGenerationClientRegistry
+Penghou.Baize.Generation.DefaultGenerationClientRegistry.DefaultGenerationClientRegistry() -> void
+Penghou.Baize.Generation.DefaultGenerationClientRegistry.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>!
+Penghou.Baize.Generation.DefaultGenerationClientRegistry.Find(string! provider, string! endpointId) -> Penghou.Baize.Generation.IGenerationClient?
+Penghou.Baize.Generation.DefaultGenerationClientRegistry.Register(string! provider, string! endpointId, Penghou.Baize.Generation.IGenerationClient! client) -> void
+Penghou.Baize.Generation.DefaultGenerationRoutingPolicy
+Penghou.Baize.Generation.DefaultGenerationRoutingPolicy.DefaultGenerationRoutingPolicy() -> void
+Penghou.Baize.Generation.DefaultGenerationRoutingPolicy.Select(Penghou.Baize.Generation.GenerationRequest! request, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>! candidates) -> Penghou.Baize.Generation.GenerationEndpoint?
+Penghou.Baize.Generation.DelegateGenerationEndpointDescriptor
+Penghou.Baize.Generation.DelegateGenerationEndpointDescriptor.DelegateGenerationEndpointDescriptor(System.Action<System.IServiceProvider!, Penghou.Baize.Generation.IGenerationClientRegistry!>! register) -> void
+Penghou.Baize.Generation.DelegateGenerationEndpointDescriptor.Register(System.IServiceProvider! serviceProvider, Penghou.Baize.Generation.IGenerationClientRegistry! registry) -> void
+Penghou.Baize.Generation.GeneratedAsset
+Penghou.Baize.Generation.GeneratedAsset.ContentType.get -> string?
+Penghou.Baize.Generation.GeneratedAsset.ContentType.init -> void
+Penghou.Baize.Generation.GeneratedAsset.ExpiresAt.get -> System.DateTimeOffset?
+Penghou.Baize.Generation.GeneratedAsset.ExpiresAt.init -> void
+Penghou.Baize.Generation.GeneratedAsset.FileName.get -> string?
+Penghou.Baize.Generation.GeneratedAsset.FileName.init -> void
+Penghou.Baize.Generation.GeneratedAsset.GeneratedAsset(Penghou.Baize.Generation.GeneratedAssetSource! Source, string? ContentType = null, string? FileName = null, long? Size = null, System.DateTimeOffset? ExpiresAt = null, System.Collections.Generic.IReadOnlyDictionary<string!, object?>? Metadata = null) -> void
+Penghou.Baize.Generation.GeneratedAsset.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+Penghou.Baize.Generation.GeneratedAsset.Metadata.init -> void
+Penghou.Baize.Generation.GeneratedAsset.Size.get -> long?
+Penghou.Baize.Generation.GeneratedAsset.Size.init -> void
+Penghou.Baize.Generation.GeneratedAsset.Source.get -> Penghou.Baize.Generation.GeneratedAssetSource!
+Penghou.Baize.Generation.GeneratedAsset.Source.init -> void
+Penghou.Baize.Generation.GeneratedAssetSource
+Penghou.Baize.Generation.GenerationBatchChunk
+Penghou.Baize.Generation.GenerationBatchChunk.Error.get -> Penghou.Baize.BaizeException?
+Penghou.Baize.Generation.GenerationBatchChunk.Error.init -> void
+Penghou.Baize.Generation.GenerationBatchChunk.GenerationBatchChunk(int Index, Penghou.Baize.Generation.GenerationResult? Result, Penghou.Baize.BaizeException? Error) -> void
+Penghou.Baize.Generation.GenerationBatchChunk.Index.get -> int
+Penghou.Baize.Generation.GenerationBatchChunk.Index.init -> void
+Penghou.Baize.Generation.GenerationBatchChunk.Result.get -> Penghou.Baize.Generation.GenerationResult?
+Penghou.Baize.Generation.GenerationBatchChunk.Result.init -> void
+Penghou.Baize.Generation.GenerationBatchExecutor
+Penghou.Baize.Generation.GenerationBatchExecutor.ExecuteAsync(Penghou.Baize.Generation.GenerationBatchRequest! request, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationBatchResult!>!
+Penghou.Baize.Generation.GenerationBatchExecutor.GenerationBatchExecutor(Penghou.Baize.Generation.IGenerationClientRegistry! registry, Penghou.Baize.Generation.IGenerationRoutingPolicy? routingPolicy = null, Microsoft.Extensions.Options.IOptions<Penghou.Baize.Generation.GenerationExecutorOptions!>? options = null, Penghou.Baize.Generation.IGenerationEndpointOrderer? endpointOrderer = null) -> void
+Penghou.Baize.Generation.GenerationBatchExecutor.WaitAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.GenerationBatchRequest
+Penghou.Baize.Generation.GenerationBatchRequest.GenerationBatchRequest(Penghou.Baize.Generation.GenerationRequest! Request, int TotalCount, int MaxConcurrency = 4) -> void
+Penghou.Baize.Generation.GenerationBatchRequest.MaxConcurrency.get -> int
+Penghou.Baize.Generation.GenerationBatchRequest.MaxConcurrency.init -> void
+Penghou.Baize.Generation.GenerationBatchRequest.Request.get -> Penghou.Baize.Generation.GenerationRequest!
+Penghou.Baize.Generation.GenerationBatchRequest.Request.init -> void
+Penghou.Baize.Generation.GenerationBatchRequest.TotalCount.get -> int
+Penghou.Baize.Generation.GenerationBatchRequest.TotalCount.init -> void
+Penghou.Baize.Generation.GenerationBatchResult
+Penghou.Baize.Generation.GenerationBatchResult.AllSucceeded.get -> bool
+Penghou.Baize.Generation.GenerationBatchResult.Assets.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GeneratedAsset!>!
+Penghou.Baize.Generation.GenerationBatchResult.Chunks.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationBatchChunk!>!
+Penghou.Baize.Generation.GenerationBatchResult.Chunks.init -> void
+Penghou.Baize.Generation.GenerationBatchResult.Errors.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeException!>!
+Penghou.Baize.Generation.GenerationBatchResult.FailedCount.get -> int
+Penghou.Baize.Generation.GenerationBatchResult.GenerationBatchResult(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationBatchChunk!>! Chunks, int RequestedCount) -> void
+Penghou.Baize.Generation.GenerationBatchResult.RequestedCount.get -> int
+Penghou.Baize.Generation.GenerationBatchResult.RequestedCount.init -> void
+Penghou.Baize.Generation.GenerationBatchResult.SucceededCount.get -> int
+Penghou.Baize.Generation.GenerationCapabilities
+Penghou.Baize.Generation.GenerationCapabilities.Constraints.get -> Penghou.Baize.Generation.GenerationConstraints?
+Penghou.Baize.Generation.GenerationCapabilities.Constraints.init -> void
+Penghou.Baize.Generation.GenerationCapabilities.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationCapabilities.Features.init -> void
+Penghou.Baize.Generation.GenerationCapabilities.InputTransports.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.LlmContentTransport>!
+Penghou.Baize.Generation.GenerationCapabilities.InputTransports.init -> void
+Penghou.Baize.Generation.GenerationCapabilities.MaximumCandidates.get -> int?
+Penghou.Baize.Generation.GenerationCapabilities.MaximumCandidates.init -> void
+Penghou.Baize.Generation.GenerationCapabilities.Supports(Penghou.Baize.Generation.GenerationFeature feature) -> bool
+Penghou.Baize.Generation.GenerationClientBase
+Penghou.Baize.Generation.GenerationClientBase.ApiKey.get -> string!
+Penghou.Baize.Generation.GenerationClientBase.Capabilities.get -> Penghou.Baize.Generation.GenerationCapabilities!
+Penghou.Baize.Generation.GenerationClientBase.CreateHandle(string! id) -> Penghou.Baize.Generation.GenerationOperationHandle!
+Penghou.Baize.Generation.GenerationClientBase.EndpointId.get -> string!
+Penghou.Baize.Generation.GenerationClientBase.EnsureHandleOwnership(Penghou.Baize.Generation.GenerationOperationHandle! handle) -> void
+Penghou.Baize.Generation.GenerationClientBase.GenerationClientBase(string! provider, string! endpointId, string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, Penghou.Baize.Generation.GenerationCapabilities! capabilities) -> void
+Penghou.Baize.Generation.GenerationClientBase.Model.get -> string!
+Penghou.Baize.Generation.GenerationClientBase.Provider.get -> string!
+Penghou.Baize.Generation.GenerationClientBase.SendAsync(System.Net.Http.HttpRequestMessage! httpRequest, string! context, bool submission, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+Penghou.Baize.Generation.GenerationConstraints
+Penghou.Baize.Generation.GenerationConstraints.MaximumDuration.get -> System.TimeSpan?
+Penghou.Baize.Generation.GenerationConstraints.MaximumDuration.init -> void
+Penghou.Baize.Generation.GenerationConstraints.MaximumInputs.get -> int?
+Penghou.Baize.Generation.GenerationConstraints.MaximumInputs.init -> void
+Penghou.Baize.Generation.GenerationConstraints.MinimumDuration.get -> System.TimeSpan?
+Penghou.Baize.Generation.GenerationConstraints.MinimumDuration.init -> void
+Penghou.Baize.Generation.GenerationConstraints.SupportedAspectRatios.get -> System.Collections.Generic.IReadOnlySet<string!>!
+Penghou.Baize.Generation.GenerationConstraints.SupportedAspectRatios.init -> void
+Penghou.Baize.Generation.GenerationConstraints.SupportedAudioKinds.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.Generation.AudioGenerationKind>!
+Penghou.Baize.Generation.GenerationConstraints.SupportedAudioKinds.init -> void
+Penghou.Baize.Generation.GenerationConstraints.SupportedImageSizes.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.Generation.GenerationImageSize!>!
+Penghou.Baize.Generation.GenerationConstraints.SupportedImageSizes.init -> void
+Penghou.Baize.Generation.GenerationConstraints.SupportedOutputFormats.get -> System.Collections.Generic.IReadOnlySet<string!>!
+Penghou.Baize.Generation.GenerationConstraints.SupportedOutputFormats.init -> void
+Penghou.Baize.Generation.GenerationConstraints.SupportedVideoSizes.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.Generation.GenerationVideoSize!>!
+Penghou.Baize.Generation.GenerationConstraints.SupportedVideoSizes.init -> void
+Penghou.Baize.Generation.GenerationEndpoint
+Penghou.Baize.Generation.GenerationEndpoint.Client.get -> Penghou.Baize.Generation.IGenerationClient!
+Penghou.Baize.Generation.GenerationEndpoint.Client.init -> void
+Penghou.Baize.Generation.GenerationEndpoint.EndpointId.get -> string!
+Penghou.Baize.Generation.GenerationEndpoint.EndpointId.init -> void
+Penghou.Baize.Generation.GenerationEndpoint.GenerationEndpoint(string! Provider, string! EndpointId, Penghou.Baize.Generation.IGenerationClient! Client) -> void
+Penghou.Baize.Generation.GenerationEndpoint.Provider.get -> string!
+Penghou.Baize.Generation.GenerationEndpoint.Provider.init -> void
+Penghou.Baize.Generation.GenerationError
+Penghou.Baize.Generation.GenerationError.GenerationError(Penghou.Baize.Generation.GenerationErrorKind Kind, string! Message, int? StatusCode = null, string? ProviderStatus = null) -> void
+Penghou.Baize.Generation.GenerationError.Kind.get -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationError.Kind.init -> void
+Penghou.Baize.Generation.GenerationError.Message.get -> string!
+Penghou.Baize.Generation.GenerationError.Message.init -> void
+Penghou.Baize.Generation.GenerationError.ProviderStatus.get -> string?
+Penghou.Baize.Generation.GenerationError.ProviderStatus.init -> void
+Penghou.Baize.Generation.GenerationError.StatusCode.get -> int?
+Penghou.Baize.Generation.GenerationError.StatusCode.init -> void
+Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.Authentication = 2 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.Authorization = 3 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.Canceled = 9 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.GenerationFailed = 8 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.InvalidRequest = 0 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.ProviderUnavailable = 7 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.QuotaExceeded = 4 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.RateLimited = 5 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.SafetyRejected = 6 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.TimeoutExceeded = 11 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.UnknownSubmissionOutcome = 10 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationErrorKind.UnsupportedCapability = 1 -> Penghou.Baize.Generation.GenerationErrorKind
+Penghou.Baize.Generation.GenerationExecutor
+Penghou.Baize.Generation.GenerationExecutor.ExecuteAsync(Penghou.Baize.Generation.GenerationRequest! request, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.GenerationExecutor.GenerationExecutor(Penghou.Baize.Generation.IGenerationClientRegistry! registry, Penghou.Baize.Generation.IGenerationRoutingPolicy? routingPolicy = null, Microsoft.Extensions.Options.IOptions<Penghou.Baize.Generation.GenerationExecutorOptions!>? options = null, Penghou.Baize.Generation.IGenerationEndpointOrderer? endpointOrderer = null) -> void
+Penghou.Baize.Generation.GenerationExecutor.WaitAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.GenerationExecutorOptions
+Penghou.Baize.Generation.GenerationExecutorOptions.GenerationExecutorOptions() -> void
+Penghou.Baize.Generation.GenerationExecutorOptions.InitialPollingInterval.get -> System.TimeSpan
+Penghou.Baize.Generation.GenerationExecutorOptions.InitialPollingInterval.set -> void
+Penghou.Baize.Generation.GenerationExecutorOptions.MaxPollingInterval.get -> System.TimeSpan
+Penghou.Baize.Generation.GenerationExecutorOptions.MaxPollingInterval.set -> void
+Penghou.Baize.Generation.GenerationExecutorOptions.PollingBackoffMultiplier.get -> double
+Penghou.Baize.Generation.GenerationExecutorOptions.PollingBackoffMultiplier.set -> void
+Penghou.Baize.Generation.GenerationExecutorOptions.Timeout.get -> System.TimeSpan
+Penghou.Baize.Generation.GenerationExecutorOptions.Timeout.set -> void
+Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.AudioTransform = 1024 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.Cancellation = 8192 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.IdempotentSubmission = 65536 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.ImageToImage = 2 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.ImageToVideo = 16 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.ImageUpscale = 4 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.MultipleCandidates = 2048 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.None = 0 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.OperationRetrieval = 4096 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.Progress = 16384 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.Streaming = 32768 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.TextToImage = 1 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.TextToMusic = 512 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.TextToSound = 256 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.TextToSpeech = 128 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.TextToVideo = 8 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.VideoToVideo = 32 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationFeature.VideoUpscale = 64 -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Generation.GenerationImageSize
+Penghou.Baize.Generation.GenerationImageSize.GenerationImageSize(int Width, int Height) -> void
+Penghou.Baize.Generation.GenerationImageSize.Height.get -> int
+Penghou.Baize.Generation.GenerationImageSize.Height.init -> void
+Penghou.Baize.Generation.GenerationImageSize.Width.get -> int
+Penghou.Baize.Generation.GenerationImageSize.Width.init -> void
+Penghou.Baize.Generation.GenerationOperation
+Penghou.Baize.Generation.GenerationOperation.Error.get -> Penghou.Baize.Generation.GenerationError?
+Penghou.Baize.Generation.GenerationOperation.Error.init -> void
+Penghou.Baize.Generation.GenerationOperation.GenerationOperation(Penghou.Baize.Generation.GenerationOperationHandle! Handle, Penghou.Baize.Generation.GenerationOperationState State, Penghou.Baize.Generation.GenerationResult? Result = null, Penghou.Baize.Generation.GenerationError? Error = null, double? Progress = null, System.Collections.Generic.IReadOnlyDictionary<string!, object?>? ProviderMetadata = null) -> void
+Penghou.Baize.Generation.GenerationOperation.Handle.get -> Penghou.Baize.Generation.GenerationOperationHandle!
+Penghou.Baize.Generation.GenerationOperation.Handle.init -> void
+Penghou.Baize.Generation.GenerationOperation.Progress.get -> double?
+Penghou.Baize.Generation.GenerationOperation.Progress.init -> void
+Penghou.Baize.Generation.GenerationOperation.ProgressDetails.get -> Penghou.Baize.Generation.GenerationProgress?
+Penghou.Baize.Generation.GenerationOperation.ProgressDetails.init -> void
+Penghou.Baize.Generation.GenerationOperation.ProviderMetadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+Penghou.Baize.Generation.GenerationOperation.ProviderMetadata.init -> void
+Penghou.Baize.Generation.GenerationOperation.Result.get -> Penghou.Baize.Generation.GenerationResult?
+Penghou.Baize.Generation.GenerationOperation.Result.init -> void
+Penghou.Baize.Generation.GenerationOperation.State.get -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperation.State.init -> void
+Penghou.Baize.Generation.GenerationOperationHandle
+Penghou.Baize.Generation.GenerationOperationHandle.EndpointId.get -> string!
+Penghou.Baize.Generation.GenerationOperationHandle.EndpointId.init -> void
+Penghou.Baize.Generation.GenerationOperationHandle.GenerationOperationHandle(string! Provider, string! EndpointId, string! Id, string? Model = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? ProviderData = null) -> void
+Penghou.Baize.Generation.GenerationOperationHandle.Id.get -> string!
+Penghou.Baize.Generation.GenerationOperationHandle.Id.init -> void
+Penghou.Baize.Generation.GenerationOperationHandle.Model.get -> string?
+Penghou.Baize.Generation.GenerationOperationHandle.Model.init -> void
+Penghou.Baize.Generation.GenerationOperationHandle.Provider.get -> string!
+Penghou.Baize.Generation.GenerationOperationHandle.Provider.init -> void
+Penghou.Baize.Generation.GenerationOperationHandle.ProviderData.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.Generation.GenerationOperationHandle.ProviderData.init -> void
+Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Canceled = 5 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Failed = 4 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Queued = 1 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Running = 2 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Succeeded = 3 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationOperationState.Unknown = 0 -> Penghou.Baize.Generation.GenerationOperationState
+Penghou.Baize.Generation.GenerationProgress
+Penghou.Baize.Generation.GenerationProgress.Fraction.get -> double?
+Penghou.Baize.Generation.GenerationProgress.Fraction.init -> void
+Penghou.Baize.Generation.GenerationProgress.GenerationProgress(double? Fraction = null, string? Phase = null, int? QueuePosition = null) -> void
+Penghou.Baize.Generation.GenerationProgress.Phase.get -> string?
+Penghou.Baize.Generation.GenerationProgress.Phase.init -> void
+Penghou.Baize.Generation.GenerationProgress.QueuePosition.get -> int?
+Penghou.Baize.Generation.GenerationProgress.QueuePosition.init -> void
+Penghou.Baize.Generation.GenerationRequest
+Penghou.Baize.Generation.GenerationRequest.IdempotencyKey.get -> string?
+Penghou.Baize.Generation.GenerationRequest.IdempotencyKey.init -> void
+Penghou.Baize.Generation.GenerationRequestValidator
+Penghou.Baize.Generation.GenerationResult
+Penghou.Baize.Generation.GenerationResult.Assets.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GeneratedAsset!>!
+Penghou.Baize.Generation.GenerationResult.Assets.init -> void
+Penghou.Baize.Generation.GenerationResult.GenerationResult(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GeneratedAsset!>! Assets, System.Collections.Generic.IReadOnlyDictionary<string!, object?>? Metadata = null) -> void
+Penghou.Baize.Generation.GenerationResult.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+Penghou.Baize.Generation.GenerationResult.Metadata.init -> void
+Penghou.Baize.Generation.GenerationServiceCollectionExtensions
+Penghou.Baize.Generation.GenerationVideoSize
+Penghou.Baize.Generation.GenerationVideoSize.GenerationVideoSize(int Width, int Height) -> void
+Penghou.Baize.Generation.GenerationVideoSize.Height.get -> int
+Penghou.Baize.Generation.GenerationVideoSize.Height.init -> void
+Penghou.Baize.Generation.GenerationVideoSize.Width.get -> int
+Penghou.Baize.Generation.GenerationVideoSize.Width.init -> void
+Penghou.Baize.Generation.IGenerationBatchExecutor
+Penghou.Baize.Generation.IGenerationBatchExecutor.ExecuteAsync(Penghou.Baize.Generation.GenerationBatchRequest! request, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationBatchResult!>!
+Penghou.Baize.Generation.IGenerationBatchExecutor.WaitAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.IGenerationClient
+Penghou.Baize.Generation.IGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Generation.IGenerationClient.Capabilities.get -> Penghou.Baize.Generation.GenerationCapabilities!
+Penghou.Baize.Generation.IGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Generation.IGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Generation.IGenerationClientRegistry
+Penghou.Baize.Generation.IGenerationClientRegistry.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>!
+Penghou.Baize.Generation.IGenerationClientRegistry.Find(string! provider, string! endpointId) -> Penghou.Baize.Generation.IGenerationClient?
+Penghou.Baize.Generation.IGenerationClientRegistry.Register(string! provider, string! endpointId, Penghou.Baize.Generation.IGenerationClient! client) -> void
+Penghou.Baize.Generation.IGenerationEndpointDescriptor
+Penghou.Baize.Generation.IGenerationEndpointDescriptor.Register(System.IServiceProvider! serviceProvider, Penghou.Baize.Generation.IGenerationClientRegistry! registry) -> void
+Penghou.Baize.Generation.IGenerationEndpointOrderer
+Penghou.Baize.Generation.IGenerationEndpointOrderer.OrderAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>! candidates, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>!>!
+Penghou.Baize.Generation.IGenerationExecutor
+Penghou.Baize.Generation.IGenerationExecutor.ExecuteAsync(Penghou.Baize.Generation.GenerationRequest! request, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.IGenerationExecutor.WaitAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.IProgress<double>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationResult!>!
+Penghou.Baize.Generation.IGenerationRoutingPolicy
+Penghou.Baize.Generation.IGenerationRoutingPolicy.Select(Penghou.Baize.Generation.GenerationRequest! request, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationEndpoint!>! candidates) -> Penghou.Baize.Generation.GenerationEndpoint?
+Penghou.Baize.Generation.ImageGenerationRequest
+Penghou.Baize.Generation.ImageGenerationRequest.AspectRatio.get -> string?
+Penghou.Baize.Generation.ImageGenerationRequest.AspectRatio.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.Count.get -> int
+Penghou.Baize.Generation.ImageGenerationRequest.Count.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.Inputs.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmMediaSource!>!
+Penghou.Baize.Generation.ImageGenerationRequest.Inputs.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.OutputFormat.get -> string?
+Penghou.Baize.Generation.ImageGenerationRequest.OutputFormat.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.Prompt.get -> string!
+Penghou.Baize.Generation.ImageGenerationRequest.Prompt.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.Seed.get -> int?
+Penghou.Baize.Generation.ImageGenerationRequest.Seed.init -> void
+Penghou.Baize.Generation.ImageGenerationRequest.Size.get -> Penghou.Baize.Generation.GenerationImageSize?
+Penghou.Baize.Generation.ImageGenerationRequest.Size.init -> void
+Penghou.Baize.Generation.InlineGeneratedAssetSource
+Penghou.Baize.Generation.InlineGeneratedAssetSource.ContentType.get -> string?
+Penghou.Baize.Generation.InlineGeneratedAssetSource.Data.get -> System.ReadOnlyMemory<byte>
+Penghou.Baize.Generation.InlineGeneratedAssetSource.InlineGeneratedAssetSource(System.ReadOnlyMemory<byte> data, string? contentType = null) -> void
+Penghou.Baize.Generation.ProviderGeneratedAssetSource
+Penghou.Baize.Generation.ProviderGeneratedAssetSource.Provider.get -> string?
+Penghou.Baize.Generation.ProviderGeneratedAssetSource.ProviderFileId.get -> string!
+Penghou.Baize.Generation.ProviderGeneratedAssetSource.ProviderGeneratedAssetSource(string! providerFileId, string? provider = null) -> void
+Penghou.Baize.Generation.UriGeneratedAssetSource
+Penghou.Baize.Generation.UriGeneratedAssetSource.Uri.get -> System.Uri!
+Penghou.Baize.Generation.UriGeneratedAssetSource.UriGeneratedAssetSource(System.Uri! uri) -> void
+Penghou.Baize.Generation.VideoGenerationRequest
+Penghou.Baize.Generation.VideoGenerationRequest.AspectRatio.get -> string?
+Penghou.Baize.Generation.VideoGenerationRequest.AspectRatio.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.Duration.get -> System.TimeSpan?
+Penghou.Baize.Generation.VideoGenerationRequest.Duration.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.FirstFrame.get -> Penghou.Baize.LlmMediaSource?
+Penghou.Baize.Generation.VideoGenerationRequest.FirstFrame.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.GenerateAudio.get -> bool?
+Penghou.Baize.Generation.VideoGenerationRequest.GenerateAudio.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.LastFrame.get -> Penghou.Baize.LlmMediaSource?
+Penghou.Baize.Generation.VideoGenerationRequest.LastFrame.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.Prompt.get -> string!
+Penghou.Baize.Generation.VideoGenerationRequest.Prompt.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.References.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmMediaSource!>!
+Penghou.Baize.Generation.VideoGenerationRequest.References.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.Seed.get -> int?
+Penghou.Baize.Generation.VideoGenerationRequest.Seed.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.Size.get -> Penghou.Baize.Generation.GenerationVideoSize?
+Penghou.Baize.Generation.VideoGenerationRequest.Size.init -> void
+Penghou.Baize.Generation.VideoGenerationRequest.SourceVideo.get -> Penghou.Baize.LlmMediaSource?
+Penghou.Baize.Generation.VideoGenerationRequest.SourceVideo.init -> void
+Penghou.Baize.IBaizeBatchClient
+Penghou.Baize.IBaizeBatchClient.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.IBaizeBatchClient.Capabilities.get -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.IBaizeBatchClient.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
+Penghou.Baize.IBaizeBatchClient.GetStatusAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchStatus!>!
+Penghou.Baize.IBaizeBatchClient.ProviderId.get -> string!
+Penghou.Baize.IBaizeBatchClient.SubmitAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, Penghou.Baize.BatchSubmissionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchHandle!>!
+Penghou.Baize.ILlmClient
+Penghou.Baize.ILlmClient.Capabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.ILlmClient.StreamAsync(Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.ILlmClientDecorator
+Penghou.Baize.ILlmClientDecorator.Decorate(Penghou.Baize.ILlmClient! client) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.ILlmClientMetadataProvider
+Penghou.Baize.ILlmClientMetadataProvider.Metadata.get -> Penghou.Baize.LlmClientMetadata!
+Penghou.Baize.ILlmClientProvider
+Penghou.Baize.ILlmClientProvider.CreateBatchClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.IBaizeBatchClient?
+Penghou.Baize.ILlmClientProvider.CreateClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.ILlmClientProvider.DefaultBaseUrl.get -> string!
+Penghou.Baize.ILlmClientProvider.DefaultCapabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.ILlmClientProvider.Key.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.ILlmClientProvider.SchemaAdapter.get -> Penghou.Baize.ILlmSchemaAdapter?
+Penghou.Baize.ILlmCompletionClient
+Penghou.Baize.ILlmCompletionClient.CompleteAsync(Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.ILlmPromptBuilder
+Penghou.Baize.ILlmPromptBuilder.Build(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.LlmRequest!
+Penghou.Baize.ILlmSchemaAdapter
+Penghou.Baize.ILlmSchemaAdapter.Adapt(System.Text.Json.JsonElement schema, Penghou.Baize.LlmSchemaAdaptationContext! context) -> Penghou.Baize.LlmSchemaAdaptationResult!
+Penghou.Baize.LlmAudioContent
+Penghou.Baize.LlmAudioContent.LlmAudioContent(string! mediaType, Penghou.Baize.LlmMediaSource! source) -> void
+Penghou.Baize.LlmClientBase
+Penghou.Baize.LlmClientBase.ApiKey.get -> string!
+Penghou.Baize.LlmClientBase.Capabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.LlmClientBase.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
+Penghou.Baize.LlmClientBase.LlmClientBase(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, Penghou.Baize.LlmEndpointCapabilities! capabilities, string! provider = "Unknown") -> void
+Penghou.Baize.LlmClientBase.Metadata.get -> Penghou.Baize.LlmClientMetadata!
+Penghou.Baize.LlmClientBase.Model.get -> string!
+Penghou.Baize.LlmClientBase.StreamAsync(Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>!
+Penghou.Baize.LlmClientException
+Penghou.Baize.LlmClientException.CanFallback.get -> bool
+Penghou.Baize.LlmClientException.FailureKind.get -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientException.LlmClientException(string! message) -> void
+Penghou.Baize.LlmClientException.LlmClientException(string! message, int? statusCode, Penghou.Baize.LlmRateLimitInfo? rateLimit, System.Exception? innerException = null) -> void
+Penghou.Baize.LlmClientException.LlmClientException(string! message, int? statusCode, System.Exception? innerException = null) -> void
+Penghou.Baize.LlmClientException.LlmClientException(string! message, Penghou.Baize.LlmClientFailureKind failureKind, int? statusCode = null, Penghou.Baize.LlmRateLimitInfo? rateLimit = null, bool? canFallback = null, System.Exception? innerException = null) -> void
+Penghou.Baize.LlmClientException.LlmClientException(string! message, System.Exception! innerException) -> void
+Penghou.Baize.LlmClientException.RateLimit.get -> Penghou.Baize.LlmRateLimitInfo?
+Penghou.Baize.LlmClientException.StatusCode.get -> int?
+Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.Authentication = 2 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.Authorization = 3 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.Availability = 0 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.Content = 6 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.InvalidRequest = 4 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.Protocol = 5 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientFailureKind.RateLimit = 1 -> Penghou.Baize.LlmClientFailureKind
+Penghou.Baize.LlmClientMetadata
+Penghou.Baize.LlmClientMetadata.Endpoint.get -> System.Uri?
+Penghou.Baize.LlmClientMetadata.Endpoint.init -> void
+Penghou.Baize.LlmClientMetadata.EndpointId.get -> string?
+Penghou.Baize.LlmClientMetadata.EndpointId.init -> void
+Penghou.Baize.LlmClientMetadata.LlmClientMetadata(string! Provider, string! Model, System.Uri? Endpoint = null, string? EndpointId = null) -> void
+Penghou.Baize.LlmClientMetadata.Model.get -> string!
+Penghou.Baize.LlmClientMetadata.Model.init -> void
+Penghou.Baize.LlmClientMetadata.Provider.get -> string!
+Penghou.Baize.LlmClientMetadata.Provider.init -> void
+Penghou.Baize.LlmClientProviderContext
+Penghou.Baize.LlmClientProviderContext.ApiKey.get -> string!
+Penghou.Baize.LlmClientProviderContext.ApiKey.init -> void
+Penghou.Baize.LlmClientProviderContext.BaseUrl.get -> string!
+Penghou.Baize.LlmClientProviderContext.BaseUrl.init -> void
+Penghou.Baize.LlmClientProviderContext.Capabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.LlmClientProviderContext.Capabilities.init -> void
+Penghou.Baize.LlmClientProviderContext.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
+Penghou.Baize.LlmClientProviderContext.HttpClientFactory.init -> void
+Penghou.Baize.LlmClientProviderContext.LlmClientProviderContext(string! Model, System.Net.Http.IHttpClientFactory! HttpClientFactory, string! ApiKey, string! BaseUrl, Penghou.Baize.LlmEndpointCapabilities! Capabilities, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Settings) -> void
+Penghou.Baize.LlmClientProviderContext.Model.get -> string!
+Penghou.Baize.LlmClientProviderContext.Model.init -> void
+Penghou.Baize.LlmClientProviderContext.Settings.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Penghou.Baize.LlmClientProviderContext.Settings.init -> void
+Penghou.Baize.LlmContentPart
+Penghou.Baize.LlmContentPart.Continuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.LlmContentPart.Continuation.init -> void
+Penghou.Baize.LlmContentRequirement
+Penghou.Baize.LlmContentRequirement.LlmContentRequirement(Penghou.Baize.LlmContentType Type, Penghou.Baize.LlmContentTransport? Transport = null) -> void
+Penghou.Baize.LlmContentRequirement.Transport.get -> Penghou.Baize.LlmContentTransport?
+Penghou.Baize.LlmContentRequirement.Transport.init -> void
+Penghou.Baize.LlmContentRequirement.Type.get -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentRequirement.Type.init -> void
+Penghou.Baize.LlmContentTransport
+Penghou.Baize.LlmContentTransport.InlineData = 1 -> Penghou.Baize.LlmContentTransport
+Penghou.Baize.LlmContentTransport.None = 0 -> Penghou.Baize.LlmContentTransport
+Penghou.Baize.LlmContentTransport.ProviderFile = 4 -> Penghou.Baize.LlmContentTransport
+Penghou.Baize.LlmContentTransport.Uri = 2 -> Penghou.Baize.LlmContentTransport
+Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentType.Audio = 2 -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentType.File = 4 -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentType.Image = 1 -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentType.Text = 0 -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmContentType.Video = 3 -> Penghou.Baize.LlmContentType
+Penghou.Baize.LlmEndpointCapabilities
+Penghou.Baize.LlmEndpointCapabilities.Batch.get -> Penghou.Baize.BatchCapabilities
+Penghou.Baize.LlmEndpointCapabilities.Batch.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ContentTransports.get -> System.Collections.Generic.IReadOnlyDictionary<Penghou.Baize.LlmContentType, Penghou.Baize.LlmContentTransport>!
+Penghou.Baize.LlmEndpointCapabilities.ContentTransports.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ContentTypes.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.LlmContentType>!
+Penghou.Baize.LlmEndpointCapabilities.ContentTypes.init -> void
+Penghou.Baize.LlmEndpointCapabilities.NativeStructuredOutput.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.NativeStructuredOutput.init -> void
+Penghou.Baize.LlmEndpointCapabilities.NativeToolCalling.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.NativeToolCalling.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ParallelToolCalls.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.ParallelToolCalls.init -> void
+Penghou.Baize.LlmEndpointCapabilities.StreamingToolCallArguments.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.StreamingToolCallArguments.init -> void
+Penghou.Baize.LlmEndpointCapabilities.StrictToolArguments.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.StrictToolArguments.init -> void
+Penghou.Baize.LlmEndpointCapabilities.StructuredOutputViaTool.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.StructuredOutputViaTool.init -> void
+Penghou.Baize.LlmEndpointCapabilities.SupportedThinkingEfforts.get -> System.Collections.Generic.IReadOnlySet<Penghou.Baize.LlmThinkingEffort>!
+Penghou.Baize.LlmEndpointCapabilities.SupportedThinkingEfforts.init -> void
+Penghou.Baize.LlmEndpointCapabilities.Thinking.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.Thinking.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ThinkingBudget.get -> int?
+Penghou.Baize.LlmEndpointCapabilities.ThinkingBudget.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ThinkingDisable.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.ThinkingDisable.init -> void
+Penghou.Baize.LlmEndpointCapabilities.ToolsWithStructuredOutput.get -> bool
+Penghou.Baize.LlmEndpointCapabilities.ToolsWithStructuredOutput.init -> void
+Penghou.Baize.LlmFileContent
+Penghou.Baize.LlmFileContent.FileName.get -> string?
+Penghou.Baize.LlmFileContent.LlmFileContent(string! mediaType, Penghou.Baize.LlmMediaSource! source, string? fileName = null) -> void
+Penghou.Baize.LlmFinishReasonClassifier
+Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.ContentFilter = 4 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.Error = 5 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.LengthLimit = 2 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.Stop = 1 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.ToolCall = 3 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmFinishReasonKind.Unknown = 0 -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmImageContent
+Penghou.Baize.LlmImageContent.LlmImageContent(string! mediaType, Penghou.Baize.LlmMediaSource! source) -> void
+Penghou.Baize.LlmInlineDataSource
+Penghou.Baize.LlmInlineDataSource.Data.get -> System.ReadOnlyMemory<byte>
+Penghou.Baize.LlmInlineDataSource.LlmInlineDataSource(System.ReadOnlyMemory<byte> data) -> void
+Penghou.Baize.LlmJson
+Penghou.Baize.LlmJsonRepairDiagnostics
+Penghou.Baize.LlmJsonRepairDiagnostics.LlmJsonRepairDiagnostics(Penghou.Baize.LlmRepairShapeStatus ShapeStatus, System.Collections.Generic.IReadOnlyList<string!>! ShapeErrors, string? SucceededBy = null, Penghou.Baize.LlmTolerantRecoveryDiagnostics? TolerantRecovery = null) -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.init -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.get -> Penghou.Baize.LlmRepairShapeStatus
+Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.init -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.SucceededBy.get -> string?
+Penghou.Baize.LlmJsonRepairDiagnostics.SucceededBy.init -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.TolerantRecovery.get -> Penghou.Baize.LlmTolerantRecoveryDiagnostics?
+Penghou.Baize.LlmJsonRepairDiagnostics.TolerantRecovery.init -> void
+Penghou.Baize.LlmMediaContent
+Penghou.Baize.LlmMediaContent.LlmMediaContent(string! mediaType, Penghou.Baize.LlmMediaSource! source) -> void
+Penghou.Baize.LlmMediaContent.MediaType.get -> string!
+Penghou.Baize.LlmMediaContent.Source.get -> Penghou.Baize.LlmMediaSource!
+Penghou.Baize.LlmMediaSource
+Penghou.Baize.LlmMessage
+Penghou.Baize.LlmMessage.LlmMessage(string! role, string! content) -> void
+Penghou.Baize.LlmMessage.LlmMessage(string! role, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmContentPart!>! parts) -> void
+Penghou.Baize.LlmMessage.Parts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmContentPart!>!
+Penghou.Baize.LlmMessage.Role.get -> string!
+Penghou.Baize.LlmPromptBuilder
+Penghou.Baize.LlmPromptBuilder.Build(Penghou.Baize.ModelStrategy strategy) -> Penghou.Baize.LlmRequest!
+Penghou.Baize.LlmPromptBuilder.LlmPromptBuilder() -> void
+Penghou.Baize.LlmPromptBuilder.MaxTokens.get -> int?
+Penghou.Baize.LlmPromptBuilder.MaxTokens.set -> void
+Penghou.Baize.LlmPromptBuilder.Messages.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmMessage!>!
+Penghou.Baize.LlmPromptBuilder.Messages.set -> void
+Penghou.Baize.LlmPromptBuilder.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+Penghou.Baize.LlmPromptBuilder.Metadata.set -> void
+Penghou.Baize.LlmPromptBuilder.ResponseFormat.get -> Penghou.Baize.LlmResponseFormat?
+Penghou.Baize.LlmPromptBuilder.ResponseFormat.set -> void
+Penghou.Baize.LlmPromptBuilder.Temperature.get -> double?
+Penghou.Baize.LlmPromptBuilder.Temperature.set -> void
+Penghou.Baize.LlmPromptBuilder.ThinkingConfig.get -> Penghou.Baize.LlmThinkingConfig?
+Penghou.Baize.LlmPromptBuilder.ThinkingConfig.set -> void
+Penghou.Baize.LlmPromptBuilder.Tools.get -> System.Collections.Generic.IList<Penghou.Baize.LlmTool!>!
+Penghou.Baize.LlmPromptBuilder.Tools.set -> void
+Penghou.Baize.LlmProtocolNames
+Penghou.Baize.LlmProviderContinuation
+Penghou.Baize.LlmProviderContinuation.GetValue(string! key) -> string?
+Penghou.Baize.LlmProviderContinuation.IsFor(string! provider) -> bool
+Penghou.Baize.LlmProviderContinuation.LlmProviderContinuation(string! Provider, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Values) -> void
+Penghou.Baize.LlmProviderContinuation.Provider.get -> string!
+Penghou.Baize.LlmProviderContinuation.Provider.init -> void
+Penghou.Baize.LlmProviderContinuation.Values.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Penghou.Baize.LlmProviderContinuation.Values.init -> void
+Penghou.Baize.LlmProviderDiagnostics
+Penghou.Baize.LlmProviderDiagnostics.ActualModel.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.ActualModel.init -> void
+Penghou.Baize.LlmProviderDiagnostics.Api.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.Api.init -> void
+Penghou.Baize.LlmProviderDiagnostics.ContentLength.get -> int?
+Penghou.Baize.LlmProviderDiagnostics.ContentLength.init -> void
+Penghou.Baize.LlmProviderDiagnostics.Done.get -> bool?
+Penghou.Baize.LlmProviderDiagnostics.Done.init -> void
+Penghou.Baize.LlmProviderDiagnostics.DoneReason.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.DoneReason.init -> void
+Penghou.Baize.LlmProviderDiagnostics.GenerationDurationMilliseconds.get -> double?
+Penghou.Baize.LlmProviderDiagnostics.GenerationDurationMilliseconds.init -> void
+Penghou.Baize.LlmProviderDiagnostics.GenerationTokensPerSecond.get -> double?
+Penghou.Baize.LlmProviderDiagnostics.GenerationTokensPerSecond.init -> void
+Penghou.Baize.LlmProviderDiagnostics.LlmProviderDiagnostics(string! Provider, string? ActualModel = null, string? Api = null, bool? Done = null, string? DoneReason = null, double? TotalDurationMilliseconds = null, double? LoadDurationMilliseconds = null, double? PromptEvaluationDurationMilliseconds = null, double? GenerationDurationMilliseconds = null, double? GenerationTokensPerSecond = null, int? NativeToolCallCount = null, int? ContentLength = null, string? ResponseId = null, string? ServiceTier = null, int? ThinkingTokens = null, string? SystemFingerprint = null) -> void
+Penghou.Baize.LlmProviderDiagnostics.LoadDurationMilliseconds.get -> double?
+Penghou.Baize.LlmProviderDiagnostics.LoadDurationMilliseconds.init -> void
+Penghou.Baize.LlmProviderDiagnostics.NativeToolCallCount.get -> int?
+Penghou.Baize.LlmProviderDiagnostics.NativeToolCallCount.init -> void
+Penghou.Baize.LlmProviderDiagnostics.PromptEvaluationDurationMilliseconds.get -> double?
+Penghou.Baize.LlmProviderDiagnostics.PromptEvaluationDurationMilliseconds.init -> void
+Penghou.Baize.LlmProviderDiagnostics.Provider.get -> string!
+Penghou.Baize.LlmProviderDiagnostics.Provider.init -> void
+Penghou.Baize.LlmProviderDiagnostics.ResponseId.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.ResponseId.init -> void
+Penghou.Baize.LlmProviderDiagnostics.ServiceTier.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.ServiceTier.init -> void
+Penghou.Baize.LlmProviderDiagnostics.SystemFingerprint.get -> string?
+Penghou.Baize.LlmProviderDiagnostics.SystemFingerprint.init -> void
+Penghou.Baize.LlmProviderDiagnostics.ThinkingTokens.get -> int?
+Penghou.Baize.LlmProviderDiagnostics.ThinkingTokens.init -> void
+Penghou.Baize.LlmProviderDiagnostics.TotalDurationMilliseconds.get -> double?
+Penghou.Baize.LlmProviderDiagnostics.TotalDurationMilliseconds.init -> void
+Penghou.Baize.LlmProviderFileSource
+Penghou.Baize.LlmProviderFileSource.FileId.get -> string!
+Penghou.Baize.LlmProviderFileSource.LlmProviderFileSource(Penghou.Baize.LlmProviderKey provider, string! fileId) -> void
+Penghou.Baize.LlmProviderFileSource.Provider.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.LlmProviderKey
+Penghou.Baize.LlmProviderKey.Equals(Penghou.Baize.LlmProviderKey other) -> bool
+Penghou.Baize.LlmProviderKey.LlmProviderKey() -> void
+Penghou.Baize.LlmProviderKey.LlmProviderKey(string! value) -> void
+Penghou.Baize.LlmProviderKey.Value.get -> string!
+Penghou.Baize.LlmRateLimitInfo
+Penghou.Baize.LlmRateLimitInfo.LlmRateLimitInfo(int? RequestsRemaining = null, int? RequestsLimit = null, System.DateTimeOffset? RequestsResetAt = null, int? TokensRemaining = null, int? TokensLimit = null, System.DateTimeOffset? TokensResetAt = null, System.TimeSpan? RetryAfter = null) -> void
+Penghou.Baize.LlmRateLimitInfo.RequestsLimit.get -> int?
+Penghou.Baize.LlmRateLimitInfo.RequestsLimit.init -> void
+Penghou.Baize.LlmRateLimitInfo.RequestsRemaining.get -> int?
+Penghou.Baize.LlmRateLimitInfo.RequestsRemaining.init -> void
+Penghou.Baize.LlmRateLimitInfo.RequestsResetAt.get -> System.DateTimeOffset?
+Penghou.Baize.LlmRateLimitInfo.RequestsResetAt.init -> void
+Penghou.Baize.LlmRateLimitInfo.RetryAfter.get -> System.TimeSpan?
+Penghou.Baize.LlmRateLimitInfo.RetryAfter.init -> void
+Penghou.Baize.LlmRateLimitInfo.TokensLimit.get -> int?
+Penghou.Baize.LlmRateLimitInfo.TokensLimit.init -> void
+Penghou.Baize.LlmRateLimitInfo.TokensRemaining.get -> int?
+Penghou.Baize.LlmRateLimitInfo.TokensRemaining.init -> void
+Penghou.Baize.LlmRateLimitInfo.TokensResetAt.get -> System.DateTimeOffset?
+Penghou.Baize.LlmRateLimitInfo.TokensResetAt.init -> void
+Penghou.Baize.LlmRateLimitInfo.UnavailableUntil.get -> System.DateTimeOffset?
+Penghou.Baize.LlmReasoningContent
+Penghou.Baize.LlmReasoningContent.LlmReasoningContent(string! Text) -> void
+Penghou.Baize.LlmReasoningContent.Text.get -> string!
+Penghou.Baize.LlmReasoningContent.Text.init -> void
+Penghou.Baize.LlmRepairAttempt
+Penghou.Baize.LlmRepairAttempt.LlmRepairAttempt(string! Name, Penghou.Baize.LlmRepairStatus Status, string? Repaired = null, string? Note = null) -> void
+Penghou.Baize.LlmRepairAttempt.Name.get -> string!
+Penghou.Baize.LlmRepairAttempt.Name.init -> void
+Penghou.Baize.LlmRepairAttempt.Note.get -> string?
+Penghou.Baize.LlmRepairAttempt.Note.init -> void
+Penghou.Baize.LlmRepairAttempt.Repaired.get -> string?
+Penghou.Baize.LlmRepairAttempt.Repaired.init -> void
+Penghou.Baize.LlmRepairAttempt.Status.get -> Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRepairAttempt.Status.init -> void
+Penghou.Baize.LlmRepairShapeStatus
+Penghou.Baize.LlmRepairShapeStatus.Matched = 1 -> Penghou.Baize.LlmRepairShapeStatus
+Penghou.Baize.LlmRepairShapeStatus.Mismatched = 2 -> Penghou.Baize.LlmRepairShapeStatus
+Penghou.Baize.LlmRepairShapeStatus.NotEvaluated = 0 -> Penghou.Baize.LlmRepairShapeStatus
+Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRepairStatus.Failed = 2 -> Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRepairStatus.NotApplicable = 1 -> Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRepairStatus.Skipped = 0 -> Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRepairStatus.Succeeded = 3 -> Penghou.Baize.LlmRepairStatus
+Penghou.Baize.LlmRequest
+Penghou.Baize.LlmRequest.LlmRequest(System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmMessage!>! messages, double? temperature = null, int? maxTokens = null, System.Collections.Generic.IList<Penghou.Baize.LlmTool!>? tools = null, Penghou.Baize.LlmResponseFormat? responseFormat = null, Penghou.Baize.LlmThinkingConfig? thinkingConfig = null, System.Collections.Generic.IReadOnlyDictionary<string!, object?>? metadata = null) -> void
+Penghou.Baize.LlmRequest.MaxTokens.get -> int?
+Penghou.Baize.LlmRequest.Messages.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmMessage!>!
+Penghou.Baize.LlmRequest.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+Penghou.Baize.LlmRequest.ResponseFormat.get -> Penghou.Baize.LlmResponseFormat?
+Penghou.Baize.LlmRequest.Temperature.get -> double?
+Penghou.Baize.LlmRequest.ThinkingConfig.get -> Penghou.Baize.LlmThinkingConfig?
+Penghou.Baize.LlmRequest.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmTool!>!
+Penghou.Baize.LlmRequestRequirements
+Penghou.Baize.LlmRequestRequirements.Content.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmContentRequirement!>!
+Penghou.Baize.LlmRequestRequirements.Content.init -> void
+Penghou.Baize.LlmRequestRequirements.IsSatisfiedBy(Penghou.Baize.LlmEndpointCapabilities! capabilities, out string? reason) -> bool
+Penghou.Baize.LlmRequestRequirements.ParallelToolCalls.get -> bool
+Penghou.Baize.LlmRequestRequirements.ParallelToolCalls.init -> void
+Penghou.Baize.LlmRequestRequirements.StrictToolArguments.get -> bool
+Penghou.Baize.LlmRequestRequirements.StrictToolArguments.init -> void
+Penghou.Baize.LlmRequestRequirements.StructuredOutput.get -> bool
+Penghou.Baize.LlmRequestRequirements.StructuredOutput.init -> void
+Penghou.Baize.LlmRequestRequirements.Thinking.get -> Penghou.Baize.LlmThinkingConfig?
+Penghou.Baize.LlmRequestRequirements.Thinking.init -> void
+Penghou.Baize.LlmRequestRequirements.ToolCalling.get -> bool
+Penghou.Baize.LlmRequestRequirements.ToolCalling.init -> void
+Penghou.Baize.LlmRequestValidationException
+Penghou.Baize.LlmRequestValidationException.LlmRequestValidationException(string! message) -> void
+Penghou.Baize.LlmRequestValidator
+Penghou.Baize.LlmResponse
+Penghou.Baize.LlmResponse.Content.get -> string!
+Penghou.Baize.LlmResponse.Content.init -> void
+Penghou.Baize.LlmResponse.ContentContinuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.LlmResponse.ContentContinuation.init -> void
+Penghou.Baize.LlmResponse.ContentRepairAttempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>?
+Penghou.Baize.LlmResponse.ContentRepairAttempts.init -> void
+Penghou.Baize.LlmResponse.ContentRepairDiagnostics.get -> Penghou.Baize.LlmJsonRepairDiagnostics?
+Penghou.Baize.LlmResponse.ContentRepairDiagnostics.init -> void
+Penghou.Baize.LlmResponse.ContentWasRepaired.get -> bool
+Penghou.Baize.LlmResponse.ContentWasRepaired.init -> void
+Penghou.Baize.LlmResponse.Diagnostics.get -> Penghou.Baize.LlmProviderDiagnostics?
+Penghou.Baize.LlmResponse.Diagnostics.init -> void
+Penghou.Baize.LlmResponse.FinishReason.get -> string?
+Penghou.Baize.LlmResponse.FinishReason.init -> void
+Penghou.Baize.LlmResponse.FinishReasonKind.get -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmResponse.LlmResponse(string! Content, string? Reasoning = null, string? FinishReason = null, Penghou.Baize.LlmUsage? Usage = null, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>? ToolCalls = null, Penghou.Baize.LlmProviderDiagnostics? Diagnostics = null, Penghou.Baize.LlmRouterDiagnostics? RouterDiagnostics = null, bool ContentWasRepaired = false, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>? ContentRepairAttempts = null, Penghou.Baize.LlmProviderContinuation? ReasoningContinuation = null, Penghou.Baize.LlmProviderContinuation? ContentContinuation = null) -> void
+Penghou.Baize.LlmResponse.Parts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmContentPart!>?
+Penghou.Baize.LlmResponse.Parts.init -> void
+Penghou.Baize.LlmResponse.Reasoning.get -> string?
+Penghou.Baize.LlmResponse.Reasoning.init -> void
+Penghou.Baize.LlmResponse.ReasoningContinuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.LlmResponse.ReasoningContinuation.init -> void
+Penghou.Baize.LlmResponse.RouterDiagnostics.get -> Penghou.Baize.LlmRouterDiagnostics?
+Penghou.Baize.LlmResponse.RouterDiagnostics.init -> void
+Penghou.Baize.LlmResponse.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>?
+Penghou.Baize.LlmResponse.ToolCalls.init -> void
+Penghou.Baize.LlmResponse.Usage.get -> Penghou.Baize.LlmUsage?
+Penghou.Baize.LlmResponse.Usage.init -> void
+Penghou.Baize.LlmResponseFormat
+Penghou.Baize.LlmResponseFormat.Schema.get -> string?
+Penghou.Baize.LlmResponseFormat.Type.get -> string!
+Penghou.Baize.LlmRouterAttempt
+Penghou.Baize.LlmRouterAttempt.Duration.get -> System.TimeSpan
+Penghou.Baize.LlmRouterAttempt.Duration.init -> void
+Penghou.Baize.LlmRouterAttempt.EndpointApiStyle.get -> string!
+Penghou.Baize.LlmRouterAttempt.EndpointApiStyle.init -> void
+Penghou.Baize.LlmRouterAttempt.EndpointId.get -> string!
+Penghou.Baize.LlmRouterAttempt.EndpointId.init -> void
+Penghou.Baize.LlmRouterAttempt.EndpointModel.get -> string!
+Penghou.Baize.LlmRouterAttempt.EndpointModel.init -> void
+Penghou.Baize.LlmRouterAttempt.EndpointProvider.get -> string!
+Penghou.Baize.LlmRouterAttempt.Error.get -> string?
+Penghou.Baize.LlmRouterAttempt.Error.init -> void
+Penghou.Baize.LlmRouterAttempt.LlmRouterAttempt(string! EndpointId, string! EndpointModel, string! EndpointApiStyle, Penghou.Baize.LlmRouterAttemptOutcome Outcome, System.TimeSpan Duration, string? Error = null, System.DateTimeOffset? UnavailableUntil = null) -> void
+Penghou.Baize.LlmRouterAttempt.Outcome.get -> Penghou.Baize.LlmRouterAttemptOutcome
+Penghou.Baize.LlmRouterAttempt.Outcome.init -> void
+Penghou.Baize.LlmRouterAttempt.UnavailableUntil.get -> System.DateTimeOffset?
+Penghou.Baize.LlmRouterAttempt.UnavailableUntil.init -> void
+Penghou.Baize.LlmRouterAttemptOutcome
+Penghou.Baize.LlmRouterAttemptOutcome.Failed = 1 -> Penghou.Baize.LlmRouterAttemptOutcome
+Penghou.Baize.LlmRouterAttemptOutcome.Succeeded = 0 -> Penghou.Baize.LlmRouterAttemptOutcome
+Penghou.Baize.LlmRouterDiagnostics
+Penghou.Baize.LlmRouterDiagnostics.Attempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRouterAttempt!>!
+Penghou.Baize.LlmRouterDiagnostics.Attempts.init -> void
+Penghou.Baize.LlmRouterDiagnostics.LlmRouterDiagnostics(System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRouterAttempt!>! Attempts) -> void
+Penghou.Baize.LlmSchemaAdaptation
+Penghou.Baize.LlmSchemaAdaptation.Action.get -> string!
+Penghou.Baize.LlmSchemaAdaptation.Action.init -> void
+Penghou.Baize.LlmSchemaAdaptation.IsLossy.get -> bool
+Penghou.Baize.LlmSchemaAdaptation.IsLossy.init -> void
+Penghou.Baize.LlmSchemaAdaptation.Keyword.get -> string!
+Penghou.Baize.LlmSchemaAdaptation.Keyword.init -> void
+Penghou.Baize.LlmSchemaAdaptation.LlmSchemaAdaptation(string! Path, string! Keyword, string! Action, string! Reason, bool IsLossy) -> void
+Penghou.Baize.LlmSchemaAdaptation.Path.get -> string!
+Penghou.Baize.LlmSchemaAdaptation.Path.init -> void
+Penghou.Baize.LlmSchemaAdaptation.Reason.get -> string!
+Penghou.Baize.LlmSchemaAdaptation.Reason.init -> void
+Penghou.Baize.LlmSchemaAdaptationContext
+Penghou.Baize.LlmSchemaAdaptationContext.ApiVersion.get -> string?
+Penghou.Baize.LlmSchemaAdaptationContext.ApiVersion.init -> void
+Penghou.Baize.LlmSchemaAdaptationContext.LlmSchemaAdaptationContext(Penghou.Baize.LlmProviderKey Provider, string! Model, string? ApiVersion, Penghou.Baize.LlmSchemaPurpose Purpose) -> void
+Penghou.Baize.LlmSchemaAdaptationContext.Model.get -> string!
+Penghou.Baize.LlmSchemaAdaptationContext.Model.init -> void
+Penghou.Baize.LlmSchemaAdaptationContext.Provider.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.LlmSchemaAdaptationContext.Provider.init -> void
+Penghou.Baize.LlmSchemaAdaptationContext.Purpose.get -> Penghou.Baize.LlmSchemaPurpose
+Penghou.Baize.LlmSchemaAdaptationContext.Purpose.init -> void
+Penghou.Baize.LlmSchemaAdaptationResult
+Penghou.Baize.LlmSchemaAdaptationResult.Adaptations.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmSchemaAdaptation!>!
+Penghou.Baize.LlmSchemaAdaptationResult.Adaptations.init -> void
+Penghou.Baize.LlmSchemaAdaptationResult.IsLossy.get -> bool
+Penghou.Baize.LlmSchemaAdaptationResult.LlmSchemaAdaptationResult(System.Text.Json.JsonElement Schema, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmSchemaAdaptation!>! Adaptations) -> void
+Penghou.Baize.LlmSchemaAdaptationResult.Schema.get -> System.Text.Json.JsonElement
+Penghou.Baize.LlmSchemaAdaptationResult.Schema.init -> void
+Penghou.Baize.LlmSchemaAdaptationResult.WasAdapted.get -> bool
+Penghou.Baize.LlmSchemaPurpose
+Penghou.Baize.LlmSchemaPurpose.StructuredResponse = 1 -> Penghou.Baize.LlmSchemaPurpose
+Penghou.Baize.LlmSchemaPurpose.ToolInput = 0 -> Penghou.Baize.LlmSchemaPurpose
+Penghou.Baize.LlmSettingNames
+Penghou.Baize.LlmStreamEvent
+Penghou.Baize.LlmStreamEvent.ContentRepairAttempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>?
+Penghou.Baize.LlmStreamEvent.ContentRepairAttempts.init -> void
+Penghou.Baize.LlmStreamEvent.ContentRepairDiagnostics.get -> Penghou.Baize.LlmJsonRepairDiagnostics?
+Penghou.Baize.LlmStreamEvent.ContentRepairDiagnostics.init -> void
+Penghou.Baize.LlmStreamEvent.ContentWasRepaired.get -> bool
+Penghou.Baize.LlmStreamEvent.ContentWasRepaired.init -> void
+Penghou.Baize.LlmStreamEvent.Continuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.LlmStreamEvent.Continuation.init -> void
+Penghou.Baize.LlmStreamEvent.Delta.get -> string?
+Penghou.Baize.LlmStreamEvent.Delta.init -> void
+Penghou.Baize.LlmStreamEvent.Diagnostics.get -> Penghou.Baize.LlmProviderDiagnostics?
+Penghou.Baize.LlmStreamEvent.Diagnostics.init -> void
+Penghou.Baize.LlmStreamEvent.FinishReason.get -> string?
+Penghou.Baize.LlmStreamEvent.FinishReason.init -> void
+Penghou.Baize.LlmStreamEvent.FinishReasonKind.get -> Penghou.Baize.LlmFinishReasonKind
+Penghou.Baize.LlmStreamEvent.LlmStreamEvent(string? Delta = null, string? ReasoningContent = null, string? FinishReason = null, Penghou.Baize.LlmUsage? Usage = null, Penghou.Baize.ToolCallDelta? ToolCallDelta = null, Penghou.Baize.LlmProviderDiagnostics? Diagnostics = null, Penghou.Baize.LlmRateLimitInfo? RateLimit = null, Penghou.Baize.LlmRouterDiagnostics? RouterDiagnostics = null, Penghou.Baize.LlmProviderContinuation? Continuation = null) -> void
+Penghou.Baize.LlmStreamEvent.PartIndex.get -> int?
+Penghou.Baize.LlmStreamEvent.PartIndex.init -> void
+Penghou.Baize.LlmStreamEvent.RateLimit.get -> Penghou.Baize.LlmRateLimitInfo?
+Penghou.Baize.LlmStreamEvent.RateLimit.init -> void
+Penghou.Baize.LlmStreamEvent.ReasoningContent.get -> string?
+Penghou.Baize.LlmStreamEvent.ReasoningContent.init -> void
+Penghou.Baize.LlmStreamEvent.RouterDiagnostics.get -> Penghou.Baize.LlmRouterDiagnostics?
+Penghou.Baize.LlmStreamEvent.RouterDiagnostics.init -> void
+Penghou.Baize.LlmStreamEvent.ToolCallDelta.get -> Penghou.Baize.ToolCallDelta?
+Penghou.Baize.LlmStreamEvent.ToolCallDelta.init -> void
+Penghou.Baize.LlmStreamEvent.Usage.get -> Penghou.Baize.LlmUsage?
+Penghou.Baize.LlmStreamEvent.Usage.init -> void
+Penghou.Baize.LlmStreamingExtensions
+Penghou.Baize.LlmTextContent
+Penghou.Baize.LlmTextContent.LlmTextContent(string! Text) -> void
+Penghou.Baize.LlmTextContent.Text.get -> string!
+Penghou.Baize.LlmTextContent.Text.init -> void
+Penghou.Baize.LlmThinking
+Penghou.Baize.LlmThinkingConfig
+Penghou.Baize.LlmThinkingConfig.Effort.get -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingConfig.Effort.init -> void
+Penghou.Baize.LlmThinkingConfig.LlmThinkingConfig(Penghou.Baize.LlmThinkingMode mode = Penghou.Baize.LlmThinkingMode.ProviderDefault, Penghou.Baize.LlmThinkingEffort effort = Penghou.Baize.LlmThinkingEffort.High) -> void
+Penghou.Baize.LlmThinkingConfig.Mode.get -> Penghou.Baize.LlmThinkingMode
+Penghou.Baize.LlmThinkingConfig.Mode.init -> void
+Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingEffort.High = 3 -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingEffort.Low = 1 -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingEffort.Max = 4 -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingEffort.Medium = 2 -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingEffort.None = 0 -> Penghou.Baize.LlmThinkingEffort
+Penghou.Baize.LlmThinkingMode
+Penghou.Baize.LlmThinkingMode.Disabled = 2 -> Penghou.Baize.LlmThinkingMode
+Penghou.Baize.LlmThinkingMode.Enabled = 1 -> Penghou.Baize.LlmThinkingMode
+Penghou.Baize.LlmThinkingMode.ProviderDefault = 0 -> Penghou.Baize.LlmThinkingMode
+Penghou.Baize.LlmTolerantRecoveryDiagnostics
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.CorrectionCount.get -> int
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.CorrectionCount.init -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Corrections.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Corrections.init -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.LlmTolerantRecoveryDiagnostics(bool Succeeded, string! Outcome, int CorrectionCount, int SchemaGuidedStringCorrectionCount, System.Collections.Generic.IReadOnlyList<string!>! Corrections) -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Outcome.get -> string!
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Outcome.init -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.SchemaGuidedStringCorrectionCount.get -> int
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.SchemaGuidedStringCorrectionCount.init -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Succeeded.get -> bool
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Succeeded.init -> void
+Penghou.Baize.LlmTool
+Penghou.Baize.LlmTool.Description.get -> string!
+Penghou.Baize.LlmTool.Description.init -> void
+Penghou.Baize.LlmTool.InputSchemaJson.get -> string!
+Penghou.Baize.LlmTool.InputSchemaJson.init -> void
+Penghou.Baize.LlmTool.LlmTool(string! Name, string! Description, string! InputSchemaJson, bool Strict = false) -> void
+Penghou.Baize.LlmTool.Name.get -> string!
+Penghou.Baize.LlmTool.Name.init -> void
+Penghou.Baize.LlmTool.Strict.get -> bool
+Penghou.Baize.LlmTool.Strict.init -> void
+Penghou.Baize.LlmToolCall
+Penghou.Baize.LlmToolCall.ArgumentsJson.get -> string!
+Penghou.Baize.LlmToolCall.ArgumentsJson.init -> void
+Penghou.Baize.LlmToolCall.Continuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.LlmToolCall.Continuation.init -> void
+Penghou.Baize.LlmToolCall.Id.get -> string!
+Penghou.Baize.LlmToolCall.Id.init -> void
+Penghou.Baize.LlmToolCall.JsonRepairAttempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>?
+Penghou.Baize.LlmToolCall.JsonRepairAttempts.init -> void
+Penghou.Baize.LlmToolCall.JsonRepairDiagnostics.get -> Penghou.Baize.LlmJsonRepairDiagnostics?
+Penghou.Baize.LlmToolCall.JsonRepairDiagnostics.init -> void
+Penghou.Baize.LlmToolCall.JsonWasRepaired.get -> bool
+Penghou.Baize.LlmToolCall.JsonWasRepaired.init -> void
+Penghou.Baize.LlmToolCall.LlmToolCall(string! Id, string! Name, string! ArgumentsJson, bool JsonWasRepaired = false, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>? JsonRepairAttempts = null, Penghou.Baize.LlmToolCallNormalizationStatus NormalizationStatus = Penghou.Baize.LlmToolCallNormalizationStatus.Normalized, Penghou.Baize.LlmProviderContinuation? Continuation = null) -> void
+Penghou.Baize.LlmToolCall.Name.get -> string!
+Penghou.Baize.LlmToolCall.Name.init -> void
+Penghou.Baize.LlmToolCall.NormalizationStatus.get -> Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolCall.NormalizationStatus.init -> void
+Penghou.Baize.LlmToolCallContent
+Penghou.Baize.LlmToolCallContent.LlmToolCallContent(Penghou.Baize.LlmToolCall! ToolCall) -> void
+Penghou.Baize.LlmToolCallContent.ToolCall.get -> Penghou.Baize.LlmToolCall!
+Penghou.Baize.LlmToolCallContent.ToolCall.init -> void
+Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolCallNormalizationStatus.EmptyArguments = 2 -> Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolCallNormalizationStatus.Normalized = 0 -> Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolCallNormalizationStatus.UnknownTool = 1 -> Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolResult
+Penghou.Baize.LlmToolResult.Content.get -> string!
+Penghou.Baize.LlmToolResult.Content.init -> void
+Penghou.Baize.LlmToolResult.LlmToolResult(string! ToolCallId, string! ToolName, string! Content, bool Succeeded = true) -> void
+Penghou.Baize.LlmToolResult.Succeeded.get -> bool
+Penghou.Baize.LlmToolResult.Succeeded.init -> void
+Penghou.Baize.LlmToolResult.ToolCallId.get -> string!
+Penghou.Baize.LlmToolResult.ToolCallId.init -> void
+Penghou.Baize.LlmToolResult.ToolName.get -> string!
+Penghou.Baize.LlmToolResult.ToolName.init -> void
+Penghou.Baize.LlmToolResultContent
+Penghou.Baize.LlmToolResultContent.LlmToolResultContent(Penghou.Baize.LlmToolResult! Result) -> void
+Penghou.Baize.LlmToolResultContent.Result.get -> Penghou.Baize.LlmToolResult!
+Penghou.Baize.LlmToolResultContent.Result.init -> void
+Penghou.Baize.LlmUriSource
+Penghou.Baize.LlmUriSource.LlmUriSource(System.Uri! uri) -> void
+Penghou.Baize.LlmUriSource.Uri.get -> System.Uri!
+Penghou.Baize.LlmUsage
+Penghou.Baize.LlmUsage.CompletionTokens.get -> int?
+Penghou.Baize.LlmUsage.CompletionTokens.init -> void
+Penghou.Baize.LlmUsage.LlmUsage(int? PromptTokens, int? CompletionTokens, int? TotalTokens, int? PromptCacheHitTokens = null, int? PromptCacheMissTokens = null, int? ThinkingTokens = null) -> void
+Penghou.Baize.LlmUsage.PromptCacheHitTokens.get -> int?
+Penghou.Baize.LlmUsage.PromptCacheHitTokens.init -> void
+Penghou.Baize.LlmUsage.PromptCacheMissTokens.get -> int?
+Penghou.Baize.LlmUsage.PromptCacheMissTokens.init -> void
+Penghou.Baize.LlmUsage.PromptTokens.get -> int?
+Penghou.Baize.LlmUsage.PromptTokens.init -> void
+Penghou.Baize.LlmUsage.ThinkingTokens.get -> int?
+Penghou.Baize.LlmUsage.ThinkingTokens.init -> void
+Penghou.Baize.LlmUsage.TotalTokens.get -> int?
+Penghou.Baize.LlmUsage.TotalTokens.init -> void
+Penghou.Baize.LlmVideoContent
+Penghou.Baize.LlmVideoContent.LlmVideoContent(string! mediaType, Penghou.Baize.LlmMediaSource! source) -> void
+Penghou.Baize.ModelStrategy
+Penghou.Baize.ModelStrategy.Auto = 0 -> Penghou.Baize.ModelStrategy
+Penghou.Baize.ModelStrategy.StructuredOutput = 2 -> Penghou.Baize.ModelStrategy
+Penghou.Baize.ModelStrategy.ToolCall = 1 -> Penghou.Baize.ModelStrategy
+Penghou.Baize.ProviderBatchHandle
+Penghou.Baize.ProviderBatchHandle.BatchId.get -> string!
+Penghou.Baize.ProviderBatchHandle.BatchId.init -> void
+Penghou.Baize.ProviderBatchHandle.EndpointId.get -> string?
+Penghou.Baize.ProviderBatchHandle.EndpointId.init -> void
+Penghou.Baize.ProviderBatchHandle.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.ProviderBatchHandle.Metadata.init -> void
+Penghou.Baize.ProviderBatchHandle.ProviderBatchHandle(string! ProviderId, string! BatchId, string? EndpointId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Penghou.Baize.ProviderBatchHandle.ProviderId.get -> string!
+Penghou.Baize.ProviderBatchHandle.ProviderId.init -> void
+Penghou.Baize.ProviderBatchStatus
+Penghou.Baize.ProviderBatchStatus.Completed.get -> int?
+Penghou.Baize.ProviderBatchStatus.Completed.init -> void
+Penghou.Baize.ProviderBatchStatus.Failed.get -> int?
+Penghou.Baize.ProviderBatchStatus.Failed.init -> void
+Penghou.Baize.ProviderBatchStatus.ProviderBatchStatus(Penghou.Baize.BaizeBatchState State, string? ProviderStatus = null, int? Total = null, int? Completed = null, int? Failed = null, System.TimeSpan? RetryAfter = null) -> void
+Penghou.Baize.ProviderBatchStatus.ProviderStatus.get -> string?
+Penghou.Baize.ProviderBatchStatus.ProviderStatus.init -> void
+Penghou.Baize.ProviderBatchStatus.RetryAfter.get -> System.TimeSpan?
+Penghou.Baize.ProviderBatchStatus.RetryAfter.init -> void
+Penghou.Baize.ProviderBatchStatus.State.get -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.ProviderBatchStatus.State.init -> void
+Penghou.Baize.ProviderBatchStatus.Total.get -> int?
+Penghou.Baize.ProviderBatchStatus.Total.init -> void
+Penghou.Baize.ToolCallDelta
+Penghou.Baize.ToolCallDelta.ArgumentsJsonFragment.get -> string?
+Penghou.Baize.ToolCallDelta.ArgumentsJsonFragment.init -> void
+Penghou.Baize.ToolCallDelta.Continuation.get -> Penghou.Baize.LlmProviderContinuation?
+Penghou.Baize.ToolCallDelta.Continuation.init -> void
+Penghou.Baize.ToolCallDelta.Id.get -> string?
+Penghou.Baize.ToolCallDelta.Id.init -> void
+Penghou.Baize.ToolCallDelta.Index.get -> int
+Penghou.Baize.ToolCallDelta.Index.init -> void
+Penghou.Baize.ToolCallDelta.Name.get -> string?
+Penghou.Baize.ToolCallDelta.Name.init -> void
+Penghou.Baize.ToolCallDelta.ToolCallDelta(int Index, string? Id = null, string? Name = null, string? ArgumentsJsonFragment = null, Penghou.Baize.LlmProviderContinuation? Continuation = null) -> void
+static Penghou.Baize.BaizeBatchClientBase.SplitJsonl(string! content) -> System.Collections.Generic.IEnumerable<string!>!
+static Penghou.Baize.BaizeException.ClassifyStatusCode(int statusCode) -> Penghou.Baize.Generation.GenerationErrorKind
+static Penghou.Baize.BaizeException.InvalidRequest(string! message) -> Penghou.Baize.BaizeException!
+static Penghou.Baize.BaizeException.ProviderUnavailable(string! message, System.Exception? innerException = null) -> Penghou.Baize.BaizeException!
+static Penghou.Baize.BaizeException.UnknownSubmissionOutcome(string! message, System.Exception? innerException = null) -> Penghou.Baize.BaizeException!
+static Penghou.Baize.BaizeException.UnsupportedCapability(string! message) -> Penghou.Baize.BaizeException!
+static Penghou.Baize.BaizeHttp.WithRequestTimeout(this System.Net.Http.IHttpClientFactory! factory, System.TimeSpan timeout) -> System.Net.Http.IHttpClientFactory!
+static Penghou.Baize.BaizeServiceCollectionExtensions.AddBaizeTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.BaizeTelemetry.Activities.get -> System.Diagnostics.ActivitySource!
+static Penghou.Baize.BaizeTelemetry.Meter.get -> System.Diagnostics.Metrics.Meter!
+static Penghou.Baize.BatchRequestValidator.ValidateHandle(Penghou.Baize.ProviderBatchHandle! handle, string! providerId) -> void
+static Penghou.Baize.BatchRequestValidator.ValidateItems(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, string! providerId) -> void
+static Penghou.Baize.Generation.GenerationClientBase.Deserialize<T>(System.Text.Json.JsonElement root, string! context) -> T
+static Penghou.Baize.Generation.GenerationClientBase.JsonContent(object! value) -> System.Net.Http.ByteArrayContent!
+static Penghou.Baize.Generation.GenerationClientBase.ReadBytesAsync(System.Net.Http.HttpResponseMessage! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<byte[]!>!
+static Penghou.Baize.Generation.GenerationClientBase.ReadJsonAsync(System.Net.Http.HttpResponseMessage! response, string! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
+static Penghou.Baize.Generation.GenerationRequestValidator.TryValidate(Penghou.Baize.Generation.GenerationCapabilities! capabilities, Penghou.Baize.Generation.GenerationRequest! request, out System.Collections.Generic.IReadOnlyList<string!>! diagnostics) -> bool
+static Penghou.Baize.Generation.GenerationRequestValidator.Validate(Penghou.Baize.Generation.GenerationCapabilities! capabilities, Penghou.Baize.Generation.GenerationRequest! request, string! endpointDescription) -> void
+static Penghou.Baize.Generation.GenerationServiceCollectionExtensions.AddBaizeGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Baize.Generation.GenerationExecutorOptions!>? configureExecutor = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Generation.GenerationServiceCollectionExtensions.AddBaizeGenerationEndpoint<TOptions>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! providerName, string! endpointId, System.Action<TOptions!>! configure, System.Action<System.IServiceProvider!, TOptions!>? validate, System.Func<System.IServiceProvider!, TOptions!, Penghou.Baize.Generation.IGenerationClient!>! createClient) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.LlmClientBase.ParseJsonElement(string? json, string! context) -> System.Text.Json.JsonElement
+static Penghou.Baize.LlmClientBase.ReadRateLimitInfo(System.Net.Http.HttpResponseMessage! response) -> Penghou.Baize.LlmRateLimitInfo?
+static Penghou.Baize.LlmClientBase.ReadSseEventsAsync(System.IO.Stream! stream, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<(string? EventType, string! Data)>!
+static Penghou.Baize.LlmClientException.ClassifyStatusCode(int statusCode) -> Penghou.Baize.LlmClientFailureKind
+static Penghou.Baize.LlmFinishReasonClassifier.Classify(string? finishReason) -> Penghou.Baize.LlmFinishReasonKind
+static Penghou.Baize.LlmJson.FormatForError(string? value) -> string!
+static Penghou.Baize.LlmJson.FormatUrlForError(string? value) -> string!
+static Penghou.Baize.LlmJson.ParseElement(string? json, string! context) -> System.Text.Json.JsonElement
+static Penghou.Baize.LlmMessage.Assistant(System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>! toolCalls, string? text = null) -> Penghou.Baize.LlmMessage!
+static Penghou.Baize.LlmMessage.Text(string! role, string! text) -> Penghou.Baize.LlmMessage!
+static Penghou.Baize.LlmMessage.ToolResult(string! toolCallId, string! toolName, string! content, bool succeeded = true) -> Penghou.Baize.LlmMessage!
+static Penghou.Baize.LlmMessage.ToolResults(System.Collections.Generic.IEnumerable<Penghou.Baize.LlmToolResult!>! results) -> Penghou.Baize.LlmMessage!
+static Penghou.Baize.LlmProviderKey.implicit operator Penghou.Baize.LlmProviderKey(string! value) -> Penghou.Baize.LlmProviderKey
+static Penghou.Baize.LlmProviderKey.operator !=(Penghou.Baize.LlmProviderKey left, Penghou.Baize.LlmProviderKey right) -> bool
+static Penghou.Baize.LlmProviderKey.operator ==(Penghou.Baize.LlmProviderKey left, Penghou.Baize.LlmProviderKey right) -> bool
+static Penghou.Baize.LlmRequestRequirements.From(Penghou.Baize.LlmRequest! request) -> Penghou.Baize.LlmRequestRequirements!
+static Penghou.Baize.LlmRequestValidator.Validate(string! model, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.LlmRequest! request, System.Func<Penghou.Baize.LlmContentPart!, Penghou.Baize.LlmContentType?>? contentTypeOf = null) -> void
+static Penghou.Baize.LlmResponseFormat.Json() -> Penghou.Baize.LlmResponseFormat!
+static Penghou.Baize.LlmResponseFormat.JsonSchema(string! schemaJson) -> Penghou.Baize.LlmResponseFormat!
+static Penghou.Baize.LlmStreamingExtensions.CollectAsync(this System.Collections.Generic.IAsyncEnumerable<Penghou.Baize.LlmStreamEvent!>! stream, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.LlmStreamingExtensions.CompleteAsync(this Penghou.Baize.ILlmClient! client, Penghou.Baize.LlmRequest! request, System.Action<string!>? onDelta = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.LlmStreamingExtensions.CompleteAsync(this Penghou.Baize.ILlmClient! client, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+static Penghou.Baize.LlmThinking.MapStandardEffort(string! providerDisplayName, Penghou.Baize.LlmThinkingEffort effort) -> string?
+static readonly Penghou.Baize.BaizeHttp.DefaultTimeout -> System.TimeSpan
+static readonly Penghou.Baize.Generation.GenerationClientBase.JsonOptions -> System.Text.Json.JsonSerializerOptions!
+virtual Penghou.Baize.BaizeBatchClientBase.ProviderDisplayName.get -> string!
+virtual Penghou.Baize.Generation.GenerationClientBase.ApplyAuth(System.Net.Http.HttpRequestMessage! httpRequest) -> void
+virtual Penghou.Baize.Generation.GenerationClientBase.ClassifyFailure(System.Net.Http.HttpResponseMessage! response, string! responseBody) -> Penghou.Baize.Generation.GenerationErrorKind
+virtual Penghou.Baize.Generation.GenerationClientBase.EndpointDescription.get -> string!
+virtual Penghou.Baize.Generation.GenerationClientBase.ProviderDisplayName.get -> string!
+virtual Penghou.Baize.Generation.GenerationClientBase.ValidateRequest(Penghou.Baize.Generation.GenerationRequest! request) -> void
+virtual Penghou.Baize.LlmClientBase.ApplyAuth(System.Net.Http.HttpRequestMessage! httpRequest) -> void
+virtual Penghou.Baize.LlmClientBase.ContentTypeOf(Penghou.Baize.LlmContentPart! part) -> Penghou.Baize.LlmContentType?
+virtual Penghou.Baize.LlmClientBase.ValidateRequest(Penghou.Baize.LlmRequest! request) -> void

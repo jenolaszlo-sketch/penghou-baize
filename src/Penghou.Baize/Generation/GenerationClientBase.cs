@@ -244,7 +244,7 @@ public abstract class GenerationClientBase : IGenerationClient
                 $"{context} returned a malformed response.",
                 GenerationErrorKind.GenerationFailed,
                 (int)response.StatusCode,
-                body,
+                LlmJson.FormatForError(body),
                 ex);
         }
     }
@@ -328,10 +328,11 @@ public abstract class GenerationClientBase : IGenerationClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         throw new BaizeException(
-            $"{context} failed with HTTP {(int)response.StatusCode}: {body}",
+            $"{context} failed with HTTP {(int)response.StatusCode}: " +
+            LlmJson.FormatForError(body),
             ClassifyFailure(response, body),
             (int)response.StatusCode,
-            body,
+            LlmJson.FormatForError(body),
             null);
     }
 

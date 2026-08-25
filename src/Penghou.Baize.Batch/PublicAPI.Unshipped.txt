@@ -1,0 +1,171 @@
+#nullable enable
+Penghou.Baize.Batch.BaizeBatchCoordinator
+Penghou.Baize.Batch.BaizeBatchCoordinator.BaizeBatchCoordinator(Penghou.Baize.Batch.IBaizeBatchPlanner! planner, Penghou.Baize.Batch.IBaizeBatchClientResolver! resolver, Penghou.Baize.Batch.BatchCoordinatorOptions! options) -> void
+Penghou.Baize.Batch.BaizeBatchCoordinator.BaizeBatchCoordinator(Penghou.Baize.Batch.IBaizeBatchPlanner! planner, Penghou.Baize.Batch.IBaizeBatchClientResolver! resolver, System.TimeProvider? timeProvider = null, System.Random? random = null) -> void
+Penghou.Baize.Batch.BaizeBatchCoordinator.BaizeBatchCoordinator(Penghou.Baize.Batch.IBaizeBatchPlanner! planner, Penghou.Baize.Batch.IBaizeBatchClientResolver! resolver, System.TimeProvider? timeProvider, System.Random? random, Penghou.Baize.Batch.BatchCoordinatorOptions? options) -> void
+Penghou.Baize.Batch.BaizeBatchCoordinator.CancelAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Batch.BaizeBatchCoordinator.GetResultsAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchResultSet!>!
+Penghou.Baize.Batch.BaizeBatchCoordinator.GetStatusAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchStatus!>!
+Penghou.Baize.Batch.BaizeBatchCoordinator.SubmitAsync(Penghou.Baize.Batch.BaizeBatchSubmission! submission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchHandle!>!
+Penghou.Baize.Batch.BaizeBatchCoordinator.WaitForCompletionAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, Penghou.Baize.Batch.BatchWaitOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchStatus!>!
+Penghou.Baize.Batch.BaizeBatchCoordinator.WaitForResultsAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, Penghou.Baize.Batch.BatchWaitOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchResultSet!>!
+Penghou.Baize.Batch.BaizeBatchHandle
+Penghou.Baize.Batch.BaizeBatchHandle.BaizeBatchHandle(string! LogicalBatchId, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPart!>! Parts) -> void
+Penghou.Baize.Batch.BaizeBatchHandle.IsEmpty.get -> bool
+Penghou.Baize.Batch.BaizeBatchHandle.LogicalBatchId.get -> string!
+Penghou.Baize.Batch.BaizeBatchHandle.LogicalBatchId.init -> void
+Penghou.Baize.Batch.BaizeBatchHandle.Parts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPart!>!
+Penghou.Baize.Batch.BaizeBatchHandle.Parts.init -> void
+Penghou.Baize.Batch.BaizeBatchRequest
+Penghou.Baize.Batch.BaizeBatchRequest.BaizeBatchRequest(string! Id, Penghou.Baize.LlmRequest! Request, string? Model = null, string? Provider = null, string? EndpointId = null) -> void
+Penghou.Baize.Batch.BaizeBatchRequest.EndpointId.get -> string?
+Penghou.Baize.Batch.BaizeBatchRequest.EndpointId.init -> void
+Penghou.Baize.Batch.BaizeBatchRequest.Id.get -> string!
+Penghou.Baize.Batch.BaizeBatchRequest.Id.init -> void
+Penghou.Baize.Batch.BaizeBatchRequest.Model.get -> string?
+Penghou.Baize.Batch.BaizeBatchRequest.Model.init -> void
+Penghou.Baize.Batch.BaizeBatchRequest.Provider.get -> string?
+Penghou.Baize.Batch.BaizeBatchRequest.Provider.init -> void
+Penghou.Baize.Batch.BaizeBatchRequest.Request.get -> Penghou.Baize.LlmRequest!
+Penghou.Baize.Batch.BaizeBatchRequest.Request.init -> void
+Penghou.Baize.Batch.BaizeBatchResultSet
+Penghou.Baize.Batch.BaizeBatchResultSet.BaizeBatchResultSet(string! LogicalBatchId, Penghou.Baize.BaizeBatchState State, System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>! Results) -> void
+Penghou.Baize.Batch.BaizeBatchResultSet.LogicalBatchId.get -> string!
+Penghou.Baize.Batch.BaizeBatchResultSet.LogicalBatchId.init -> void
+Penghou.Baize.Batch.BaizeBatchResultSet.Results.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!
+Penghou.Baize.Batch.BaizeBatchResultSet.Results.init -> void
+Penghou.Baize.Batch.BaizeBatchResultSet.State.get -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.Batch.BaizeBatchResultSet.State.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus
+Penghou.Baize.Batch.BaizeBatchStatus.BaizeBatchStatus(string! LogicalBatchId, Penghou.Baize.BaizeBatchState State, int Total, int Completed, int Failed, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPartStatus!>? Parts = null) -> void
+Penghou.Baize.Batch.BaizeBatchStatus.Completed.get -> int
+Penghou.Baize.Batch.BaizeBatchStatus.Completed.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus.Failed.get -> int
+Penghou.Baize.Batch.BaizeBatchStatus.Failed.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus.LogicalBatchId.get -> string!
+Penghou.Baize.Batch.BaizeBatchStatus.LogicalBatchId.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus.Parts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPartStatus!>?
+Penghou.Baize.Batch.BaizeBatchStatus.Parts.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus.State.get -> Penghou.Baize.BaizeBatchState
+Penghou.Baize.Batch.BaizeBatchStatus.State.init -> void
+Penghou.Baize.Batch.BaizeBatchStatus.Total.get -> int
+Penghou.Baize.Batch.BaizeBatchStatus.Total.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmission
+Penghou.Baize.Batch.BaizeBatchSubmission.BaizeBatchSubmission(System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.BaizeBatchRequest!>! Requests, string? Id = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Penghou.Baize.Batch.BaizeBatchSubmission.Id.get -> string?
+Penghou.Baize.Batch.BaizeBatchSubmission.Id.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmission.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.Batch.BaizeBatchSubmission.Metadata.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmission.Requests.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.BaizeBatchRequest!>!
+Penghou.Baize.Batch.BaizeBatchSubmission.Requests.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionException
+Penghou.Baize.Batch.BaizeBatchSubmissionException.BaizeBatchSubmissionException(string! message, Penghou.Baize.Batch.BaizeBatchHandle! partialHandle, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.BaizeBatchSubmissionFailure!>! failures) -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionException.BaizeBatchSubmissionException(string! message, Penghou.Baize.Batch.BaizeBatchHandle! partialHandle, System.Exception! innerException) -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionException.Failures.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.BaizeBatchSubmissionFailure!>!
+Penghou.Baize.Batch.BaizeBatchSubmissionException.PartialHandle.get -> Penghou.Baize.Batch.BaizeBatchHandle!
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.BaizeBatchSubmissionFailure(int GroupIndex, string! EndpointId, System.Exception! Error) -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.EndpointId.get -> string!
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.EndpointId.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.Error.get -> System.Exception!
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.Error.init -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.GroupIndex.get -> int
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.GroupIndex.init -> void
+Penghou.Baize.Batch.BatchClientResolver
+Penghou.Baize.Batch.BatchClientResolver.BatchClientResolver(System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Baize.IBaizeBatchClient!>! clients) -> void
+Penghou.Baize.Batch.BatchClientResolver.BatchClientResolver(System.Collections.Generic.IReadOnlyDictionary<string!, System.Func<Penghou.Baize.IBaizeBatchClient!>!>! byEndpointId) -> void
+Penghou.Baize.Batch.BatchClientResolver.GetClient(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Batch.BatchClientResolver.TryGetClient(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Batch.BatchCoordinatorOptions
+Penghou.Baize.Batch.BatchCoordinatorOptions.MaxConcurrentSubmissions.get -> int
+Penghou.Baize.Batch.BatchCoordinatorOptions.MaxConcurrentSubmissions.init -> void
+Penghou.Baize.Batch.BatchPlan
+Penghou.Baize.Batch.BatchPlan.BatchPlan(string! LogicalBatchId, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchGroup!>! Groups) -> void
+Penghou.Baize.Batch.BatchPlan.Groups.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchGroup!>!
+Penghou.Baize.Batch.BatchPlan.Groups.init -> void
+Penghou.Baize.Batch.BatchPlan.LogicalBatchId.get -> string!
+Penghou.Baize.Batch.BatchPlan.LogicalBatchId.init -> void
+Penghou.Baize.Batch.BatchPlanException
+Penghou.Baize.Batch.BatchPlanException.BatchPlanException(string! message) -> void
+Penghou.Baize.Batch.BatchPlanner
+Penghou.Baize.Batch.BatchPlanner.BatchPlanner(Penghou.Baize.Router.ILlmModelLookup! lookup, Penghou.Baize.Batch.IBaizeBatchClientResolver! resolver, Penghou.Baize.Batch.BatchPlannerOptions? options = null) -> void
+Penghou.Baize.Batch.BatchPlanner.Plan(Penghou.Baize.Batch.BaizeBatchSubmission! submission) -> Penghou.Baize.Batch.BatchPlan!
+Penghou.Baize.Batch.BatchPlannerOptions
+Penghou.Baize.Batch.BatchPlannerOptions.MaxItemsPerGroup.get -> int?
+Penghou.Baize.Batch.BatchPlannerOptions.MaxItemsPerGroup.init -> void
+Penghou.Baize.Batch.BatchPollingUpdate
+Penghou.Baize.Batch.BatchPollingUpdate.BatchPollingUpdate(int PollNumber, Penghou.Baize.Batch.BaizeBatchStatus? Status, int ConsecutiveTransientFailures, System.TimeSpan? NextDelay = null, string? Error = null) -> void
+Penghou.Baize.Batch.BatchPollingUpdate.ConsecutiveTransientFailures.get -> int
+Penghou.Baize.Batch.BatchPollingUpdate.ConsecutiveTransientFailures.init -> void
+Penghou.Baize.Batch.BatchPollingUpdate.Error.get -> string?
+Penghou.Baize.Batch.BatchPollingUpdate.Error.init -> void
+Penghou.Baize.Batch.BatchPollingUpdate.NextDelay.get -> System.TimeSpan?
+Penghou.Baize.Batch.BatchPollingUpdate.NextDelay.init -> void
+Penghou.Baize.Batch.BatchPollingUpdate.PollNumber.get -> int
+Penghou.Baize.Batch.BatchPollingUpdate.PollNumber.init -> void
+Penghou.Baize.Batch.BatchPollingUpdate.Status.get -> Penghou.Baize.Batch.BaizeBatchStatus?
+Penghou.Baize.Batch.BatchPollingUpdate.Status.init -> void
+Penghou.Baize.Batch.BatchServiceCollectionExtensions
+Penghou.Baize.Batch.BatchWaitOptions
+Penghou.Baize.Batch.BatchWaitOptions.BackoffFactor.get -> double
+Penghou.Baize.Batch.BatchWaitOptions.BackoffFactor.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.JitterRatio.get -> double
+Penghou.Baize.Batch.BatchWaitOptions.JitterRatio.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.MaxPollInterval.get -> System.TimeSpan
+Penghou.Baize.Batch.BatchWaitOptions.MaxPollInterval.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.MaxTransientFailures.get -> int
+Penghou.Baize.Batch.BatchWaitOptions.MaxTransientFailures.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.PollInterval.get -> System.TimeSpan
+Penghou.Baize.Batch.BatchWaitOptions.PollInterval.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.Progress.get -> System.IProgress<Penghou.Baize.Batch.BatchPollingUpdate!>?
+Penghou.Baize.Batch.BatchWaitOptions.Progress.init -> void
+Penghou.Baize.Batch.BatchWaitOptions.Timeout.get -> System.TimeSpan?
+Penghou.Baize.Batch.BatchWaitOptions.Timeout.init -> void
+Penghou.Baize.Batch.IBaizeBatchClientResolver
+Penghou.Baize.Batch.IBaizeBatchClientResolver.GetClient(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Batch.IBaizeBatchClientResolver.TryGetClient(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Batch.IBaizeBatchCoordinator
+Penghou.Baize.Batch.IBaizeBatchCoordinator.CancelAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Penghou.Baize.Batch.IBaizeBatchCoordinator.GetResultsAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchResultSet!>!
+Penghou.Baize.Batch.IBaizeBatchCoordinator.GetStatusAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchStatus!>!
+Penghou.Baize.Batch.IBaizeBatchCoordinator.SubmitAsync(Penghou.Baize.Batch.BaizeBatchSubmission! submission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchHandle!>!
+Penghou.Baize.Batch.IBaizeBatchCoordinator.WaitForCompletionAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, Penghou.Baize.Batch.BatchWaitOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchStatus!>!
+Penghou.Baize.Batch.IBaizeBatchCoordinator.WaitForResultsAsync(Penghou.Baize.Batch.BaizeBatchHandle! handle, Penghou.Baize.Batch.BatchWaitOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Batch.BaizeBatchResultSet!>!
+Penghou.Baize.Batch.IBaizeBatchPlanner
+Penghou.Baize.Batch.IBaizeBatchPlanner.Plan(Penghou.Baize.Batch.BaizeBatchSubmission! submission) -> Penghou.Baize.Batch.BatchPlan!
+Penghou.Baize.Batch.ModelLookupBatchClientResolver
+Penghou.Baize.Batch.ModelLookupBatchClientResolver.GetClient(string! endpointId) -> Penghou.Baize.IBaizeBatchClient!
+Penghou.Baize.Batch.ModelLookupBatchClientResolver.ModelLookupBatchClientResolver(Penghou.Baize.Router.ILlmModelLookup! modelLookup) -> void
+Penghou.Baize.Batch.ModelLookupBatchClientResolver.TryGetClient(string! endpointId, out Penghou.Baize.IBaizeBatchClient! client) -> bool
+Penghou.Baize.Batch.ProviderBatchGroup
+Penghou.Baize.Batch.ProviderBatchGroup.EndpointId.get -> string!
+Penghou.Baize.Batch.ProviderBatchGroup.EndpointId.init -> void
+Penghou.Baize.Batch.ProviderBatchGroup.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>!
+Penghou.Baize.Batch.ProviderBatchGroup.Items.init -> void
+Penghou.Baize.Batch.ProviderBatchGroup.Model.get -> string?
+Penghou.Baize.Batch.ProviderBatchGroup.Model.init -> void
+Penghou.Baize.Batch.ProviderBatchGroup.ProviderBatchGroup(string! EndpointId, string! ProviderId, string? Model, System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! Items) -> void
+Penghou.Baize.Batch.ProviderBatchGroup.ProviderId.get -> string!
+Penghou.Baize.Batch.ProviderBatchGroup.ProviderId.init -> void
+Penghou.Baize.Batch.ProviderBatchPart
+Penghou.Baize.Batch.ProviderBatchPart.BatchId.get -> string!
+Penghou.Baize.Batch.ProviderBatchPart.BatchId.init -> void
+Penghou.Baize.Batch.ProviderBatchPart.EndpointId.get -> string!
+Penghou.Baize.Batch.ProviderBatchPart.EndpointId.init -> void
+Penghou.Baize.Batch.ProviderBatchPart.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Penghou.Baize.Batch.ProviderBatchPart.Metadata.init -> void
+Penghou.Baize.Batch.ProviderBatchPart.ProviderBatchPart(string! ProviderId, string! BatchId, string! EndpointId, System.Collections.Generic.IReadOnlyList<string!>! RequestIds, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Penghou.Baize.Batch.ProviderBatchPart.ProviderId.get -> string!
+Penghou.Baize.Batch.ProviderBatchPart.ProviderId.init -> void
+Penghou.Baize.Batch.ProviderBatchPart.RequestIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Baize.Batch.ProviderBatchPart.RequestIds.init -> void
+Penghou.Baize.Batch.ProviderBatchPartStatus
+Penghou.Baize.Batch.ProviderBatchPartStatus.Part.get -> Penghou.Baize.Batch.ProviderBatchPart!
+Penghou.Baize.Batch.ProviderBatchPartStatus.Part.init -> void
+Penghou.Baize.Batch.ProviderBatchPartStatus.ProviderBatchPartStatus(Penghou.Baize.Batch.ProviderBatchPart! Part, Penghou.Baize.ProviderBatchStatus! Status) -> void
+Penghou.Baize.Batch.ProviderBatchPartStatus.Status.get -> Penghou.Baize.ProviderBatchStatus!
+Penghou.Baize.Batch.ProviderBatchPartStatus.Status.init -> void
+static Penghou.Baize.Batch.BaizeBatchRequest.Create(string! id, string! model, Penghou.Baize.LlmRequest! request) -> Penghou.Baize.Batch.BaizeBatchRequest!
+static Penghou.Baize.Batch.BaizeBatchRequest.CreateForProvider(string! id, string! provider, string! model, Penghou.Baize.LlmRequest! request) -> Penghou.Baize.Batch.BaizeBatchRequest!
+static Penghou.Baize.Batch.BatchServiceCollectionExtensions.AddBaizeBatch(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Penghou.Baize.Batch.BatchPlannerOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Batch.BatchServiceCollectionExtensions.AddBaizeBatch(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Penghou.Baize.Batch.BatchPlannerOptions? options, Penghou.Baize.Batch.BatchCoordinatorOptions? coordinatorOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -10,15 +10,19 @@ public sealed class BaizeChatClient : IChatClient
 {
     private readonly ILlmClient _client;
     private readonly ChatClientMetadata _metadata;
+    private readonly bool _ownsClient;
+    private int _disposed;
 
     /// <summary>Initializes the adapter.</summary>
     public BaizeChatClient(
         ILlmClient client,
         string? providerName = null,
         Uri? providerUri = null,
-        string? modelId = null)
+        string? modelId = null,
+        bool ownsClient = false)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _ownsClient = ownsClient;
         var clientMetadata = (client as ILlmClientMetadataProvider)?.Metadata;
         _metadata = new ChatClientMetadata(
             providerName ?? clientMetadata?.Provider,
@@ -121,10 +125,7 @@ public sealed class BaizeChatClient : IChatClient
         var updates = new List<ChatResponseUpdate>(toolCalls.Count);
         foreach (var (_, call) in toolCalls.OrderBy(pair => pair.Key))
         {
-            var arguments = string.IsNullOrWhiteSpace(call.Arguments.ToString())
-                ? new Dictionary<string, object?>()
-                : JsonSerializer.Deserialize<Dictionary<string, object?>>(
-                    call.Arguments.ToString()) ?? [];
+            var arguments = ParseToolArguments(call.Arguments.ToString());
             updates.Add(new ChatResponseUpdate(
                 ChatRole.Assistant,
                 [new FunctionCallContent(
@@ -174,8 +175,34 @@ public sealed class BaizeChatClient : IChatClient
         return null;
     }
 
-    /// <summary>The adapter owns no disposable provider resources.</summary>
-    public void Dispose() { }
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (!_ownsClient || Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+        if (_client is IDisposable disposable)
+            disposable.Dispose();
+    }
+
+    private static Dictionary<string, object?> ParseToolArguments(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, object?>>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            // M.E.AI requires a materialized argument dictionary. Preserve the
+            // provider bytes rather than terminating an otherwise valid stream.
+            return new Dictionary<string, object?>
+            {
+                ["$raw"] = json
+            };
+        }
+    }
 
     private LlmRequest ToBaizeRequest(
         IEnumerable<ChatMessage> source,

@@ -167,6 +167,32 @@ public sealed class OllamaChatClientTests
     }
 
     [Fact]
+    public async Task CompleteAsync_MapsStreamingThinkingAsOrderedReasoning()
+    {
+        var handler = new RecordingHandler(
+            """
+            {"model":"deepseek-r1","message":{"role":"assistant","thinking":"check "},"done":false}
+            {"model":"deepseek-r1","message":{"role":"assistant","thinking":"carefully"},"done":false}
+            {"model":"deepseek-r1","message":{"role":"assistant","content":"answer"},"done":false}
+            {"model":"deepseek-r1","message":{"role":"assistant","content":"!"},"done":true,"done_reason":"stop"}
+            """);
+        var client = CreateClient(handler, "deepseek-r1");
+
+        var response = await client.CompleteAsync(
+            new LlmRequest([new LlmMessage("user", "solve")]),
+            TestContext.Current.CancellationToken);
+
+        response.Reasoning.Should().Be("check carefully");
+        response.Content.Should().Be("answer!");
+        response.Parts.Should().HaveCount(2);
+        response.Parts[0].Should().BeOfType<LlmReasoningContent>()
+            .Which.Text.Should().Be("check carefully");
+        response.Parts[1].Should().BeOfType<LlmTextContent>()
+            .Which.Text.Should().Be("answer!");
+        response.FinishReason.Should().Be("stop");
+    }
+
+    [Fact]
     public async Task StreamAsync_RejectsMalformedResponseChunk()
     {
         var handler = new RecordingHandler(
@@ -282,6 +308,29 @@ public sealed class OllamaChatClientTests
         await action.Should()
             .ThrowAsync<LlmRequestValidationException>()
             .WithMessage("*does not support extended thinking*");
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsNonInlineImageBeforeSending()
+    {
+        var handler = new RecordingHandler(
+            """{"model":"qwen","message":{"role":"assistant","content":""},"done":true}""");
+        var client = CreateClient(handler, "qwen");
+        var request = new LlmRequest([
+            new LlmMessage("user", [
+                new LlmImageContent(
+                    "image/png",
+                    new LlmUriSource(new Uri("https://cdn.test/image.png")))
+            ])
+        ]);
+
+        var action = async () => await CollectAsync(client.StreamAsync(
+            request,
+            TestContext.Current.CancellationToken));
+
+        await action.Should().ThrowAsync<LlmRequestValidationException>()
+            .WithMessage("*does not support*");
+        handler.RequestUri.Should().BeNull();
     }
 
     [Fact]

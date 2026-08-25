@@ -27,17 +27,23 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
     /// <param name="registry">The registry of registered generation endpoints.</param>
     /// <param name="routingPolicy">The routing policy, or the deterministic default when null.</param>
     /// <param name="options">The polling configuration used when waiting on queued handles, or defaults when null.</param>
+    /// <param name="endpointOrderer">Optional shared reliability ordering applied before routing selection.</param>
     /// <exception cref="ArgumentNullException"><paramref name="registry"/> is null.</exception>
     public GenerationBatchExecutor(
         IGenerationClientRegistry registry,
         IGenerationRoutingPolicy? routingPolicy = null,
-        IOptions<GenerationExecutorOptions>? options = null)
+        IOptions<GenerationExecutorOptions>? options = null,
+        IGenerationEndpointOrderer? endpointOrderer = null)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _routingPolicy = routingPolicy ?? new DefaultGenerationRoutingPolicy();
         _pollOptions = options?.Value ?? new GenerationExecutorOptions();
         GenerationExecutorCore.ValidateOptions(_pollOptions);
-        _core = new GenerationExecutorCore(_registry, _routingPolicy, _pollOptions);
+        _core = new GenerationExecutorCore(
+            _registry,
+            _routingPolicy,
+            _pollOptions,
+            endpointOrderer);
     }
 
     /// <inheritdoc />
@@ -55,7 +61,9 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
             throw BaizeException.InvalidRequest(
                 $"Generation batch MaxConcurrency must be at least 1, but {request.MaxConcurrency} was configured.");
 
-        var endpoint = SelectEndpoint(request.Request);
+        var endpoint = await _core
+            .SelectEndpointAsync(request.Request, cancellationToken)
+            .ConfigureAwait(false);
         var chunkSize = ChunkSize(endpoint.Client.Capabilities, request.Request, request.TotalCount);
         var chunkCount = (int)Math.Ceiling(request.TotalCount / (double)chunkSize);
 
@@ -283,8 +291,6 @@ public sealed class GenerationBatchExecutor : IGenerationBatchExecutor
         }
     }
 
-    private GenerationEndpoint SelectEndpoint(GenerationRequest request) =>
-        _core.SelectEndpoint(request);
 
     private static bool Supports(GenerationEndpoint endpoint, GenerationRequest request) =>
         GenerationExecutorCore.Supports(endpoint, request);

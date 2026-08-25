@@ -68,7 +68,7 @@ public sealed class ClaudeClientProvider : ILlmClientProvider
     {
         var thinkingStyle = ClaudeThinkingStyle.Adaptive;
 
-        if (context.Settings.TryGetValue("ThinkingStyle", out var configured) &&
+        if (context.Settings.TryGetValue(LlmSettingNames.ThinkingStyle, out var configured) &&
             !Enum.TryParse(configured, ignoreCase: true, out thinkingStyle))
         {
             throw new InvalidOperationException(

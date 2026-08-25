@@ -113,6 +113,16 @@ public sealed class OpenAiChatClient : LlmClientBase
             if (data == "[DONE]")
             {
                 receivedTerminal = true;
+                yield return new LlmStreamEvent(
+                    Diagnostics: new LlmProviderDiagnostics(
+                        Provider: "OpenAi",
+                        ActualModel: actualModel,
+                        Api: "native",
+                        Done: true,
+                        NativeToolCallCount: nativeToolCallCount,
+                        ResponseId: responseId,
+                        ServiceTier: serviceTier,
+                        SystemFingerprint: systemFingerprint));
                 break;
             }
 
@@ -127,7 +137,7 @@ public sealed class OpenAiChatClient : LlmClientBase
             catch (JsonException ex)
             {
                 throw new LlmClientException(
-                    $"Failed to parse streaming chunk: {data}",
+                    $"Failed to parse streaming chunk: {LlmJson.FormatForError(data)}",
                     ex);
             }
 
@@ -196,17 +206,6 @@ public sealed class OpenAiChatClient : LlmClientBase
                 };
             }
 
-            yield return new LlmStreamEvent(
-                Diagnostics: new LlmProviderDiagnostics(
-                    Provider: "OpenAi",
-                    ActualModel: actualModel,
-                    Api: "native",
-                    Done: receivedTerminal,
-                    NativeToolCallCount: nativeToolCallCount,
-                    ResponseId: responseId,
-                    ServiceTier: serviceTier,
-                    SystemFingerprint: systemFingerprint));
-
             if (choice.Delta?.ToolCalls is { Count: > 0 } toolCallDeltas)
             {
                 foreach (var toolCallDelta in toolCallDeltas)
@@ -254,6 +253,17 @@ public sealed class OpenAiChatClient : LlmClientBase
                     };
                 }
             }
+
+            yield return new LlmStreamEvent(
+                Diagnostics: new LlmProviderDiagnostics(
+                    Provider: "OpenAi",
+                    ActualModel: actualModel,
+                    Api: "native",
+                    Done: receivedTerminal,
+                    NativeToolCallCount: nativeToolCallCount,
+                    ResponseId: responseId,
+                    ServiceTier: serviceTier,
+                    SystemFingerprint: systemFingerprint));
         }
 
         if (!receivedTerminal)

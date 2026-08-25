@@ -23,6 +23,40 @@ public sealed class RunwayGenerationClient : GenerationClientBase
     private readonly string? _defaultOutputFormat;
 
     /// <summary>
+    /// Creates a Runway client from one cohesive options object. This is the
+    /// preferred direct-construction API.
+    /// </summary>
+    /// <param name="httpClientFactory">Factory providing the underlying <see cref="HttpClient"/>.</param>
+    /// <param name="options">The endpoint configuration.</param>
+    /// <param name="endpointId">The configured endpoint identity.</param>
+    public RunwayGenerationClient(
+        IHttpClientFactory httpClientFactory,
+        RunwayGenerationOptions options,
+        string endpointId)
+        : this(
+            GetOptions(options).Model,
+            httpClientFactory,
+            options.ApiKey,
+            new Uri(options.BaseUrl, UriKind.Absolute),
+            new GenerationCapabilities
+            {
+                Features = options.Features,
+                InputTransports = new HashSet<LlmContentTransport>
+                {
+                    LlmContentTransport.Uri,
+                    LlmContentTransport.InlineData,
+                    LlmContentTransport.ProviderFile
+                }
+            },
+            endpointId,
+            options.ApiVersion,
+            options.DefaultInputImageMimeType,
+            options.DefaultRatio,
+            options.DefaultOutputFormat)
+    {
+    }
+
+    /// <summary>
     /// Creates a Runway generation client.
     /// </summary>
     /// <param name="model">The video-generation model identifier (for example <c>gen4.5</c>).</param>
@@ -253,7 +287,7 @@ public sealed class RunwayGenerationClient : GenerationClientBase
         var form = new MultipartFormDataContent();
         foreach (var (name, value) in upload.Fields)
             form.Add(new StringContent(value, System.Text.Encoding.UTF8), name);
-        form.Add(new ByteArrayContent(data.ToArray())
+        form.Add(new ReadOnlyMemoryContent(data)
         {
             Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType) }
         }, "file", filename);
@@ -280,6 +314,10 @@ public sealed class RunwayGenerationClient : GenerationClientBase
         base.ApplyAuth(httpRequest);
         httpRequest.Headers.Add("X-Runway-Version", _apiVersion);
     }
+
+    private static RunwayGenerationOptions GetOptions(
+        RunwayGenerationOptions? options) =>
+        options ?? throw new ArgumentNullException(nameof(options));
 
     private async Task<GenerationOperation> SubmitVideoAsync(
         VideoGenerationRequest request,
@@ -445,9 +483,10 @@ public sealed class RunwayGenerationClient : GenerationClientBase
                 // failure, not an asset to skip silently — the caller paid
                 // for it and must know the output is unusable.
                 throw new BaizeException(
-                    $"Runway returned an unparseable output URL '{url}'.",
+                    $"Runway returned an unparseable output URL " +
+                    $"'{LlmJson.FormatUrlForError(url)}'.",
                     GenerationErrorKind.GenerationFailed,
-                    providerStatus: url);
+                    providerStatus: "unparseable_output_url");
             }
 
             assets.Add(new GeneratedAsset(

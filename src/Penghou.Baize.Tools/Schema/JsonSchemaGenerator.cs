@@ -32,6 +32,7 @@ public static partial class JsonSchemaGenerator
             {
                 NormalizeNullableType(obj);
                 NormalizeNullableAnyOf(obj);
+                NormalizeEnumType(obj);
                 ApplyDescription(context, obj);
             }
 
@@ -111,6 +112,18 @@ public static partial class JsonSchemaGenerator
         {
             obj["description"] = description;
         }
+    }
+
+    private static void NormalizeEnumType(JsonObject obj)
+    {
+        if (obj["type"] is not null || obj["enum"] is not JsonArray values ||
+            values.Count == 0)
+            return;
+
+        obj["type"] = values.All(value => value is JsonValue json &&
+            json.TryGetValue<string>(out _))
+            ? "string"
+            : "integer";
     }
 #endif
 }

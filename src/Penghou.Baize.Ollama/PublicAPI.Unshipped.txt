@@ -1,0 +1,17 @@
+#nullable enable
+Penghou.Baize.Ollama.OllamaChatClient
+Penghou.Baize.Ollama.OllamaChatClient.OllamaChatClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities) -> void
+Penghou.Baize.Ollama.OllamaClientProvider
+Penghou.Baize.Ollama.OllamaClientProvider.CreateClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Ollama.OllamaClientProvider.DefaultBaseUrl.get -> string!
+Penghou.Baize.Ollama.OllamaClientProvider.DefaultCapabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.Ollama.OllamaClientProvider.Key.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.Ollama.OllamaClientProvider.OllamaClientProvider() -> void
+Penghou.Baize.Ollama.OllamaOptions
+Penghou.Baize.Ollama.OllamaOptions.NumPredict.get -> int?
+Penghou.Baize.Ollama.OllamaOptions.NumPredict.init -> void
+Penghou.Baize.Ollama.OllamaOptions.OllamaOptions() -> void
+Penghou.Baize.Ollama.OllamaOptions.Temperature.get -> double?
+Penghou.Baize.Ollama.OllamaOptions.Temperature.init -> void
+Penghou.Baize.Ollama.ServiceCollectionExtensions
+static Penghou.Baize.Ollama.ServiceCollectionExtensions.AddOllamaLlmProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -7,6 +7,33 @@ namespace Penghou.Baize;
 /// </summary>
 public static class LlmJson
 {
+    private const int MaximumErrorTextLength = 1024;
+
+    /// <summary>Returns bounded text suitable for exception messages.</summary>
+    public static string FormatForError(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        return value.Length <= MaximumErrorTextLength
+            ? value
+            : $"{value[..MaximumErrorTextLength]}…";
+    }
+
+    /// <summary>
+    /// Returns a bounded provider URL without its query or fragment, which may
+    /// contain signed credentials.
+    /// </summary>
+    public static string FormatUrlForError(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        var delimiter = value.IndexOfAny(['?', '#']);
+        var sanitized = delimiter >= 0 ? value[..delimiter] : value;
+        return FormatForError(sanitized);
+    }
+
     /// <summary>
     /// Parses a JSON string into an owned, document-independent
     /// <see cref="JsonElement"/>, throwing a <see cref="LlmClientException"/>
@@ -29,7 +56,9 @@ public static class LlmJson
         }
         catch (JsonException ex)
         {
-            throw new LlmClientException($"Failed to parse {context}: {json}", ex);
+            throw new LlmClientException(
+                $"Failed to parse {context}: {FormatForError(json)}",
+                ex);
         }
     }
 }

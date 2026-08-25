@@ -66,7 +66,7 @@ public static class ServiceCollectionExtensions
     /// the explicitly configured <see cref="OpenAiCompatibleGenerationOptions.Features"/>
     /// are advertised. Endpoint options are validated and the client is
     /// registered with routing when the <see cref="IGenerationClientRegistry"/>
-    /// is resolved � not lazily on first use.
+    /// is resolved—not lazily on first use.
     /// </summary>
     public static IServiceCollection AddBaizeOpenAiCompatibleGeneration(
         this IServiceCollection services,

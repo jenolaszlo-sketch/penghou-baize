@@ -1,0 +1,66 @@
+#nullable enable
+override Penghou.Baize.OpenAi.OpenAiBatchClient.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+override Penghou.Baize.OpenAi.OpenAiBatchClient.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
+override Penghou.Baize.OpenAi.OpenAiBatchClient.GetStatusAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchStatus!>!
+override Penghou.Baize.OpenAi.OpenAiBatchClient.SubmitAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, Penghou.Baize.BatchSubmissionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchHandle!>!
+override Penghou.Baize.OpenAi.OpenAiGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.OpenAi.OpenAiGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.OpenAi.OpenAiGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.OpenAi.OpenAiBatchClient
+Penghou.Baize.OpenAi.OpenAiBatchClient.OpenAiBatchClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.OpenAi.OpenAiDialect dialect = Penghou.Baize.OpenAi.OpenAiDialect.Standard) -> void
+Penghou.Baize.OpenAi.OpenAiChatClient
+Penghou.Baize.OpenAi.OpenAiChatClient.OpenAiChatClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.OpenAi.OpenAiDialect dialect = Penghou.Baize.OpenAi.OpenAiDialect.Standard) -> void
+Penghou.Baize.OpenAi.OpenAiClientProvider
+Penghou.Baize.OpenAi.OpenAiClientProvider.CreateBatchClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.IBaizeBatchClient?
+Penghou.Baize.OpenAi.OpenAiClientProvider.CreateClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.OpenAi.OpenAiClientProvider.DefaultBaseUrl.get -> string!
+Penghou.Baize.OpenAi.OpenAiClientProvider.DefaultCapabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.OpenAi.OpenAiClientProvider.Key.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.OpenAi.OpenAiClientProvider.OpenAiClientProvider() -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.ApiKey.get -> string!
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.ApiKey.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.BaseAddress.get -> System.Uri!
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.BaseAddress.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.Features.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.ImageModel.get -> string?
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.ImageModel.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.MaximumCandidates.get -> int?
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.MaximumCandidates.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.Model.get -> string!
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.Model.set -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.OpenAiCompatibleGenerationOptions() -> void
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions.RequestTimeout.set -> void
+Penghou.Baize.OpenAi.OpenAiDialect
+Penghou.Baize.OpenAi.OpenAiDialect.DeepSeek = 1 -> Penghou.Baize.OpenAi.OpenAiDialect
+Penghou.Baize.OpenAi.OpenAiDialect.Standard = 0 -> Penghou.Baize.OpenAi.OpenAiDialect
+Penghou.Baize.OpenAi.OpenAiGenerationClient
+Penghou.Baize.OpenAi.OpenAiGenerationClient.OpenAiGenerationClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, System.Uri! baseAddress, Penghou.Baize.Generation.GenerationCapabilities! capabilities, string! endpointId, string? imageModel = null, string? videoModel = null, string? audioModel = null, string? defaultVoice = null) -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.ApiKey.get -> string!
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.ApiKey.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.AudioModel.get -> string?
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.AudioModel.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.BaseAddress.get -> System.Uri!
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.BaseAddress.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.DefaultVoice.get -> string!
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.DefaultVoice.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.Features.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.ImageModel.get -> string?
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.ImageModel.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.MaximumCandidates.get -> int?
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.MaximumCandidates.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.Model.get -> string!
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.Model.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.OpenAiGenerationOptions() -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.RequestTimeout.set -> void
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.VideoModel.get -> string?
+Penghou.Baize.OpenAi.OpenAiGenerationOptions.VideoModel.set -> void
+Penghou.Baize.OpenAi.ServiceCollectionExtensions
+static Penghou.Baize.OpenAi.ServiceCollectionExtensions.AddBaizeOpenAiCompatibleGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! endpointId, System.Action<Penghou.Baize.OpenAi.OpenAiCompatibleGenerationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.OpenAi.ServiceCollectionExtensions.AddBaizeOpenAiGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! endpointId, System.Action<Penghou.Baize.OpenAi.OpenAiGenerationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.OpenAi.ServiceCollectionExtensions.AddOpenAiLlmProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

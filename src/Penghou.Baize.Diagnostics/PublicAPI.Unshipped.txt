@@ -1,0 +1,24 @@
+#nullable enable
+Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler
+Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler.HttpTrafficCaptureHandler(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions!>! options, Microsoft.Extensions.Logging.ILogger<Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler!>! logger) -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.CaptureRequestBody.get -> bool
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.CaptureRequestBody.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.CaptureResponseBody.get -> bool
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.CaptureResponseBody.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.ContinueOnCaptureError.get -> bool
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.ContinueOnCaptureError.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.DirectoryPath.get -> string!
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.DirectoryPath.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.Enabled.get -> bool
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.Enabled.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.FlushEachResponseChunk.get -> bool
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.FlushEachResponseChunk.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.HttpTrafficCaptureOptions() -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxBodyBytes.get -> long
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxBodyBytes.set -> void
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxRetainedSessions.get -> int
+Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxRetainedSessions.set -> void
+Penghou.Baize.Diagnostics.ServiceCollectionExtensions
+static Penghou.Baize.Diagnostics.ServiceCollectionExtensions.AddBaizeHttpDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! sectionName = "Baize:Diagnostics") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Diagnostics.ServiceCollectionExtensions.AddBaizeHttpDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

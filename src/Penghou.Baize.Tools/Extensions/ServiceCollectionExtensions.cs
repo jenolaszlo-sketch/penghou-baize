@@ -42,9 +42,22 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddLlmStructuredOutputRepair(
         this IServiceCollection services)
+        => services.AddLlmStructuredOutputRepair(_ => { });
+
+    /// <summary>
+    /// Adds deterministic structured-output repair with an explicit streaming
+    /// buffering policy.
+    /// </summary>
+    public static IServiceCollection AddLlmStructuredOutputRepair(
+        this IServiceCollection services,
+        Action<StructuredOutputRepairOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
         services.AddLlmTools();
+        var options = new StructuredOutputRepairOptions();
+        configure(options);
+        services.TryAddSingleton(options);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<ILlmClientDecorator,
                 StructuredOutputRepairingLlmClientDecorator>());

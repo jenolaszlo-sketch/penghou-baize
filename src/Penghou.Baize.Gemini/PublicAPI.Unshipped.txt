@@ -1,0 +1,47 @@
+#nullable enable
+override Penghou.Baize.Gemini.GeminiBatchClient.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+override Penghou.Baize.Gemini.GeminiBatchClient.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
+override Penghou.Baize.Gemini.GeminiBatchClient.GetStatusAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchStatus!>!
+override Penghou.Baize.Gemini.GeminiBatchClient.SubmitAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, Penghou.Baize.BatchSubmissionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchHandle!>!
+override Penghou.Baize.Gemini.GeminiGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Gemini.GeminiGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Gemini.GeminiGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Gemini.GeminiBatchClient
+Penghou.Baize.Gemini.GeminiBatchClient.GeminiBatchClient(System.Net.Http.IHttpClientFactory! httpClientFactory, string! model, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.ILlmSchemaAdapter? schemaAdapter = null) -> void
+Penghou.Baize.Gemini.GeminiChatClient
+Penghou.Baize.Gemini.GeminiChatClient.GeminiChatClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.ILlmSchemaAdapter? schemaAdapter = null) -> void
+Penghou.Baize.Gemini.GeminiClientProvider
+Penghou.Baize.Gemini.GeminiClientProvider.CreateBatchClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.IBaizeBatchClient?
+Penghou.Baize.Gemini.GeminiClientProvider.CreateClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Gemini.GeminiClientProvider.DefaultBaseUrl.get -> string!
+Penghou.Baize.Gemini.GeminiClientProvider.DefaultCapabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.Gemini.GeminiClientProvider.GeminiClientProvider() -> void
+Penghou.Baize.Gemini.GeminiClientProvider.Key.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.Gemini.GeminiClientProvider.SchemaAdapter.get -> Penghou.Baize.ILlmSchemaAdapter!
+Penghou.Baize.Gemini.GeminiGenerationClient
+Penghou.Baize.Gemini.GeminiGenerationClient.GeminiGenerationClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.Generation.GenerationCapabilities! capabilities, string! endpointId, string? imageSize = null, string! defaultInputImageMimeType = "image/png", bool storeResponses = false) -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions
+Penghou.Baize.Gemini.GeminiGenerationOptions.ApiKey.get -> string!
+Penghou.Baize.Gemini.GeminiGenerationOptions.ApiKey.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.BaseUrl.get -> string!
+Penghou.Baize.Gemini.GeminiGenerationOptions.BaseUrl.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.DefaultInputImageMimeType.get -> string!
+Penghou.Baize.Gemini.GeminiGenerationOptions.DefaultInputImageMimeType.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Gemini.GeminiGenerationOptions.Features.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.GeminiGenerationOptions() -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.ImageSize.get -> string?
+Penghou.Baize.Gemini.GeminiGenerationOptions.ImageSize.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.Model.get -> string!
+Penghou.Baize.Gemini.GeminiGenerationOptions.Model.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.Gemini.GeminiGenerationOptions.RequestTimeout.set -> void
+Penghou.Baize.Gemini.GeminiGenerationOptions.StoreResponses.get -> bool
+Penghou.Baize.Gemini.GeminiGenerationOptions.StoreResponses.set -> void
+Penghou.Baize.Gemini.GeminiSchemaAdapter
+Penghou.Baize.Gemini.GeminiSchemaAdapter.Adapt(System.Text.Json.JsonElement schema, Penghou.Baize.LlmSchemaAdaptationContext! context) -> Penghou.Baize.LlmSchemaAdaptationResult!
+Penghou.Baize.Gemini.GeminiSchemaAdapter.GeminiSchemaAdapter() -> void
+Penghou.Baize.Gemini.ServiceCollectionExtensions
+static Penghou.Baize.Gemini.GeminiSchemaAdapter.Default.get -> Penghou.Baize.Gemini.GeminiSchemaAdapter!
+static Penghou.Baize.Gemini.ServiceCollectionExtensions.AddBaizeGeminiGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! endpointId, System.Action<Penghou.Baize.Gemini.GeminiGenerationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Gemini.ServiceCollectionExtensions.AddGeminiLlmProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

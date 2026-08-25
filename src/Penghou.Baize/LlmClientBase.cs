@@ -122,7 +122,8 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 var exception = new LlmClientException(
-                    $"LLM streaming request failed with HTTP {(int)response.StatusCode}: {responseBody}",
+                    $"LLM streaming request failed with HTTP {(int)response.StatusCode}: " +
+                    LlmJson.FormatForError(responseBody),
                     (int)response.StatusCode,
                     ReadRateLimitInfo(response));
                 RecordFailure(activity, exception, cancellationToken);

@@ -9,20 +9,25 @@ namespace Penghou.Baize.Tools;
 /// tool-only, and schema-less requests retain their original streaming path.
 /// </summary>
 public sealed class StructuredOutputRepairingLlmClientDecorator(
-    ILlmStructuredOutputRepairer repairer) : ILlmClientDecorator
+    ILlmStructuredOutputRepairer repairer,
+    StructuredOutputRepairOptions? options = null) : ILlmClientDecorator
 {
+    private readonly StructuredOutputRepairOptions _options =
+        options ?? new StructuredOutputRepairOptions();
+
     /// <inheritdoc />
     public ILlmClient Decorate(ILlmClient client)
     {
         ArgumentNullException.ThrowIfNull(client);
         return client is StructuredOutputRepairingLlmClient
             ? client
-            : new StructuredOutputRepairingLlmClient(client, repairer);
+            : new StructuredOutputRepairingLlmClient(client, repairer, _options);
     }
 
     private sealed class StructuredOutputRepairingLlmClient(
         ILlmClient inner,
-        ILlmStructuredOutputRepairer repairer)
+        ILlmStructuredOutputRepairer repairer,
+        StructuredOutputRepairOptions options)
         : ILlmClient, ILlmCompletionClient, ILlmClientMetadataProvider
     {
         public LlmEndpointCapabilities Capabilities => inner.Capabilities;
@@ -35,7 +40,8 @@ public sealed class StructuredOutputRepairingLlmClientDecorator(
             LlmRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            if (request.ResponseFormat?.Schema is null)
+            if (request.ResponseFormat?.Schema is null ||
+                !options.BufferStreamingResponses)
             {
                 await foreach (var item in inner.StreamAsync(request, cancellationToken))
                     yield return item;

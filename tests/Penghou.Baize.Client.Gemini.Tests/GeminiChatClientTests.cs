@@ -53,12 +53,14 @@ public sealed class GeminiChatClientTests
         var canonicalSchema =
             """{"$defs":{"value":{"type":"object","properties":{"text":{"type":"string"}},"additionalProperties":false}},"type":"object","properties":{"value":{"$ref":"#/$defs/value"}},"additionalProperties":false}""";
 
-        await CollectAsync(
+        var events = await CollectAsync(
             client.StreamAsync(
                 new LlmRequest(
                     [new LlmMessage("user", "Call the tool")],
                     tools: [new LlmTool("echo_value", "Echo", canonicalSchema)]),
                 TestContext.Current.CancellationToken));
+        events.Single(item => item.ToolCallDelta is not null)
+            .ToolCallDelta!.Id.Should().Be("call_0");
 
         using var request = JsonDocument.Parse(handler.RequestBody!);
         var parameters = request.RootElement

@@ -1,0 +1,60 @@
+#nullable enable
+Penghou.Baize.Tools.ContentToolCallExtractor
+Penghou.Baize.Tools.ContentToolCallExtractor.ContentToolCallExtractor(Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline) -> void
+Penghou.Baize.Tools.ContentToolCallExtractor.ExtractAsync(string? content, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>!>!
+Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions
+Penghou.Baize.Tools.IContentToolCallExtractor
+Penghou.Baize.Tools.IContentToolCallExtractor.ExtractAsync(string? content, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>!>!
+Penghou.Baize.Tools.ILlmResponseNormalizer
+Penghou.Baize.Tools.ILlmResponseNormalizer.NormalizeAsync(Penghou.Baize.LlmResponse! response, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.Tools.ILlmStructuredOutputRepairer
+Penghou.Baize.Tools.ILlmStructuredOutputRepairer.RepairAsync(Penghou.Baize.LlmResponse! response, Penghou.Baize.LlmResponseFormat! responseFormat, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.Tools.ILlmToolResultParser<TResult>
+Penghou.Baize.Tools.ILlmToolResultParser<TResult>.Parse(Penghou.Baize.LlmResponse! response) -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!
+Penghou.Baize.Tools.LlmClientRepairExtensions
+Penghou.Baize.Tools.LlmResponseNormalizer
+Penghou.Baize.Tools.LlmResponseNormalizer.LlmResponseNormalizer(Penghou.Baize.Tools.IContentToolCallExtractor! contentToolCallExtractor, Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline) -> void
+Penghou.Baize.Tools.LlmResponseNormalizer.NormalizeAsync(Penghou.Baize.LlmResponse! response, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.Tools.LlmStructuredOutputRepairer
+Penghou.Baize.Tools.LlmStructuredOutputRepairer.LlmStructuredOutputRepairer(Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline, Microsoft.Extensions.Logging.ILogger<Penghou.Baize.Tools.LlmStructuredOutputRepairer!>? logger = null) -> void
+Penghou.Baize.Tools.LlmStructuredOutputRepairer.RepairAsync(Penghou.Baize.LlmResponse! response, Penghou.Baize.LlmResponseFormat! responseFormat, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.Tools.LlmToolFactory
+Penghou.Baize.Tools.LlmToolResultParserBase<TResult>
+Penghou.Baize.Tools.LlmToolResultParserBase<TResult>.LlmToolResultParserBase(string! toolName, Penghou.Nuwa.JsonSchemaExpectation! expectation) -> void
+Penghou.Baize.Tools.LlmToolResultParserBase<TResult>.Parse(Penghou.Baize.LlmResponse! response) -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!
+Penghou.Baize.Tools.LlmToolResultParserBase<TResult>.ToolName.get -> string!
+Penghou.Baize.Tools.Schema.JsonSchemaGenerator
+Penghou.Baize.Tools.Schema.SchemaDescriptionAttribute
+Penghou.Baize.Tools.Schema.SchemaDescriptionAttribute.Description.get -> string!
+Penghou.Baize.Tools.Schema.SchemaDescriptionAttribute.SchemaDescriptionAttribute(string! description) -> void
+Penghou.Baize.Tools.StructuredOutputRepairingLlmClientDecorator
+Penghou.Baize.Tools.StructuredOutputRepairingLlmClientDecorator.Decorate(Penghou.Baize.ILlmClient! client) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Tools.StructuredOutputRepairingLlmClientDecorator.StructuredOutputRepairingLlmClientDecorator(Penghou.Baize.Tools.ILlmStructuredOutputRepairer! repairer, Penghou.Baize.Tools.StructuredOutputRepairOptions? options = null) -> void
+Penghou.Baize.Tools.StructuredOutputRepairOptions
+Penghou.Baize.Tools.StructuredOutputRepairOptions.BufferStreamingResponses.get -> bool
+Penghou.Baize.Tools.StructuredOutputRepairOptions.BufferStreamingResponses.set -> void
+Penghou.Baize.Tools.StructuredOutputRepairOptions.StructuredOutputRepairOptions() -> void
+Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.DeserializationFailed = 5 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.EmptyArguments = 2 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.InvalidJson = 3 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.MissingToolCall = 1 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.None = 0 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.SchemaValidationFailed = 4 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseFailure.TruncatedResponse = 6 -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseResult<TResult>
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Error.get -> string?
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Failure.get -> Penghou.Baize.Tools.ToolCallParseFailure
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Raw.get -> string?
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Succeeded.get -> bool
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Value.get -> TResult?
+static Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions.AddLlmStructuredOutputRepair(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions.AddLlmStructuredOutputRepair(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Baize.Tools.StructuredOutputRepairOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions.AddLlmTools(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions.AddLlmTools(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Nuwa.JsonRepairOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Penghou.Baize.Tools.LlmClientRepairExtensions.WithStructuredOutputRepair(this Penghou.Baize.ILlmClient! client, Penghou.Baize.Tools.ILlmStructuredOutputRepairer! repairer, Penghou.Baize.Tools.StructuredOutputRepairOptions? options = null) -> Penghou.Baize.ILlmClient!
+static Penghou.Baize.Tools.LlmToolFactory.Create<TArguments>(string! name, string! description) -> Penghou.Baize.LlmTool!
+static Penghou.Baize.Tools.Schema.JsonSchemaGenerator.GenerateSchemaJson<T>() -> string!
+static Penghou.Baize.Tools.Schema.JsonSchemaGenerator.GenerateSchemaNode<T>() -> System.Text.Json.Nodes.JsonNode!
+static Penghou.Baize.Tools.ToolCallParseResult<TResult>.Failed(Penghou.Baize.Tools.ToolCallParseFailure failure, string! error, string? raw) -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!
+static Penghou.Baize.Tools.ToolCallParseResult<TResult>.Success(TResult value) -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!

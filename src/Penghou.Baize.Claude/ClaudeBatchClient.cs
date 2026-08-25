@@ -183,14 +183,14 @@ public sealed class ClaudeBatchClient : BaizeBatchClientBase
             catch (JsonException ex)
             {
                 throw new LlmClientException(
-                    $"Failed to parse Anthropic batch result line: {rawLine}",
+                    $"Failed to parse Anthropic batch result line: {LlmJson.FormatForError(rawLine)}",
                     ex);
             }
 
             if (line is null || string.IsNullOrWhiteSpace(line.CustomId))
             {
                 throw new LlmClientException(
-                    $"Anthropic batch result line has no custom_id: {rawLine}",
+                    $"Anthropic batch result line has no custom_id: {LlmJson.FormatForError(rawLine)}",
                     LlmClientFailureKind.Protocol);
             }
 

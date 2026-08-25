@@ -81,6 +81,26 @@ public sealed class BaizeChatClientTests
     }
 
     [Fact]
+    public async Task StreamingResponse_PreservesMalformedToolArgumentsAsRawContent()
+    {
+        var inner = new RecordingClient(
+            new LlmStreamEvent(ToolCallDelta: new ToolCallDelta(
+                0, "call-1", "lookup", "{not-json")),
+            new LlmStreamEvent(FinishReason: "tool_calls"));
+        using var client = new BaizeChatClient(inner);
+
+        var updates = new List<ChatResponseUpdate>();
+        await foreach (var update in client.GetStreamingResponseAsync(
+                           [new ChatMessage(ChatRole.User, "weather")],
+                           cancellationToken: TestContext.Current.CancellationToken))
+            updates.Add(update);
+
+        updates.SelectMany(update => update.Contents)
+            .OfType<FunctionCallContent>()
+            .Single().Arguments!["$raw"].Should().Be("{not-json");
+    }
+
+    [Fact]
     public async Task Request_PreservesPlainJsonFormatAndStringToolResult()
     {
         var inner = new RecordingClient();

@@ -270,14 +270,14 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
             catch (JsonException ex)
             {
                 throw new LlmClientException(
-                    $"Failed to parse OpenAI batch result line: {rawLine}",
+                    $"Failed to parse OpenAI batch result line: {LlmJson.FormatForError(rawLine)}",
                     ex);
             }
 
             if (line is null || string.IsNullOrWhiteSpace(line.CustomId))
             {
                 throw new LlmClientException(
-                    $"OpenAI batch result line has no custom_id: {rawLine}",
+                    $"OpenAI batch result line has no custom_id: {LlmJson.FormatForError(rawLine)}",
                     LlmClientFailureKind.Protocol);
             }
 
@@ -383,7 +383,18 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
                     providerStatus));
         }
 
-        var body = line.Response!.Body;
+        if (line.Response is not { } successfulResponse ||
+            successfulResponse.StatusCode is not (>= 200 and < 300))
+        {
+            return new BaizeBatchResult(
+                requestId,
+                BaizeBatchItemState.Failed,
+                Error: new BaizeError(
+                    "OpenAI batch response was missing despite a successful status classification.",
+                    LlmClientFailureKind.Protocol));
+        }
+
+        var body = successfulResponse.Body;
 
         if (body.ValueKind == JsonValueKind.Object &&
             body.TryGetProperty("error", out _))
@@ -395,7 +406,7 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
                 BaizeBatchItemState.Failed,
                 Error: new BaizeError(
                     message,
-                    LlmClientException.ClassifyStatusCode(statusCode.Value),
+                    LlmClientException.ClassifyStatusCode(statusCode.GetValueOrDefault()),
                     statusCode,
                     providerStatus));
         }
@@ -413,7 +424,8 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
         catch (JsonException ex)
         {
             throw new LlmClientException(
-                $"Failed to parse OpenAI batch completion body: {body.GetRawText()}",
+                $"Failed to parse OpenAI batch completion body: " +
+                LlmJson.FormatForError(body.GetRawText()),
                 ex);
         }
 

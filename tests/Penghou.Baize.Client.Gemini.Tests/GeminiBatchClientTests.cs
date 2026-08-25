@@ -251,6 +251,23 @@ public sealed class GeminiBatchClientTests
     }
 
     [Fact]
+    public async Task GetResultsAsync_AssignsDeterministicMissingToolCallIds()
+    {
+        var handler = new BatchRecordingHandler(
+            """{"name":"batches/123","done":true,"response":{"output":{"responsesFile":"files/out"}}}""",
+            """{"key":"req-1","response":{"candidates":[{"content":{"parts":[{"functionCall":{"name":"first","args":{}}},{"functionCall":{"name":"second","args":{}}}]},"finishReason":"STOP"}]}}""");
+        var client = CreateClient(handler);
+
+        var results = await client.GetResultsAsync(
+            new ProviderBatchHandle("Gemini", "batches/123"),
+            TestContext.Current.CancellationToken);
+
+        results.Single().Response!.ToolCalls!
+            .Select(call => call.Id)
+            .Should().Equal("call_0", "call_1");
+    }
+
+    [Fact]
     public async Task GetResultsAsync_ParsesInlinedResponses()
     {
         var handler = new BatchRecordingHandler(

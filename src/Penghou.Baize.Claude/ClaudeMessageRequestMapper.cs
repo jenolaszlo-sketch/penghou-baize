@@ -17,7 +17,7 @@ internal static class ClaudeMessageRequestMapper
     /// The synthetic tool Claude endpoints use to emulate JSON-schema output.
     /// Its payload is repackaged as content so it never surfaces as a call.
     /// </summary>
-    internal const string StructuredOutputToolName = "structured_output";
+    internal const string StructuredOutputToolName = LlmProtocolNames.StructuredOutputTool;
 
     private const int DefaultMaxTokens = 4096;
 

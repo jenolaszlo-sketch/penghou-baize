@@ -1,0 +1,17 @@
+#nullable enable
+Penghou.Baize.Extensions.AI.BaizeChatClient
+Penghou.Baize.Extensions.AI.BaizeChatClient.BaizeChatClient(Penghou.Baize.ILlmClient! client, string? providerName = null, System.Uri? providerUri = null, string? modelId = null, bool ownsClient = false) -> void
+Penghou.Baize.Extensions.AI.BaizeChatClient.Dispose() -> void
+Penghou.Baize.Extensions.AI.BaizeChatClient.GetResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ChatResponse!>!
+Penghou.Baize.Extensions.AI.BaizeChatClient.GetService(System.Type! serviceType, object? serviceKey = null) -> object?
+Penghou.Baize.Extensions.AI.BaizeChatClient.GetStreamingResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate!>!
+Penghou.Baize.Extensions.AI.BaizeImageGenerator
+Penghou.Baize.Extensions.AI.BaizeImageGenerator.BaizeImageGenerator(Penghou.Baize.Generation.IGenerationClient! client, string? providerName = null, System.Uri? providerUri = null, string? modelId = null, Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? options = null, bool ownsClient = false) -> void
+Penghou.Baize.Extensions.AI.BaizeImageGenerator.Dispose() -> void
+Penghou.Baize.Extensions.AI.BaizeImageGenerator.GenerateAsync(Microsoft.Extensions.AI.ImageGenerationRequest! request, Microsoft.Extensions.AI.ImageGenerationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ImageGenerationResponse!>!
+Penghou.Baize.Extensions.AI.BaizeImageGenerator.GetService(System.Type! serviceType, object? serviceKey = null) -> object?
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.PollInterval.get -> System.TimeSpan
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.PollInterval.init -> void
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Timeout.get -> System.TimeSpan?
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Timeout.init -> void

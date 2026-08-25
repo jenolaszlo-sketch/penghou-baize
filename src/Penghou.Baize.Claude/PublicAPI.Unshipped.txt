@@ -1,0 +1,21 @@
+#nullable enable
+override Penghou.Baize.Claude.ClaudeBatchClient.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+override Penghou.Baize.Claude.ClaudeBatchClient.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
+override Penghou.Baize.Claude.ClaudeBatchClient.GetStatusAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchStatus!>!
+override Penghou.Baize.Claude.ClaudeBatchClient.SubmitAsync(System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! items, Penghou.Baize.BatchSubmissionOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.ProviderBatchHandle!>!
+Penghou.Baize.Claude.ClaudeBatchClient
+Penghou.Baize.Claude.ClaudeBatchClient.ClaudeBatchClient(System.Net.Http.IHttpClientFactory! httpClientFactory, string! model, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.Claude.ClaudeThinkingStyle thinkingStyle = Penghou.Baize.Claude.ClaudeThinkingStyle.Adaptive) -> void
+Penghou.Baize.Claude.ClaudeChatClient
+Penghou.Baize.Claude.ClaudeChatClient.ClaudeChatClient(System.Net.Http.IHttpClientFactory! httpClientFactory, string! model, string! apiKey, string! baseUrl, Penghou.Baize.LlmEndpointCapabilities! capabilities, Penghou.Baize.Claude.ClaudeThinkingStyle thinkingStyle = Penghou.Baize.Claude.ClaudeThinkingStyle.Adaptive) -> void
+Penghou.Baize.Claude.ClaudeClientProvider
+Penghou.Baize.Claude.ClaudeClientProvider.ClaudeClientProvider() -> void
+Penghou.Baize.Claude.ClaudeClientProvider.CreateBatchClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.IBaizeBatchClient?
+Penghou.Baize.Claude.ClaudeClientProvider.CreateClient(Penghou.Baize.LlmClientProviderContext! context) -> Penghou.Baize.ILlmClient!
+Penghou.Baize.Claude.ClaudeClientProvider.DefaultBaseUrl.get -> string!
+Penghou.Baize.Claude.ClaudeClientProvider.DefaultCapabilities.get -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.Claude.ClaudeClientProvider.Key.get -> Penghou.Baize.LlmProviderKey
+Penghou.Baize.Claude.ClaudeThinkingStyle
+Penghou.Baize.Claude.ClaudeThinkingStyle.Adaptive = 0 -> Penghou.Baize.Claude.ClaudeThinkingStyle
+Penghou.Baize.Claude.ClaudeThinkingStyle.Manual = 1 -> Penghou.Baize.Claude.ClaudeThinkingStyle
+Penghou.Baize.Claude.ServiceCollectionExtensions
+static Penghou.Baize.Claude.ServiceCollectionExtensions.AddClaudeLlmProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

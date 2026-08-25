@@ -98,6 +98,50 @@ public sealed class TelemetryTests
             .And.NotContain("private-prompt");
     }
 
+    [Fact]
+    public async Task CallerCancellation_DoesNotIncrementFailureMetric()
+    {
+        var failureCount = 0L;
+        using var meterListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == BaizeTelemetry.InstrumentationName &&
+                    instrument.Name == "baize.llm.failures")
+                    listener.EnableMeasurementEvents(instrument);
+            }
+        };
+        meterListener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "gen_ai.request.model" &&
+                    Equals(tag.Value, "cancel-model"))
+                {
+                    Interlocked.Add(ref failureCount, value);
+                    break;
+                }
+            }
+        });
+        meterListener.Start();
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var client = new CancellationTelemetryClient();
+
+        var action = async () =>
+        {
+            await foreach (var _ in client.StreamAsync(
+                               new LlmRequest([new LlmMessage("user", "cancel")]),
+                               cancellation.Token))
+            {
+            }
+        };
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        failureCount.Should().Be(0);
+    }
+
     private sealed class TelemetryClient()
         : LlmClientBase(
             "test-model",
@@ -136,6 +180,27 @@ public sealed class TelemetryTests
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
+            yield break;
+        }
+    }
+
+    private sealed class CancellationTelemetryClient()
+        : LlmClientBase(
+            "cancel-model",
+            new TestHttpClientFactory(),
+            string.Empty,
+            new LlmEndpointCapabilities(),
+            "Test")
+    {
+        protected override HttpRequestMessage CreateHttpRequest(LlmRequest request) =>
+            new(HttpMethod.Post, "https://example.test/chat");
+
+        protected override async IAsyncEnumerable<LlmStreamEvent> ProcessStreamAsync(
+            Stream stream,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            cancellationToken.ThrowIfCancellationRequested();
             yield break;
         }
     }

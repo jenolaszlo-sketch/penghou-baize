@@ -118,7 +118,8 @@ public abstract class BaizeBatchClientBase : IBaizeBatchClient
         if (!response.IsSuccessStatusCode)
         {
             throw new LlmClientException(
-                $"{ProviderDisplayName} batch request failed with HTTP {(int)response.StatusCode}: {responseBody}",
+                $"{ProviderDisplayName} batch request failed with HTTP {(int)response.StatusCode}: " +
+                LlmJson.FormatForError(responseBody),
                 (int)response.StatusCode);
         }
 
@@ -132,7 +133,8 @@ public abstract class BaizeBatchClientBase : IBaizeBatchClient
         catch (JsonException ex)
         {
             throw new LlmClientException(
-                $"Failed to parse {ProviderDisplayName} batch response: {responseBody}",
+                $"Failed to parse {ProviderDisplayName} batch response: " +
+                LlmJson.FormatForError(responseBody),
                 ex);
         }
     }

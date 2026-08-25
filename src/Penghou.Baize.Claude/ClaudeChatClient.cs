@@ -350,7 +350,7 @@ public sealed class ClaudeChatClient : LlmClientBase
             // drift; surface it as an error rather than silently dropping the
             // event and turning it into a confusing failure later.
             throw new LlmClientException(
-                $"Failed to parse Claude streaming event: {data}",
+                $"Failed to parse Claude streaming event: {LlmJson.FormatForError(data)}",
                 ex);
         }
     }

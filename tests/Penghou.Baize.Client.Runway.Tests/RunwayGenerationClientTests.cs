@@ -359,6 +359,25 @@ public sealed class RunwayGenerationClientTests
     }
 
     [Fact]
+    public async Task GetAsync_UnparseableOutput_FailsWithoutExposingSignedParameters()
+    {
+        const string signedValue = "relative-output.mp4?token=private-token";
+        var handler = new RecordingHandler().ReturnJson(
+            $$"""{"id":"task-1","status":"SUCCEEDED","output":["{{signedValue}}"]}""");
+        var client = CreateClient(handler);
+
+        var action = async () => await client.GetAsync(
+            Handle("task-1"),
+            TestContext.Current.CancellationToken);
+
+        var exception = (await action.Should().ThrowAsync<BaizeException>()).Which;
+        exception.ErrorKind.Should().Be(GenerationErrorKind.GenerationFailed);
+        exception.ProviderStatus.Should().Be("unparseable_output_url");
+        exception.Message.Should().Contain("relative-output.mp4");
+        exception.Message.Should().NotContain("private-token");
+    }
+
+    [Fact]
     public async Task GetAsync_FailedStatus_MapsFailureWithCode()
     {
         var handler = new RecordingHandler().ReturnJson(

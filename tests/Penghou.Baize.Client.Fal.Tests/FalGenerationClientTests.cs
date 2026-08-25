@@ -44,6 +44,31 @@ public sealed class FalGenerationClientTests
     }
 
     [Fact]
+    public async Task PersistedHandle_UsesProviderIssuedStatusAndResponseUrls()
+    {
+        var handler = new RecordingHandler()
+            .ReturnJson(
+                """{"request_id":"r-links","status":"IN_QUEUE","status_url":"https://status.example/custom","response_url":"https://result.example/custom","cancel_url":"https://cancel.example/custom"}""")
+            .ReturnJson("""{"request_id":"r-links","status":"COMPLETED"}""")
+            .ReturnJson("""{"image":{"url":"https://cdn.example/result.png"}}""");
+        var client = CreateClient(handler);
+
+        var submitted = await client.SubmitAsync(
+            new ImageGenerationRequest { Prompt = "linked" },
+            TestContext.Current.CancellationToken);
+        var resumedHandle = submitted.Handle with { };
+
+        var completed = await client.GetAsync(
+            resumedHandle,
+            TestContext.Current.CancellationToken);
+
+        completed.State.Should().Be(GenerationOperationState.Succeeded);
+        handler.Requests[1].RequestUri.Should().Be("https://status.example/custom");
+        handler.Requests[2].RequestUri.Should().Be("https://result.example/custom");
+        resumedHandle.ProviderData.Should().Contain("cancel_url", "https://cancel.example/custom");
+    }
+
+    [Fact]
     public async Task SubmitAsync_ImageWithCountAndCandidates_SendsNumImages()
     {
         var handler = new RecordingHandler().ReturnJson("""{"request_id":"r-2"}""");

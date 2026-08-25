@@ -799,6 +799,13 @@ public sealed class OpenAiChatClientTests
         events.Where(item => item.ToolCallDelta is not null).Should().HaveCount(2);
         events.Should().Contain(item => item.FinishReason == "tool_calls");
         events.Any(item => item.Usage?.TotalTokens == 11).Should().BeTrue();
+        events.Where(item => item.Diagnostics is not null)
+            .Select(item => item.Diagnostics!.NativeToolCallCount)
+            .Should().ContainInOrder(1, 1, 1);
+        var terminalDiagnostics = events.Last().Diagnostics;
+        terminalDiagnostics.Should().NotBeNull();
+        terminalDiagnostics!.Done.Should().BeTrue();
+        terminalDiagnostics.ResponseId.Should().Be("chatcmpl-test");
     }
 
     private static LlmEndpointCapabilities DefaultCapabilities =>

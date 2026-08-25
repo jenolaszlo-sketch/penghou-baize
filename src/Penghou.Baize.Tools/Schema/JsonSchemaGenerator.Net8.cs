@@ -36,13 +36,18 @@ public static partial class JsonSchemaGenerator
 
         if (type.IsEnum)
         {
+            var stringEncoded = type.IsDefined(
+                typeof(JsonConverterAttribute),
+                inherit: false);
             return new JsonObject
             {
-                ["type"] = "integer",
+                ["type"] = stringEncoded ? "string" : "integer",
                 ["enum"] = new JsonArray(
                     Enum.GetValues(type)
                         .Cast<object>()
-                        .Select(value => JsonValue.Create(Convert.ToInt64(value)))
+                        .Select(value => stringEncoded
+                            ? JsonValue.Create(value.ToString())
+                            : JsonValue.Create(Convert.ToInt64(value)))
                         .ToArray<JsonNode?>())
             };
         }

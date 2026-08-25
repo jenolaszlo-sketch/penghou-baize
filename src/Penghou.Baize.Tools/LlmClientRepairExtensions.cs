@@ -10,11 +10,12 @@ public static class LlmClientRepairExtensions
     /// </summary>
     public static ILlmClient WithStructuredOutputRepair(
         this ILlmClient client,
-        ILlmStructuredOutputRepairer repairer)
+        ILlmStructuredOutputRepairer repairer,
+        StructuredOutputRepairOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(repairer);
-        return new StructuredOutputRepairingLlmClientDecorator(repairer)
+        return new StructuredOutputRepairingLlmClientDecorator(repairer, options)
             .Decorate(client);
     }
 }

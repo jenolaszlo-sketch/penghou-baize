@@ -220,7 +220,7 @@ internal sealed class CapturingReadStream : Stream
             return;
         FlushCapture();
         var details = CompletionText(outcome, exception);
-        _session.TryAppendTextAsync(details).AsTask().GetAwaiter().GetResult();
+        _session.TryAppendText(details);
         _session.Complete(outcome);
     }
 

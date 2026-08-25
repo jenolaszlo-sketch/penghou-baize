@@ -56,9 +56,8 @@ internal sealed class CapturingHttpContent : HttpContent
             _inner.Dispose();
             if (Volatile.Read(ref _streamCreated) == 0)
             {
-                _session.TryAppendTextAsync(
-                    $"{Environment.NewLine}Response body was never read.{Environment.NewLine}")
-                    .AsTask().GetAwaiter().GetResult();
+                _session.TryAppendText(
+                    $"{Environment.NewLine}Response body was never read.{Environment.NewLine}");
                 _session.Complete("not-read");
             }
         }

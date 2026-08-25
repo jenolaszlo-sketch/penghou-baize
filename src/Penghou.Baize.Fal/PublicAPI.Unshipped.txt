@@ -1,0 +1,54 @@
+#nullable enable
+override Penghou.Baize.Fal.FalGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Fal.FalGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+override Penghou.Baize.Fal.FalGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
+Penghou.Baize.Fal.FalGenerationClient
+Penghou.Baize.Fal.FalGenerationClient.CancelQueueAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Fal.FalQueueResponse!>!
+Penghou.Baize.Fal.FalGenerationClient.FalGenerationClient(string! model, System.Net.Http.IHttpClientFactory! httpClientFactory, string! apiKey, string! baseUrl, Penghou.Baize.Generation.GenerationCapabilities! capabilities, string! endpointId) -> void
+Penghou.Baize.Fal.FalGenerationClient.GetResultAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
+Penghou.Baize.Fal.FalGenerationClient.GetStatusAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Fal.FalRequestStatus!>!
+Penghou.Baize.Fal.FalGenerationClient.SubmitQueueAsync(System.Text.Json.Nodes.JsonNode! payload, string? idempotencyKey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Fal.FalQueueResponse!>!
+Penghou.Baize.Fal.FalGenerationOptions
+Penghou.Baize.Fal.FalGenerationOptions.ApiKey.get -> string!
+Penghou.Baize.Fal.FalGenerationOptions.ApiKey.set -> void
+Penghou.Baize.Fal.FalGenerationOptions.BaseUrl.get -> string!
+Penghou.Baize.Fal.FalGenerationOptions.BaseUrl.set -> void
+Penghou.Baize.Fal.FalGenerationOptions.FalGenerationOptions() -> void
+Penghou.Baize.Fal.FalGenerationOptions.Features.get -> Penghou.Baize.Generation.GenerationFeature
+Penghou.Baize.Fal.FalGenerationOptions.Features.set -> void
+Penghou.Baize.Fal.FalGenerationOptions.Model.get -> string!
+Penghou.Baize.Fal.FalGenerationOptions.Model.set -> void
+Penghou.Baize.Fal.FalGenerationOptions.RequestTimeout.get -> System.TimeSpan?
+Penghou.Baize.Fal.FalGenerationOptions.RequestTimeout.set -> void
+Penghou.Baize.Fal.FalQueueResponse
+Penghou.Baize.Fal.FalQueueResponse.CancelUrl.get -> string?
+Penghou.Baize.Fal.FalQueueResponse.CancelUrl.init -> void
+Penghou.Baize.Fal.FalQueueResponse.FalQueueResponse(string? RequestId, string? Status, string? ResponseUrl, string? StatusUrl, string? CancelUrl) -> void
+Penghou.Baize.Fal.FalQueueResponse.RequestId.get -> string?
+Penghou.Baize.Fal.FalQueueResponse.RequestId.init -> void
+Penghou.Baize.Fal.FalQueueResponse.ResponseUrl.get -> string?
+Penghou.Baize.Fal.FalQueueResponse.ResponseUrl.init -> void
+Penghou.Baize.Fal.FalQueueResponse.Status.get -> string?
+Penghou.Baize.Fal.FalQueueResponse.Status.init -> void
+Penghou.Baize.Fal.FalQueueResponse.StatusUrl.get -> string?
+Penghou.Baize.Fal.FalQueueResponse.StatusUrl.init -> void
+Penghou.Baize.Fal.FalRequestMetrics
+Penghou.Baize.Fal.FalRequestMetrics.FalRequestMetrics(double? QueueTime, double? InferenceTime, double? TotalTime) -> void
+Penghou.Baize.Fal.FalRequestMetrics.InferenceTime.get -> double?
+Penghou.Baize.Fal.FalRequestMetrics.InferenceTime.init -> void
+Penghou.Baize.Fal.FalRequestMetrics.QueueTime.get -> double?
+Penghou.Baize.Fal.FalRequestMetrics.QueueTime.init -> void
+Penghou.Baize.Fal.FalRequestMetrics.TotalTime.get -> double?
+Penghou.Baize.Fal.FalRequestMetrics.TotalTime.init -> void
+Penghou.Baize.Fal.FalRequestStatus
+Penghou.Baize.Fal.FalRequestStatus.FalRequestStatus(string? RequestId, string? Status, int? Position, Penghou.Baize.Fal.FalRequestMetrics? Metrics) -> void
+Penghou.Baize.Fal.FalRequestStatus.Metrics.get -> Penghou.Baize.Fal.FalRequestMetrics?
+Penghou.Baize.Fal.FalRequestStatus.Metrics.init -> void
+Penghou.Baize.Fal.FalRequestStatus.Position.get -> int?
+Penghou.Baize.Fal.FalRequestStatus.Position.init -> void
+Penghou.Baize.Fal.FalRequestStatus.RequestId.get -> string?
+Penghou.Baize.Fal.FalRequestStatus.RequestId.init -> void
+Penghou.Baize.Fal.FalRequestStatus.Status.get -> string?
+Penghou.Baize.Fal.FalRequestStatus.Status.init -> void
+Penghou.Baize.Fal.ServiceCollectionExtensions
+static Penghou.Baize.Fal.ServiceCollectionExtensions.AddBaizeFalGeneration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! endpointId, System.Action<Penghou.Baize.Fal.FalGenerationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

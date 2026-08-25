@@ -67,7 +67,7 @@ public sealed class OpenAiClientProvider : ILlmClientProvider
     {
         var dialect = OpenAiDialect.Standard;
 
-        if (context.Settings.TryGetValue("Dialect", out var configured) &&
+        if (context.Settings.TryGetValue(LlmSettingNames.Dialect, out var configured) &&
             !Enum.TryParse(configured, ignoreCase: true, out dialect))
         {
             throw new InvalidOperationException(
