@@ -631,7 +631,7 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
             {
                 toolCalls.Add(new LlmToolCall(
                     part.FunctionCall.Id ??
-                        Guid.NewGuid().ToString("N"),
+                        $"call_{toolCalls.Count}",
                     part.FunctionCall.Name,
                     part.FunctionCall.Args.GetRawText(),
                     Continuation: continuation));

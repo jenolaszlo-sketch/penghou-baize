@@ -152,6 +152,8 @@ public sealed class OpenAiChatClient : LlmClientBase
                         PromptCacheMissTokens: chunk.Usage.PromptCacheMissTokens));
             }
 
+            // Baize never requests multiple chat choices (no "n" parameter is
+            // sent), so the first choice is the whole response by contract.
             var choice = chunk.Choices?.FirstOrDefault();
 
             if (choice is null)

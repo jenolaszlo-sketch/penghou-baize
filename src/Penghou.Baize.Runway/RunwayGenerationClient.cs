@@ -439,12 +439,20 @@ public sealed class RunwayGenerationClient : GenerationClientBase
         var assets = new List<GeneratedAsset>();
         foreach (var url in output ?? [])
         {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var absolute))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var absolute))
             {
-                assets.Add(new GeneratedAsset(
-                    new UriGeneratedAssetSource(absolute),
-                    ContentType: "video/mp4"));
+                // A completed generation whose output cannot be parsed is a
+                // failure, not an asset to skip silently — the caller paid
+                // for it and must know the output is unusable.
+                throw new BaizeException(
+                    $"Runway returned an unparseable output URL '{url}'.",
+                    GenerationErrorKind.GenerationFailed,
+                    providerStatus: url);
             }
+
+            assets.Add(new GeneratedAsset(
+                new UriGeneratedAssetSource(absolute),
+                ContentType: "video/mp4"));
         }
 
         return assets;

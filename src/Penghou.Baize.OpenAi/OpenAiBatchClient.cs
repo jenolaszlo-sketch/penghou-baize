@@ -477,6 +477,8 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
     private static LlmResponse ToLlmResponse(
         OpenAiChatCompletionResponse completion)
     {
+        // Baize never requests multiple chat choices (no "n" parameter in
+        // batch line bodies), so the first choice is the entire completion.
         var choice = completion.Choices![0];
         var message = choice.Message!;
 

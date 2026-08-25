@@ -209,7 +209,7 @@ public sealed class GeminiChatClient : LlmClientBase
                         ToolCallDelta: new ToolCallDelta(
                             Index: nativeToolCallCount,
                             Id: functionCall.Id ??
-                                Guid.NewGuid().ToString("N"),
+                                $"call_{nativeToolCallCount}",
                             Name: functionCall.Name,
                             ArgumentsJsonFragment:
                                 functionCall.Args.ToString(),

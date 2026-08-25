@@ -83,7 +83,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             }
             catch (Exception exception)
             {
-                RecordFailure(activity, exception);
+                RecordFailure(activity, exception, cancellationToken);
                 throw;
             }
 
@@ -95,7 +95,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             }
             catch (Exception exception)
             {
-                RecordFailure(activity, exception);
+                RecordFailure(activity, exception, cancellationToken);
                 throw;
             }
             using var httpRequestScope = httpRequest;
@@ -112,7 +112,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             }
             catch (Exception exception)
             {
-                RecordFailure(activity, exception);
+                RecordFailure(activity, exception, cancellationToken);
                 throw;
             }
             using var responseScope = response;
@@ -125,7 +125,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                     $"LLM streaming request failed with HTTP {(int)response.StatusCode}: {responseBody}",
                     (int)response.StatusCode,
                     ReadRateLimitInfo(response));
-                RecordFailure(activity, exception);
+                RecordFailure(activity, exception, cancellationToken);
                 throw exception;
             }
 
@@ -147,7 +147,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 }
                 catch (Exception exception)
                 {
-                    RecordFailure(activity, exception);
+                    RecordFailure(activity, exception, cancellationToken);
                     throw;
                 }
 
@@ -175,8 +175,19 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
         }
     }
 
-    private void RecordFailure(Activity? activity, Exception exception)
+    private void RecordFailure(
+        Activity? activity,
+        Exception exception,
+        CancellationToken cancellationToken)
     {
+        // Caller-initiated cancellation is not a provider failure: counting
+        // it inflates failure rates and poisons routing/cooldown signals.
+        if (exception is OperationCanceledException &&
+            cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         activity?.SetStatus(ActivityStatusCode.Error);
         activity?.SetTag("error.type", exception.GetType().FullName);
         BaizeTelemetry.Failures.Add(
