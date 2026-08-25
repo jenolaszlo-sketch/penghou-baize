@@ -174,15 +174,8 @@ public sealed class GeminiChatClient : LlmClientBase
             foreach (var part in candidate?.Content?.Parts ?? [])
             {
                 var partIndex = nextPartIndex++;
-                var continuation = part.ThoughtSignature is null
-                    ? null
-                    : new LlmProviderContinuation(
-                        Provider: "Gemini",
-                        Values: new Dictionary<string, string>
-                        {
-                            ["thoughtSignature"] =
-                                part.ThoughtSignature
-                        });
+                var continuation =
+                    GeminiResponseMapping.ContinuationFor(part.ThoughtSignature);
 
                 if (part.Text is not null)
                 {
@@ -233,7 +226,7 @@ public sealed class GeminiChatClient : LlmClientBase
             if (candidate?.FinishReason is not null)
             {
                 receivedFinalChunk = true;
-                doneReason = MapFinishReason(candidate.FinishReason);
+                doneReason = GeminiResponseMapping.MapFinishReason(candidate.FinishReason);
 
                 yield return new LlmStreamEvent(
                     FinishReason: doneReason);
@@ -242,7 +235,7 @@ public sealed class GeminiChatClient : LlmClientBase
             if (chunk.Usage is not null)
             {
                 yield return new LlmStreamEvent(
-                    Usage: ToLlmUsage(chunk.Usage));
+                    Usage: GeminiResponseMapping.ToLlmUsage(chunk.Usage));
             }
 
             yield return new LlmStreamEvent(
@@ -274,27 +267,4 @@ public sealed class GeminiChatClient : LlmClientBase
                 "Gemini stream ended without a final chunk.",
                 LlmClientFailureKind.Availability);
     }
-
-    private static string MapFinishReason(string finishReason) =>
-        finishReason switch
-        {
-            "STOP" => "stop",
-            "MAX_OUTPUT_TOKENS" => "length",
-            "SAFETY" => "content_filter",
-            _ => finishReason.ToLowerInvariant()
-        };
-
-    private static LlmUsage ToLlmUsage(GeminiUsage usage) =>
-        new(
-            PromptTokens: usage.PromptTokenCount,
-            CompletionTokens: SumGeneratedTokens(
-                usage.CandidatesTokenCount,
-                usage.ThoughtsTokenCount),
-            TotalTokens: usage.TotalTokenCount,
-            ThinkingTokens: usage.ThoughtsTokenCount);
-
-    private static int? SumGeneratedTokens(int? candidates, int? thoughts) =>
-        candidates.HasValue || thoughts.HasValue
-            ? candidates.GetValueOrDefault() + thoughts.GetValueOrDefault()
-            : null;
 }

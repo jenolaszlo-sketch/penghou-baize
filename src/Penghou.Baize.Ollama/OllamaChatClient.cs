@@ -58,6 +58,38 @@ public sealed class OllamaChatClient : LlmClientBase
 
     /// <inheritdoc />
     /// <inheritdoc />
+    /// <summary>
+    /// Enforces Ollama's media rules up front � inline-data images only, no
+    /// other media content � so rejection happens before any mapping work,
+    /// consistent with the other providers' pre-flight validation.
+    /// </summary>
+    protected override void ValidateRequest(LlmRequest request)
+    {
+
+        // Common transport/capability rules first, then Ollama's media rules.
+        base.ValidateRequest(request);
+
+        foreach (var message in request.Messages)
+        {
+            foreach (var part in message.Parts)
+            {
+                if (part is LlmImageContent image &&
+                    image.Source is not LlmInlineDataSource)
+                {
+                    throw new LlmRequestValidationException(
+                        "Ollama supports image inputs only as inline data.");
+                }
+
+                if (part is LlmMediaContent &&
+                    part is not LlmImageContent)
+                {
+                    throw new LlmRequestValidationException(
+                        $"Ollama does not support content type '{part.GetType().Name}'.");
+                }
+            }
+        }
+    }
+    /// <summary>Applies the optional Ollama bearer credential.</summary>
     protected override void ApplyAuth(HttpRequestMessage httpRequest)
     {
         if (!string.IsNullOrWhiteSpace(ApiKey))

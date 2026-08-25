@@ -121,14 +121,30 @@ internal static class OpenAiChatCompletionRequestMapper
         return tools.Count > 0 ? tools : null;
     }
 
-    private static void Validate(
+    /// <summary>
+    /// Full validation for callers without an outer generic pass (native
+    /// batch items): common transport rules plus this dialect's rules.
+    /// </summary>
+    public static void Validate(
         string model,
         LlmEndpointCapabilities capabilities,
         OpenAiDialect dialect,
         LlmRequest request)
     {
         LlmRequestValidator.Validate(model, capabilities, request);
+        ValidateDialectRules(capabilities, dialect, request);
+    }
 
+    /// <summary>
+    /// Dialect-only rules for the direct chat path, where the client's
+    /// <c>ValidateRequest</c> has already applied the common validator with
+    /// the provider content-type resolver.
+    /// </summary>
+    private static void ValidateDialectRules(
+        LlmEndpointCapabilities capabilities,
+        OpenAiDialect dialect,
+        LlmRequest request)
+    {
         if (OpenAiStructuredOutput.UsesSyntheticTool(capabilities, request) &&
             request.Tools.Count > 0)
         {

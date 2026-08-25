@@ -98,6 +98,11 @@ public sealed class OpenAiChatClient : LlmClientBase
         int? contentPartIndex = null;
         var toolPartIndices = new Dictionary<int, int>();
         var syntheticToolIndices = new HashSet<int>();
+        string? responseId = null;
+        string? actualModel = null;
+        string? serviceTier = null;
+        string? systemFingerprint = null;
+        var nativeToolCallCount = 0;
 
         await foreach (var (_, data) in ReadSseEventsAsync(stream, cancellationToken))
         {
@@ -128,6 +133,11 @@ public sealed class OpenAiChatClient : LlmClientBase
 
             if (chunk is null)
                 continue;
+
+            responseId = chunk.Id ?? responseId;
+            actualModel = chunk.Model ?? actualModel;
+            serviceTier = chunk.ServiceTier ?? serviceTier;
+            systemFingerprint = chunk.SystemFingerprint ?? systemFingerprint;
 
             if (chunk.Usage is not null)
             {
@@ -184,6 +194,17 @@ public sealed class OpenAiChatClient : LlmClientBase
                 };
             }
 
+            yield return new LlmStreamEvent(
+                Diagnostics: new LlmProviderDiagnostics(
+                    Provider: "OpenAi",
+                    ActualModel: actualModel,
+                    Api: "native",
+                    Done: receivedTerminal,
+                    NativeToolCallCount: nativeToolCallCount,
+                    ResponseId: responseId,
+                    ServiceTier: serviceTier,
+                    SystemFingerprint: systemFingerprint));
+
             if (choice.Delta?.ToolCalls is { Count: > 0 } toolCallDeltas)
             {
                 foreach (var toolCallDelta in toolCallDeltas)
@@ -217,6 +238,7 @@ public sealed class OpenAiChatClient : LlmClientBase
                     {
                         toolPartIndex = nextPartIndex++;
                         toolPartIndices[toolCallDelta.Index] = toolPartIndex;
+                        nativeToolCallCount++;
                     }
 
                     yield return new LlmStreamEvent(

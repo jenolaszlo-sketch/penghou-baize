@@ -329,6 +329,12 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
 
         foreach (var item in items)
         {
+            OpenAiChatCompletionRequestMapper.Validate(
+                Model,
+                _effectiveCapabilities,
+                _dialect,
+                item.Request);
+
             var wireRequest = OpenAiChatCompletionRequestMapper.Build(
                 Model,
                 _effectiveCapabilities,
@@ -510,7 +516,11 @@ public sealed class OpenAiBatchClient : BaizeBatchClientBase
             ToolCalls: toolCalls,
             Diagnostics: new LlmProviderDiagnostics(
                 Provider: "OpenAi",
-                Api: "batch"));
+                ActualModel: completion.Model,
+                Api: "batch",
+                ResponseId: completion.Id,
+                ServiceTier: completion.ServiceTier,
+                SystemFingerprint: completion.SystemFingerprint));
     }
 
     private static string ReadMessageText(object? content) => content switch

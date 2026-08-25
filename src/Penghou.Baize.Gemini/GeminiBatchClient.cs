@@ -612,15 +612,8 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
 
         foreach (var part in candidate.Content?.Parts ?? [])
         {
-            var continuation = part.ThoughtSignature is null
-                ? null
-                : new LlmProviderContinuation(
-                    Provider: "Gemini",
-                    Values: new Dictionary<string, string>
-                    {
-                        ["thoughtSignature"] =
-                            part.ThoughtSignature
-                    });
+            var continuation =
+                GeminiResponseMapping.ContinuationFor(part.ThoughtSignature);
 
             if (part.Text is not null && part.Thought != true)
             {
@@ -649,7 +642,7 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
             ? null
             : new LlmUsage(
                 PromptTokens: response.Usage.PromptTokenCount,
-                CompletionTokens: SumGeneratedTokens(
+                CompletionTokens: GeminiResponseMapping.SumGeneratedTokens(
                     response.Usage.CandidatesTokenCount,
                     response.Usage.ThoughtsTokenCount),
                 TotalTokens: response.Usage.TotalTokenCount,
@@ -660,7 +653,7 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
             Reasoning: reasoning.Count > 0 ? string.Concat(reasoning) : null,
             FinishReason: candidate.FinishReason is null
                 ? null
-                : MapFinishReason(candidate.FinishReason),
+                : GeminiResponseMapping.MapFinishReason(candidate.FinishReason),
             Usage: usage,
             ToolCalls: toolCalls.Count > 0 ? toolCalls : null,
             Diagnostics: new LlmProviderDiagnostics(
@@ -670,7 +663,7 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
                 Done: candidate.FinishReason is not null,
                 DoneReason: candidate.FinishReason is null
                     ? null
-                    : MapFinishReason(candidate.FinishReason),
+                    : GeminiResponseMapping.MapFinishReason(candidate.FinishReason),
                 NativeToolCallCount: toolCalls.Count,
                 ContentLength: text.Sum(item => item.Length),
                 ResponseId: response.ResponseId,
@@ -678,20 +671,6 @@ public sealed class GeminiBatchClient : BaizeBatchClientBase
                 ThinkingTokens: response.Usage?.ThoughtsTokenCount),
             ReasoningContinuation: reasoningContinuation);
     }
-
-    private static string MapFinishReason(string finishReason) =>
-        finishReason switch
-        {
-            "STOP" => "stop",
-            "MAX_OUTPUT_TOKENS" => "length",
-            "SAFETY" => "content_filter",
-            _ => finishReason.ToLowerInvariant()
-        };
-
-    private static int? SumGeneratedTokens(int? candidates, int? thoughts) =>
-        candidates.HasValue || thoughts.HasValue
-            ? candidates.GetValueOrDefault() + thoughts.GetValueOrDefault()
-            : null;
 
     private static BaizeBatchState MapState(
         string? state,

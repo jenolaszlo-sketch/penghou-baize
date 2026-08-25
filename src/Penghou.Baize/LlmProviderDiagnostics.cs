@@ -1,4 +1,4 @@
-﻿namespace Penghou.Baize;
+namespace Penghou.Baize;
 
 /// <summary>Provider-specific diagnostic information reported with a completion.</summary>
 /// <param name="Provider">The provider name (for example "Ollama").</param>
@@ -16,6 +16,7 @@
 /// <param name="ResponseId">Provider-assigned response identifier, when reported.</param>
 /// <param name="ServiceTier">Provider service tier used for the request, when reported.</param>
 /// <param name="ThinkingTokens">Tokens used for provider-side reasoning or thinking, when reported.</param>
+/// <param name="SystemFingerprint">The serving fingerprint, when the provider reports one (OpenAI).</param>
 public sealed record LlmProviderDiagnostics(
     string Provider,
     string? ActualModel = null,
@@ -31,4 +32,5 @@ public sealed record LlmProviderDiagnostics(
     int? ContentLength = null,
     string? ResponseId = null,
     string? ServiceTier = null,
-    int? ThinkingTokens = null);
+    int? ThinkingTokens = null,
+    string? SystemFingerprint = null);
