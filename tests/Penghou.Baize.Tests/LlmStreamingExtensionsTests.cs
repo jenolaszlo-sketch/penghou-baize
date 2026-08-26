@@ -217,15 +217,16 @@ public sealed class LlmStreamingExtensionsTests
     }
 
     [Fact]
-    public async Task CollectAsync_IgnoresIncompleteNamelessToolCall()
+    public async Task CollectAsync_RejectsIncompleteNamelessToolCall()
     {
-        var response = await Events(
+        var action = () => Events(
                 new LlmStreamEvent(
                     ToolCallDelta: new ToolCallDelta(0, "call-1", null, "{}")))
             .CollectAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        response.ToolCalls.Should().BeEmpty();
-        response.Parts.Should().BeEmpty();
+        await action.Should().ThrowAsync<LlmClientException>()
+            .Where(exception => exception.FailureKind == LlmClientFailureKind.Protocol)
+            .WithMessage("*incomplete tool call 0*2 argument character(s) remain buffered*");
     }
 
     [Fact]

@@ -19,11 +19,15 @@ an explicit error. Buffered content must never disappear silently.
 Baize already provides useful pieces of this behavior:
 
 - `LlmClientBase.ReadSseEventsAsync` preserves and flushes a final SSE event at
-  EOF;
+  EOF, removes only the single optional ASCII space defined by SSE framing,
+  and preserves all other payload whitespace;
 - OpenAI, Gemini, and Ollama adapters reject streams that end without their
   expected terminal indication;
 - `LlmStreamingExtensions.CollectAsync` assembles canonical text, reasoning,
-  ordered parts, and native tool-call fragments;
+  ordered parts, and native tool-call fragments, and rejects a tool-call
+  buffer whose required name never arrives instead of silently dropping it;
+- Claude releases incomplete buffered synthetic structured output before
+  reporting a terminal protocol error or truncated-stream failure;
 - diagnostics currently count canonical stream events, content characters,
   reasoning characters, and tool fragments.
 
@@ -37,9 +41,6 @@ character was preserved or intentionally consumed.
 The initial source audit found no current `buffer.Trim() == emitted` comparison
 or streaming tool-marker lookahead implementation. Relevant risks still exist:
 
-- `ReadSseEventsAsync` transforms SSE field values with `Trim` and `TrimStart`;
-  these operations need to be justified as protocol framing and accounted as
-  explicitly consumed characters rather than treated as response content;
 - several live integration assertions call `Trim()` on response content, so
   those tests cannot detect leading- or trailing-whitespace loss;
 - provider adapters and the router implement separate terminal and buffering

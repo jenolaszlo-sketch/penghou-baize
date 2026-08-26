@@ -282,6 +282,33 @@ public sealed class ClaudeChatClient : LlmClientBase
 
                 case "message_stop":
                     receivedMessageStop = true;
+
+                    if (syntheticToolJson.Count > 0)
+                    {
+                        foreach (var (toolIndex, builder) in syntheticToolJson
+                                     .OrderBy(pair => pair.Key))
+                        {
+                            if (builder.Length == 0)
+                                continue;
+
+                            yield return new LlmStreamEvent(
+                                Delta: builder.ToString())
+                            {
+                                PartIndex = toolIndex
+                            };
+                        }
+
+                        var bufferedCharacters = syntheticToolJson.Values
+                            .Sum(builder => builder.Length);
+                        syntheticToolJson.Clear();
+                        throw new LlmClientException(
+                            "Claude streaming response received message_stop " +
+                            "before all synthetic structured-output blocks " +
+                            $"stopped; {bufferedCharacters} buffered character(s) " +
+                            "were emitted before reporting the protocol error.",
+                            LlmClientFailureKind.Protocol);
+                    }
+
                     yield break;
 
                 case "error":
@@ -304,9 +331,30 @@ public sealed class ClaudeChatClient : LlmClientBase
         }
 
         if (!receivedMessageStop)
+        {
+            var hadIncompleteSyntheticOutput = syntheticToolJson.Count > 0;
+            foreach (var (toolIndex, builder) in syntheticToolJson
+                         .OrderBy(pair => pair.Key))
+            {
+                if (builder.Length == 0)
+                    continue;
+
+                yield return new LlmStreamEvent(
+                    Delta: builder.ToString())
+                {
+                    PartIndex = toolIndex
+                };
+            }
+
+            syntheticToolJson.Clear();
             throw new LlmClientException(
-                "Claude streaming response ended without a message_stop event.",
+                !hadIncompleteSyntheticOutput
+                    ? "Claude streaming response ended without a message_stop event."
+                    : "Claude streaming response ended without a message_stop " +
+                      "event; incomplete synthetic structured-output content " +
+                      "was emitted before reporting the truncated stream.",
                 LlmClientFailureKind.Availability);
+        }
     }
 
     /// <inheritdoc />

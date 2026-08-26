@@ -811,6 +811,53 @@ public sealed class ClaudeChatClientTests
             .Be("""{"name":"me","role":"engineer"}""");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task StreamAsync_EmitsIncompleteStructuredOutputBeforeFailure(
+        bool includesMessageStop)
+    {
+        var responseBody = """
+            event: content_block_start
+            data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_so","name":"structured_output","input":{}}}
+
+            event: content_block_delta
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"name\":\"partial\""}}
+            """;
+        if (includesMessageStop)
+        {
+            responseBody += "\n\nevent: message_stop\n" +
+                            "data: {\"type\":\"message_stop\"}\n\n";
+        }
+
+        var handler = new RecordingHandler(responseBody);
+        var client = CreateClient(handler, "claude-test");
+        var request = new LlmRequest(
+            [new LlmMessage("user", "Return the schema shape")],
+            responseFormat:
+                LlmResponseFormat.JsonSchema(
+                    """{"type":"object","properties":{"name":{"type":"string"}}}"""));
+        var emitted = new List<LlmStreamEvent>();
+
+        var action = async () =>
+        {
+            await foreach (var item in client.StreamAsync(
+                               request,
+                               TestContext.Current.CancellationToken))
+            {
+                emitted.Add(item);
+            }
+        };
+
+        var exception = await action.Should().ThrowAsync<LlmClientException>();
+        exception.Which.FailureKind.Should().Be(
+            includesMessageStop
+                ? LlmClientFailureKind.Protocol
+                : LlmClientFailureKind.Availability);
+        emitted.Single(item => item.Delta is not null)
+            .Delta.Should().Be("{\"name\":\"partial\"");
+    }
+
     [Fact]
     public async Task StreamAsync_ThrowsOnMalformedEvent()
     {

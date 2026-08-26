@@ -291,7 +291,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                     var payload = string.Join('\n', dataLines);
                     dataLines = null;
 
-                    if (!string.IsNullOrWhiteSpace(payload))
+                    if (payload.Length > 0)
                         yield return (eventType, payload);
                 }
 
@@ -305,7 +305,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
 
             if (line.StartsWith("event:", StringComparison.OrdinalIgnoreCase))
             {
-                eventType = line["event:".Length..].Trim();
+                eventType = ReadSseFieldValue(line, "event:".Length);
                 continue;
             }
 
@@ -313,16 +313,27 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 continue;
 
             dataLines ??= [];
-            dataLines.Add(line["data:".Length..].TrimStart());
+            dataLines.Add(ReadSseFieldValue(line, "data:".Length));
         }
 
         if (dataLines is { Count: > 0 })
         {
             var payload = string.Join('\n', dataLines);
 
-            if (!string.IsNullOrWhiteSpace(payload))
+            if (payload.Length > 0)
                 yield return (eventType, payload);
         }
+    }
+
+    // SSE removes at most one optional ASCII space after a field's colon.
+    // Other leading and trailing whitespace belongs to the field value and
+    // must remain authoritative for provider parsing and integrity accounting.
+    private static string ReadSseFieldValue(string line, int valueStart)
+    {
+        var value = line[valueStart..];
+        return value.StartsWith(' ')
+            ? value[1..]
+            : value;
     }
 
     /// <summary>

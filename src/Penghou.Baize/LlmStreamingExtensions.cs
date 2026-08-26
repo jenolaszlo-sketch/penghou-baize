@@ -238,8 +238,19 @@ public static class LlmStreamingExtensions
                 contentRepairDiagnostics = evt.ContentRepairDiagnostics;
         }
 
+        foreach (var (index, builder) in toolCallBuilders)
+        {
+            if (builder.Name is null)
+            {
+                throw new LlmClientException(
+                    $"Stream ended with incomplete tool call {index}: no name " +
+                    $"was received and {builder.Arguments.Length} argument " +
+                    "character(s) remain buffered.",
+                    LlmClientFailureKind.Protocol);
+            }
+        }
+
         var toolCalls = toolCallBuilders.Values
-            .Where(builder => builder.Name is not null)
             .Select(builder => builder.Materialize())
             .ToList();
 

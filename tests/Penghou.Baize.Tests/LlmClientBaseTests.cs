@@ -36,6 +36,24 @@ public sealed class LlmClientBaseTests
             ((string?)null, "final"));
     }
 
+    [Fact]
+    public async Task ReadSseEventsAsync_RemovesOnlyOneOptionalAsciiSpace()
+    {
+        const string source = "event:  message  \n" +
+                              "data:   leading\n" +
+                              "data:\ttrailing  \n\n" +
+                              "data:   \n\n";
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(source));
+
+        var events = await CollectAsync(
+            ProbeClient.ReadSse(stream),
+            TestContext.Current.CancellationToken);
+
+        events.Should().Equal(
+            (" message  ", "  leading\n\ttrailing  "),
+            ((string?)null, "  "));
+    }
+
     [Theory]
     [InlineData(null, "context", "Missing JSON for context.")]
     [InlineData(" ", "arguments", "Missing JSON for arguments.")]
