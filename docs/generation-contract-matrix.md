@@ -1,19 +1,19 @@
 # Generation contract matrix
 
-Phase 2 comparison of the generation-capable providers that inform the
-experimental `IGenerationClient` contracts in `Penghou.Baize.Generation`. The
+Completed Phase 2 comparison of the generation-capable providers that validate
+the stable `IGenerationClient` contracts in `Penghou.Baize.Generation`. The
 matrix records operation states, synchronous and queued behavior, idempotency,
 cancellation, progress, inputs, outputs, errors, rate limits, candidate counts,
 and asset URL expiry per provider API.
 
 Evidence is tagged so nothing is asserted without a source:
 
-- **Implemented** — the behavior is exercised by the Baize adapter and its
-  deterministic tests (`Penghou.Baize.OpenAi`).
-- **Probe** — verified by an opt-in live test or documented provider evidence in
-  this repository, not yet implemented as a Baize client.
-- **Docs** — taken from the provider's public API documentation; not yet
-  verified by Baize.
+- **Implemented** — the behavior is exercised by the named Baize adapter and
+  its deterministic tests.
+- **Probe** — verified by opt-in live provider evidence in this repository;
+  this tag is independent of whether a deterministic adapter also exists.
+- **Docs** — taken from provider documentation and retained where Baize cannot
+  verify the behavior deterministically.
 
 ## OpenAI — image generation and editing
 
@@ -155,7 +155,7 @@ Authentication uses a Bearer API key plus a required `X-Runway-Version:
 - **Input schemas diverge sharply.** Text prompts are portable; image inputs,
   durations, ratios, and arbitrary model arguments are not. Keeping
   provider-native options on provider clients preserves fidelity.
-- **Asset sources differ.** Inline data (OpenAI images/speech, Gemini probe),
+- **Asset sources differ.** Inline data (OpenAI images/speech, Gemini),
   temporary URLs (OpenAI video, Runway), and storage-backed URLs (fal.ai) all
   occur. The `GeneratedAssetSource` hierarchy models inline data and URLs, and
   `ProviderGeneratedAssetSource` accommodates provider-owned file identifiers

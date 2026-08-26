@@ -1,5 +1,9 @@
 # Roadmap: generation clients
 
+Status: Phases 1–9 complete. Remaining work is limited to targeted telemetry
+enrichment and demand-driven provider expansion; durable scheduling remains
+outside the core library.
+
 ## Goal
 
 Expand Penghou.Baize beyond conversational completion APIs with first-class
@@ -14,12 +18,13 @@ The intended capability families are:
 ```text
 Completion and streaming (ILlmClient)
 Native batch execution (IBaizeBatchClient)
-Artifact generation transport (future IGenerationClient)
-Generation lifecycle execution (future IGenerationExecutor)
+Artifact generation transport (IGenerationClient)
+Generation lifecycle execution (IGenerationExecutor)
 ```
 
-Potential generation providers include Runway, fal.ai, Replicate, Black Forest
-Labs, Luma, Kling, MiniMax, Recraft, and Ideogram.
+Current generation providers are OpenAI, Gemini, Runway, and fal.ai. Future
+providers may include Replicate, Black Forest Labs, Luma, Kling, MiniMax,
+Recraft, and Ideogram when they add a concrete capability or execution model.
 
 ## Why generation is separate from completion
 
@@ -46,7 +51,7 @@ Generation introduces concerns that do not naturally belong on `ILlmClient`:
 - idempotent submission of potentially expensive work;
 - polling, callbacks, or provider-specific streaming.
 
-Generation will therefore be a separate Baize capability, not an extension of
+Generation is therefore a separate Baize capability, not an extension of
 the conversational request model.
 
 ## Boundary with multimodal chat
@@ -59,7 +64,7 @@ as asking a model to analyze an image, understand audio, accept a video as
 context, or participate in a realtime voice conversation. Its image, audio,
 video, file, and other multimodal content types remain part of Baize.
 
-`IGenerationClient` becomes the recommended abstraction when the caller's intent
+`IGenerationClient` is the recommended abstraction when the caller's intent
 is to create, edit, transform, upscale, or produce variations of an artifact.
 
 ```text
@@ -82,28 +87,26 @@ Penghou.Baize.Gemini
 `-- GeminiBatchClient
 ```
 
-Existing chat behavior remains compatible while generation support matures.
-Once the generation API is stable, documentation should recommend it for
-explicit artifact creation. Only chat APIs dedicated solely to artifact
-generation should be considered for obsolescence, and only when callers have a
-mechanical migration path. General multimodal chat content must not be marked
-obsolete.
+Existing chat behavior remains compatible, and documentation recommends the
+stabilized generation API for explicit artifact creation. Only chat APIs
+dedicated solely to artifact generation should be considered for obsolescence,
+and only when callers have a mechanical migration path. General multimodal chat
+content must not be marked obsolete.
 
 ### Artifact-only chat API inventory
 
 This is the Phase 1 inventory of chat-shaped endpoints that exist solely to
 generate artifacts. It is reviewed whenever a provider package changes, and it
-stays current with the experimental generation adapters:
+stays current with the generation adapters:
 
 - **No Baize provider chat client exposes artifact generation through
   `ILlmClient`.** `OpenAiChatClient`, `ClaudeChatClient`, `GeminiChatClient`,
   and `OllamaChatClient` are conversation-only.
 - **Gemini Interactions API image generation** (`POST /v1beta/interactions`
-  with image-capable models such as `gemini-3.1-flash-lite-image`) is reached
-  only through the opt-in live probe in
-  `tests/Penghou.Baize.IntegrationTests/GeminiGenerationProviderProbeTests.cs`,
-  never through a public `ILlmClient` member. It is compatibility evidence for
-  the future Gemini generation adapter and is deliberately not obsoleted.
+  with image-capable models such as `gemini-3.1-flash-lite-image`) is exposed
+  through `GeminiGenerationClient`, with the opt-in
+  `GeminiGenerationProviderProbeTests` retaining live compatibility evidence.
+  It is never exposed through a public `ILlmClient` member.
 - **OpenAI image endpoints** (`/images/generations`, `/images/edits`) are
   already exposed only through `OpenAiGenerationClient`, never through chat.
 - **OpenAI chat-capable image models** (for example `gpt-image-1`) are not
@@ -111,27 +114,26 @@ stays current with the experimental generation adapters:
   `IGenerationClient`.
 
 Consequence: no existing chat member is obsolete and no migration is required
-yet. Chat-shaped artifact endpoints should move behind `IGenerationClient`
-when an adapter exists; general multimodal chat content stays on `ILlmClient`.
+yet. Chat-shaped artifact endpoints belong behind `IGenerationClient`;
+general multimodal chat content stays on `ILlmClient`.
 
 ## Design principles
 
 ### Provider first, shared abstraction second
 
-The common API must be based on real provider behavior. Existing Baize providers
-that support artifact generation should supply the first experimental adapters.
-Runway will then test the same contracts against a genuinely asynchronous task
-lifecycle. A contrasting provider such as fal.ai or Replicate must validate the
-abstraction before it is declared stable.
+The common API is based on real provider behavior. OpenAI and Gemini established
+the synchronous and chat-shaped adapters; Runway tested the same contracts
+against a genuinely asynchronous task lifecycle; fal.ai supplied the
+contrasting queued and model-variable provider needed before stabilization.
 
 Runway offers a clear task lifecycle and several media modalities. fal.ai is a
 useful contrast because it offers synchronous, queued, streaming, WebSocket, and
 webhook execution styles. Replicate is useful because individual models expose
 highly variable input schemas.
 
-Shared contracts may be introduced as experimental while these providers are
-being built. They should remain free to change until synchronous, chat-shaped,
-and queued provider styles work through the same surface.
+Future common-surface changes should remain grounded in at least two provider
+shapes and preserve the synchronous, chat-shaped, and queued behavior already
+supported through the stable contracts.
 
 ### Preserve provider fidelity
 
@@ -163,7 +165,7 @@ automatic submission retries are introduced.
 
 ## Explicit non-goals
 
-The first generation release will not:
+The generation layer does not:
 
 - provide durable workflow execution;
 - automatically download or persist generated assets;
@@ -175,10 +177,10 @@ The first generation release will not:
 - remove multimodal input or response content from `ILlmClient`;
 - make workflow infrastructure a dependency of provider clients.
 
-## Provisional domain model
+## Current domain model
 
-The following types illustrate the required concepts. Their exact public shape
-will be decided from the provider implementations.
+The following simplified types illustrate the implemented concepts. The public
+API declarations remain authoritative for their exact shape.
 
 ### Operation identity
 
@@ -191,7 +193,8 @@ public sealed record GenerationOperationHandle(
     string Provider,
     string EndpointId,
     string Id,
-    string? Model = null);
+    string? Model = null,
+    IReadOnlyDictionary<string, string>? ProviderData = null);
 ```
 
 Provider-native clients may still accept their native task identifier directly.
@@ -213,14 +216,14 @@ public enum GenerationOperationState
 `Unknown` prevents Baize from silently misclassifying a new or ambiguous
 provider state.
 
-An operation snapshot may eventually resemble:
+An operation snapshot follows this model:
 
 ```csharp
 public sealed record GenerationOperation(
     GenerationOperationHandle Handle,
     GenerationOperationState State,
     GenerationResult? Result = null,
-    BaizeError? Error = null,
+    GenerationError? Error = null,
     double? Progress = null,
     IReadOnlyDictionary<string, object?>? ProviderMetadata = null);
 ```
@@ -238,8 +241,7 @@ than requiring every result to be a permanent URI. Providers may return:
 - a provider-owned file identifier;
 - several renditions or variations.
 
-The common representation should build on concepts similar to Baize's existing
-media sources:
+The common representation builds on Baize's existing media-source concepts:
 
 ```csharp
 public sealed record GeneratedAsset(
@@ -255,13 +257,13 @@ public sealed record GenerationResult(
     IReadOnlyDictionary<string, object?>? Metadata = null);
 ```
 
-The concrete source hierarchy will be designed from provider responses. Baize
-will not download assets automatically. Callers must also be able to determine
+The concrete source hierarchy reflects provider responses. Baize does not
+download assets automatically. Callers must also be able to determine
 when a signed output URL is temporary.
 
 ### Client contract
 
-The eventual provider-neutral surface may resemble:
+The provider-neutral surface follows this lifecycle:
 
 ```csharp
 public interface IGenerationClient
@@ -282,9 +284,8 @@ public interface IGenerationClient
 }
 ```
 
-This is deliberately provisional. Cancellation may instead become a small
-optional interface if provider implementations show that capability checks are
-not sufficiently clear.
+Cancellation remains on the common client and is guarded by truthful endpoint
+capabilities; unsupported cancellation fails before a provider request.
 
 Separate request types such as `VideoGenerationRequest`,
 `ImageGenerationRequest`, and `AudioGenerationRequest` are preferable to one
@@ -299,21 +300,28 @@ which wire protocol produced the snapshot.
 ### Executor contract
 
 Waiting for completion, selecting a provider, and applying lifecycle policy
-belong above the provider client. A convenience executor may eventually expose:
+belong above the provider client. The in-process executor provides the
+corresponding completion operation:
 
 ```csharp
 public interface IGenerationExecutor
 {
-    Task<GenerationResult> GenerateAsync(
+    Task<GenerationResult> ExecuteAsync(
         GenerationRequest request,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    Task<GenerationResult> WaitAsync(
+        GenerationOperationHandle handle,
+        IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
 }
 ```
 
-The first executor should be in-process and non-durable. It can route the initial
-submission, poll with backoff, report progress, enforce a timeout, and retrieve
-the final result. Later, a durable implementation may preserve the same
-application-facing contract while using workflow infrastructure internally.
+The default executor is in-process and non-durable. It routes the initial
+submission, polls with backoff, reports progress, enforces a timeout, and
+retrieves the final result. A future durable implementation may preserve the
+same application-facing contract while using workflow infrastructure internally.
 
 The executor must not hide important lifecycle facts. Diagnostics and optional
 progress callbacks should expose the selected endpoint, accepted operation,
@@ -325,7 +333,7 @@ Generation support should follow the conventions already established by Baize.
 
 ### Capabilities
 
-Capabilities should describe at least:
+`GenerationCapabilities` describes:
 
 - output modalities;
 - accepted input modalities and transports;
@@ -336,13 +344,13 @@ Capabilities should describe at least:
 - relevant model constraints where they can be expressed reliably;
 - idempotent-submission and operation-retrieval support.
 
-Capabilities must be truthful for the configured endpoint and model. They may
-later allow the router to filter generation endpoints before applying a routing
-policy.
+Capabilities must be truthful for the configured endpoint and model. The
+generation executor uses them to filter endpoints before its replaceable
+routing policy ranks candidates.
 
 ### Errors
 
-Provider errors should map to a stable taxonomy while preserving the provider's
+Provider errors map to a stable taxonomy while preserving the provider's
 code and useful metadata. Important categories include:
 
 - invalid requests and unsupported parameters;
@@ -353,20 +361,22 @@ code and useful metadata. Important categories include:
 - terminal generation failure;
 - unknown submission outcome after a connection failure.
 
-The existing `BaizeError` should be reused unless provider implementations prove
-that generation requires a different contract.
+`GenerationError` carries terminal operation failures, while `BaizeException`
+and `GenerationErrorKind` classify transport and lifecycle failures, including
+ambiguous submission outcomes.
 
 ### Idempotency and retry
 
-Provider-native idempotency keys should be supported whenever available. The
-client must distinguish a safely retryable status request from an ambiguous
-submission failure. Generic HTTP retry policies must not automatically replay
-expensive submissions unless duplication is prevented.
+`GenerationRequest.IdempotencyKey` carries provider-native idempotency when an
+endpoint supports it. The client distinguishes a safely retryable status
+request from an ambiguous submission failure. Generic HTTP retry policies must
+not automatically replay expensive submissions unless duplication is
+prevented.
 
 ### Routing and fallback
 
-Generation routing should filter endpoints by request requirements before a
-replaceable routing policy ranks them. Requirements may include output modality,
+Generation routing filters endpoints by request requirements before a
+replaceable routing policy ranks them. Requirements include output modality,
 input modality, reference-image support, editing, aspect ratio, resolution,
 duration, media format, cancellation, and idempotent submission.
 
@@ -419,10 +429,9 @@ Baize should continue adapting `ILlmClient` to
 generation surface should separately integrate with the relevant
 Microsoft.Extensions.AI generation abstractions as they mature.
 
-`IImageGenerator` is experimental at the time of this roadmap. Baize can provide
-an experimental adapter without making that external interface the foundation
-of its provider-neutral generation contracts. Audio and video generation may
-need Baize-native contracts until corresponding ecosystem abstractions become
+Baize provides an `IImageGenerator` adapter without making that external
+interface the foundation of its provider-neutral generation contracts. Audio
+and video generation remain Baize-native until ecosystem abstractions are
 stable and sufficiently expressive.
 
 This preserves framework interoperability while keeping Baize's core model
@@ -471,28 +480,22 @@ workflow component.
 Batch and generation should not inherit from each other or be forced behind a
 generic public operation interface merely because both expose status APIs.
 
-## Package direction
+## Package layout
 
-Near term:
+The implemented package layout is:
 
 ```text
 Penghou.Baize
 Penghou.Baize.Batch
 Penghou.Baize.Extensions.AI
-Existing provider generation adapters
-```
-
-After common behavior has been validated:
-
-```text
-Penghou.Baize
-Penghou.Baize.Batch
-Penghou.Baize.Generation
+Penghou.Baize.OpenAi
+Penghou.Baize.Gemini
 Penghou.Baize.Runway
-Penghou.Baize.Fal or Penghou.Baize.Replicate
+Penghou.Baize.Fal
 ```
 
-`Penghou.Baize` already serves as the small common-contract package. A separate
+`Penghou.Baize.Generation` is a namespace in the core package, not a separate
+package. `Penghou.Baize` serves as the small common-contract package. A separate
 `Penghou.Baize.Abstractions` package should only be introduced if a concrete
 dependency problem justifies the migration.
 
@@ -513,28 +516,27 @@ Keep current multimodal chat behavior working. Document the distinction between
 media used in conversation and explicit artifact generation. Inventory any
 chat APIs that exist solely to generate artifacts, but do not obsolete them yet.
 
-### Phase 2: provider comparison and experimental contracts
+### Phase 2: provider comparison and common contracts
 
-Status: contracts introduced; matrix in progress. The experimental
-request, operation, capability, and asset contracts live in
-`Penghou.Baize.Generation` and are exercised by the OpenAI adapter. The
-provider comparison is being recorded in the [generation contract
-matrix](generation-contract-matrix.md); OpenAI, Gemini (probe), Runway, and
-fal.ai are captured, with a second contrasting provider to follow.
+Status: complete. The stabilized request, operation, capability, and asset
+contracts live in `Penghou.Baize.Generation`. The [generation contract
+matrix](generation-contract-matrix.md) records the implemented OpenAI, Gemini,
+Runway, and fal.ai adapters across synchronous, chat-shaped, and queued
+execution models.
 
 Create a contract matrix for generation-capable existing providers, Runway, and
 at least one contrasting provider. Record operation states, synchronous and
 queued behavior, idempotency, cancellation, progress, inputs, outputs, errors,
 rate limits, candidate counts, and asset URL expiry.
 
-Introduce the smallest experimental request, operation, capability, and asset
+Introduce the smallest shared request, operation, capability, and asset
 contracts needed to implement the first provider. Separate image, video, and
 audio request types are initial candidates.
 
 ### Phase 3: generation through an existing provider
 
 Status: complete. The OpenAI adapter implements image, image-edit, video,
-and speech generation with deterministic tests (77 passing on .NET 8 and 10).
+and speech generation with deterministic protocol and conformance coverage.
 The opt-in live probe (`OpenAiGenerationLiveTests`) drives the real
 `IGenerationClient` through DI for all four modalities — text-to-image, image
 editing, queued video polling, and speech — and the first-class
@@ -551,14 +553,14 @@ default generation case.
 
 Status: complete. The Gemini generation client implements text-to-image and
 image-to-image through the Interactions API with deterministic and conformance
-tests (85 passing). The experimental `Microsoft.Extensions.AI.IImageGenerator`
+coverage. The `Microsoft.Extensions.AI.IImageGenerator`
 adapter (`BaizeImageGenerator` in `Penghou.Baize.Extensions.AI`) maps prompts,
 reference images, candidate counts, sizes, and output media types to Baize
-requests and back to `DataContent`/`UriContent`/`HostedFileContent`, with five
-deterministic tests.
+requests and back to `DataContent`/`UriContent`/`HostedFileContent`, with
+deterministic adapter coverage.
 
-Implement a differently shaped existing provider where possible. Add an
-experimental `Microsoft.Extensions.AI.IImageGenerator` adapter while preserving
+Implement a differently shaped existing provider where possible. Add a
+`Microsoft.Extensions.AI.IImageGenerator` adapter while preserving
 Baize-native contracts for broader modalities.
 
 Compare both implementations before expanding the common surface.
@@ -572,7 +574,7 @@ replaceable `IGenerationRoutingPolicy` (deterministic first-fit default),
 submits exactly once, pins the handle, polls with backoff, reports provider
 progress, retries only safe status reads, and enforces a configurable timeout.
 `TimeoutExceeded` and `Canceled` were added to `GenerationErrorKind` so queued
-lifecycle outcomes are classified truthfully. Nine deterministic tests cover
+lifecycle outcomes are classified truthfully. Deterministic tests cover
 routing, immediate and queued completion, progress, transient status retries,
 timeout, failed/canceled operations, ambiguous submissions (never replayed),
 and DI registration.
@@ -600,8 +602,9 @@ progress, cost, and failure-code metadata, and `CancelAsync` issues `DELETE
 ratio, duration, seed, output format, audio, and negative-prompt parameters map
 from `VideoGenerationRequest`. An end-to-end executor test proves the genuinely
 queued, long-running path: the `IGenerationExecutor` submits once, polls a
-recorded `THROTTLED → RUNNING → SUCCEEDED` sequence, and reports progress. 35
-deterministic tests pass on .NET 8 and 10. Opt-in live tests (`RunwayGenerationLiveTests`)
+recorded `THROTTLED → RUNNING → SUCCEEDED` sequence, and reports progress.
+Deterministic tests cover the provider and executor paths. Opt-in live tests
+(`RunwayGenerationLiveTests`)
 drive queued text-to-video through `IGenerationExecutor` against the real API
 when `BAIZE_LIVE_PROVIDER=Runway` and `BAIZE_LIVE_TEST_GENERATION=1` are set, and
 upload-hosted files are wired through the uploads API: `RunwayGenerationClient`
@@ -643,7 +646,7 @@ submission skip the poll phase entirely. `GenerationBatchResult` exposes
 explicit partial results: every chunk's `Result`/`Error` plus aggregated
 `Assets` and `Errors`, so a quota-limited or transiently failing chunk never
 hides the successful candidates. Per-chunk submission is at most once (unknown
-submission outcomes are never replayed). Seventeen deterministic tests cover
+submission outcomes are never replayed). Deterministic tests cover
 native-limit chunking, per-request chunking, single submissions, non-image
 requests, mixed partial failures, overall progress (including a terminal 1.0
 report), submit-all-before-poll ordering, assets across chunks, transient and
@@ -675,10 +678,10 @@ provider metadata, no numeric progress), output assets are storage-backed URLs
 extracted from an arbitrary result document by a shape-agnostic recursive walk,
 and cancellation uses a `PUT` verb rather than a `DELETE`. A `COMPLETED`
 status is followed by a separate result fetch, keeping submit/status/result
-separation explicit. Fifty-two deterministic client and executor/DI tests
+separation explicit. Deterministic client and executor/DI tests
 cover the queued lifecycle, error-document variants, content-type inference,
 capability gates, and operation recovery through `IGenerationExecutor`;
-measured package coverage is 97% line / 97% branch.
+the package remains guarded by explicit line and branch coverage thresholds.
 
 Implement enough of fal.ai or Replicate to exercise another asynchronous or
 highly model-variable execution style. Use it to challenge cancellation,
@@ -735,14 +738,16 @@ Stabilization criteria met:
 
 Remaining follow-ups (Phase 10 / future):
 
+- **Diagnostics enrichment** — add usage or cost metrics where a provider
+  reports meaningful values, consistent with the existing `baize.llm.*`
+  telemetry and without inventing cross-provider equivalence.
 - **Phase 10: additional providers** — prioritize providers that add meaningful
-  capabilities or expose distinct execution models.
+  capabilities or expose distinct execution models required by a concrete use
+  case.
 - **Future possibility: durable execution** — persistent workflow, scheduled
   polling, restart recovery, and safe transient retries could be provided by a
   separate optional executor implementation (e.g., Temporal), keeping the core
   client usable in ordinary .NET applications without a database or queue.
-- **Diagnostics enrichment** — consider adding usage metrics (input/output tokens)
-  for generation calls, consistent with the existing `baize.llm.*` telemetry.
 
 > **The guiding rule is:**
 >
