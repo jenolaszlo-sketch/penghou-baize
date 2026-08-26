@@ -13,6 +13,12 @@ internal static class RouterTelemetry
     public static Counter<long> Fallbacks { get; } =
         BaizeTelemetry.Meter.CreateCounter<long>("baize.router.fallbacks");
 
+    public static Counter<long> SuppressedStreamCharacters { get; } =
+        BaizeTelemetry.Meter.CreateCounter<long>(
+            "baize.router.suppressed_stream_characters",
+            "{character}",
+            "Canonical characters deliberately suppressed when an uncommitted route attempt fails.");
+
     public static Counter<long> Retries { get; } =
         BaizeTelemetry.Meter.CreateCounter<long>("baize.router.retries");
 

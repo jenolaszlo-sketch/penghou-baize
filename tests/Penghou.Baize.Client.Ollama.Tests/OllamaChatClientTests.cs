@@ -14,6 +14,26 @@ namespace Penghou.Baize.Ollama.Tests;
 public sealed class OllamaChatClientTests
 {
     [Fact]
+    public async Task StreamAsync_PreservesLeadingWhitespaceAndTwentyCharacterTail()
+    {
+        const string expected = "\nhead12345678901234567890";
+        var handler = new RecordingHandler(
+            """
+            {"model":"qwen","message":{"role":"assistant","content":"\nhead"},"done":false}
+            {"model":"qwen","message":{"role":"assistant","content":"12345678901234567890"},"done":true,"done_reason":"stop"}
+            """);
+        var client = CreateClient(handler, "qwen");
+
+        var response = await client.StreamAsync(
+                new LlmRequest([new LlmMessage("user", "Reply")]),
+                TestContext.Current.CancellationToken)
+            .CollectAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be(expected);
+        response.Content[^20..].Should().Be("12345678901234567890");
+    }
+
+    [Fact]
     public async Task StreamAsync_MapsSchemaLessJsonFormat()
     {
         var handler = new RecordingHandler(

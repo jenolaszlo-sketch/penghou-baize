@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Penghou.Baize.Tests" />
+    <InternalsVisibleTo Include="Penghou.Baize.Ollama" />
   </ItemGroup>
 
 </Project>

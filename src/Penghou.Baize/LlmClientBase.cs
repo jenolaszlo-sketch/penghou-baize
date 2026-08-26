@@ -135,6 +135,9 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             await using var stream =
                 await response.Content.ReadAsStreamAsync(cancellationToken);
 
+            var assembler = new LlmStreamAssembler();
+            var boundary = new StreamBoundaryContext();
+            using var boundaryScope = StreamBoundaryContext.Push(boundary);
             await using var events = ProcessStreamAsync(stream, cancellationToken)
                 .GetAsyncEnumerator(cancellationToken);
             while (true)
@@ -148,19 +151,52 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 }
                 catch (Exception exception)
                 {
+                    assembler.Accept(new(
+                        Event: null,
+                        ProviderCharacterCount: boundary.ProviderCharacterCount,
+                        ProviderChunkCount: boundary.ProviderChunkCount));
+                    var incomplete = assembler.Complete(new(
+                        StreamTerminalKind.EndOfStream,
+                        ProtocolCompleted: false));
+                    RecordStreamCompleted(
+                        activity,
+                        incomplete.Diagnostics,
+                        succeeded: false);
                     RecordFailure(activity, exception, cancellationToken);
                     throw;
                 }
 
-                if (evt.Usage is { } usage)
+                foreach (var assembled in assembler.Accept(new(
+                             evt,
+                             ProviderCharacterCount: 0,
+                             ProviderChunkCount: 0)))
                 {
-                    if (usage.PromptTokens is { } input)
-                        BaizeTelemetry.InputTokens.Add(input, telemetryTags);
-                    if (usage.CompletionTokens is { } output)
-                        BaizeTelemetry.OutputTokens.Add(output, telemetryTags);
+                    RecordUsage(assembled, telemetryTags);
+                    yield return assembled;
                 }
+            }
 
-                yield return evt;
+            assembler.Accept(new(
+                Event: null,
+                ProviderCharacterCount: boundary.ProviderCharacterCount,
+                ProviderChunkCount: boundary.ProviderChunkCount));
+            var completion = assembler.Complete(new(
+                StreamTerminalKind.ProviderDone,
+                ProtocolCompleted: true));
+            foreach (var assembled in completion.Events)
+            {
+                RecordUsage(assembled, telemetryTags);
+                yield return assembled;
+            }
+
+            RecordStreamCompleted(
+                activity,
+                completion.Diagnostics,
+                succeeded: completion.Error is null);
+            if (completion.Error is not null)
+            {
+                RecordFailure(activity, completion.Error, cancellationToken);
+                throw completion.Error;
             }
 
             if (rateLimit is not null)
@@ -174,6 +210,57 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 Stopwatch.GetElapsedTime(started).TotalMilliseconds,
                 telemetryTags);
         }
+    }
+
+    private static void RecordUsage(
+        LlmStreamEvent value,
+        TagList telemetryTags)
+    {
+        if (value.Usage is not { } usage)
+            return;
+
+        if (usage.PromptTokens is { } input)
+            BaizeTelemetry.InputTokens.Add(input, telemetryTags);
+        if (usage.CompletionTokens is { } output)
+            BaizeTelemetry.OutputTokens.Add(output, telemetryTags);
+    }
+
+    private static void RecordStreamCompleted(
+        Activity? activity,
+        StreamIntegritySnapshot diagnostics,
+        bool succeeded)
+    {
+        if (activity is null)
+            return;
+
+        var tags = new ActivityTagsCollection
+        {
+            ["baize.stream.succeeded"] = succeeded,
+            ["baize.stream.provider_chunk_count"] = diagnostics.ProviderChunkCount,
+            ["baize.stream.provider_character_count"] = diagnostics.ProviderCharacterCount,
+            ["baize.stream.normalized_character_count"] = diagnostics.NormalizedCharacterCount,
+            ["baize.stream.emitted_character_count"] = diagnostics.EmittedCharacterCount,
+            ["baize.stream.buffered_character_count"] = diagnostics.BufferedCharacterCount,
+            ["baize.stream.consumed_protocol_character_count"] =
+                diagnostics.ConsumedProtocolCharacterCount,
+            ["baize.stream.finish_reason"] = diagnostics.FinishReason,
+            ["baize.stream.tool_call_count"] = diagnostics.ToolCallCount,
+            ["baize.stream.protocol_warning_count"] =
+                diagnostics.ProtocolWarnings.Count
+        };
+        activity.AddEvent(new ActivityEvent("StreamCompleted", tags: tags));
+        foreach (var warning in diagnostics.ProtocolWarnings)
+        {
+            activity.AddEvent(new ActivityEvent(
+                "StreamProtocolWarning",
+                tags: new ActivityTagsCollection
+                {
+                    ["baize.stream.protocol_warning.code"] = warning.Code
+                }));
+        }
+
+        foreach (var pair in tags)
+            activity.SetTag(pair.Key, pair.Value);
     }
 
     private void RecordFailure(
@@ -290,6 +377,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
                 {
                     var payload = string.Join('\n', dataLines);
                     dataLines = null;
+                    StreamBoundaryContext.RecordProviderChunk(payload.Length);
 
                     if (payload.Length > 0)
                         yield return (eventType, payload);
@@ -319,6 +407,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
         if (dataLines is { Count: > 0 })
         {
             var payload = string.Join('\n', dataLines);
+            StreamBoundaryContext.RecordProviderChunk(payload.Length);
 
             if (payload.Length > 0)
                 yield return (eventType, payload);

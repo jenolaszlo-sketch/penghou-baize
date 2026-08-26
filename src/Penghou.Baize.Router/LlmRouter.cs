@@ -589,6 +589,10 @@ public class LlmRouter(
 
                 if (shouldFallBack)
                 {
+                    RecordSuppressedPendingStream(
+                        attemptActivity,
+                        pending,
+                        telemetryTags);
                     RouterTelemetry.Fallbacks.Add(1, telemetryTags);
                     continue;
                 }
@@ -635,6 +639,39 @@ public class LlmRouter(
 
         yield return DiagnosticsEvent(attempts);
         throw lastFailure ?? new LlmClientException("Every endpoint failed before producing output.");
+    }
+
+    private static void RecordSuppressedPendingStream(
+        Activity? activity,
+        IReadOnlyCollection<LlmStreamEvent>? pending,
+        TagList telemetryTags)
+    {
+        if (pending is null || pending.Count == 0)
+            return;
+
+        var characterCount = 0;
+        foreach (var value in pending)
+        {
+            checked
+            {
+                characterCount += value.Delta?.Length ?? 0;
+                characterCount += value.ReasoningContent?.Length ?? 0;
+                characterCount +=
+                    value.ToolCallDelta?.ArgumentsJsonFragment?.Length ?? 0;
+            }
+        }
+
+        RouterTelemetry.SuppressedStreamCharacters.Add(
+            characterCount,
+            telemetryTags);
+        activity?.AddEvent(new ActivityEvent(
+            "StreamContentSuppressed",
+            tags: new ActivityTagsCollection
+            {
+                ["baize.stream.suppressed_event_count"] = pending.Count,
+                ["baize.stream.suppressed_character_count"] = characterCount,
+                ["baize.stream.suppression_reason"] = "route_failover"
+            }));
     }
 
     private ILlmRouteProvider RouteProvider =>

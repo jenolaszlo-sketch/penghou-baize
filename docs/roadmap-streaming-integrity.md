@@ -1,8 +1,7 @@
 # Roadmap: streaming integrity and protocol reliability
 
-Status: planned. This document records requirements for a future design and
-implementation discussion; it does not describe behavior Baize guarantees
-today.
+Status: implemented. This document is retained as the design and regression
+contract for Baize streaming providers.
 
 ## Goal
 
@@ -14,13 +13,19 @@ Baize must guarantee that data received from a provider is either emitted to
 the caller, deliberately consumed as protocol or tool metadata, or surfaced as
 an explicit error. Buffered content must never disappear silently.
 
-## Current state and gap
+## Implemented state
 
-Baize already provides useful pieces of this behavior:
+Baize now provides the shared integrity behavior described here:
 
+- every `LlmClientBase` provider passes canonical events through the shared
+  `LlmStreamAssembler`, which audits normalized, emitted, consumed, and
+  buffered UTF-16 code units and independently validates tool-call state at
+  completion;
 - `LlmClientBase.ReadSseEventsAsync` preserves and flushes a final SSE event at
   EOF, removes only the single optional ASCII space defined by SSE framing,
-  and preserves all other payload whitespace;
+  preserves all other payload whitespace, and counts decoded SSE payloads at
+  the provider boundary;
+- Ollama counts decoded NDJSON records at the equivalent provider boundary;
 - OpenAI, Gemini, and Ollama adapters reject streams that end without their
   expected terminal indication;
 - `LlmStreamingExtensions.CollectAsync` assembles canonical text, reasoning,
@@ -28,26 +33,37 @@ Baize already provides useful pieces of this behavior:
   buffer whose required name never arrives instead of silently dropping it;
 - Claude releases incomplete buffered synthetic structured output before
   reporting a terminal protocol error or truncated-stream failure;
-- diagnostics currently count canonical stream events, content characters,
-  reasoning characters, and tool fragments.
+- `StreamCompleted` activity events expose privacy-safe provider, normalized,
+  emitted, consumed, and buffered counts, finish reason, tool-call count, and
+  protocol-warning count; warning codes are separate content-free activity
+  events;
+- router failover explicitly records canonical characters deliberately
+  suppressed from an uncommitted failed attempt;
+- `LlmStreamParityComparer` explicitly runs deterministic native and streaming
+  paths, reports the first exact UTF-16 divergence, and does not retain response
+  content in its result;
+- deterministic provider fixtures for OpenAI, Claude, Gemini, and Ollama
+  preserve a leading newline and an independently streamed final 20-character
+  tail exactly.
 
-These pieces do not yet form the integrity layer required here. Provider
-adapters still own separate assembly and terminal-state rules, counts are not
-tracked across every boundary, there is no shared accounting invariant for
-received, emitted, consumed, and buffered content, and completion does not
-audit unresolved buffers. Baize therefore cannot yet prove that every received
-character was preserved or intentionally consumed.
+Provider-character counts refer to decoded SSE payload characters or decoded
+Ollama NDJSON record characters. Normalized, emitted, consumed, and buffered
+counts refer only to canonical user-visible text, reasoning, and tool-argument
+fragments. All character counts use UTF-16 code units. Provider and canonical
+counts intentionally use distinct boundaries and are not asserted equal.
 
-The initial source audit found no current `buffer.Trim() == emitted` comparison
-or streaming tool-marker lookahead implementation. Relevant risks still exist:
+The completed source audit found no `buffer.Trim() == emitted` comparison or
+equivalent transformed-buffer ownership bug. The shared marker lookahead keeps
+the original buffer authoritative and releases every unrecognized prefix at
+EOF. Relevant risks still exist:
 
-- several live integration assertions call `Trim()` on response content, so
-  those tests cannot detect leading- or trailing-whitespace loss;
-- provider adapters and the router implement separate terminal and buffering
-  behavior, making a future transformed-buffer comparison or unflushed
-  lookahead easy to introduce without one common invariant.
+- several live integration assertions call `Trim()` for semantic provider
+  checks, but exact deterministic decoder, assembler, and parity fixtures now
+  provide the authoritative character-preservation coverage;
+- URL normalization and finish-reason classification use trimming outside raw
+  stream-content ownership and do not mutate emitted content.
 
-Implementation work must repeat this audit for comparisons structurally
+Future streaming work must repeat this audit for comparisons structurally
 equivalent to `buffer.Trim() == emitted`, including normalization, prefix or
 suffix matching, and marker detection performed against a transformed copy
 before later mutating or releasing the raw buffer.
@@ -269,21 +285,23 @@ Baize is responsible for transport, protocol normalization, streaming
 integrity, and tool-call framing. Baize must not silently repair transport
 loss under the guise of structured-output repair.
 
-## Implementation outline
+## Completed implementation
 
-1. Define normalized delta, terminal signal, accounting units, warning, and
+1. [x] Define normalized delta, terminal signal, accounting units, warning, and
    assembler-result contracts without changing normal API results.
-2. Characterize every provider's current chunk, terminal, whitespace, text,
+2. [x] Characterize every provider's current chunk, terminal, whitespace, text,
    reasoning, and tool-call behavior with protocol-level tests.
-3. Implement the shared assembler and exhaustive boundary-partition tests.
-4. Migrate one provider adapter and compare canonical output and diagnostics
+3. [x] Implement the shared assembler and exhaustive boundary-partition tests.
+4. [x] Integrate one provider through the shared base path and compare canonical output and diagnostics
    against its characterization suite.
-5. Migrate all remaining streaming providers and the router/collector path.
-6. Add opt-in boundary telemetry and privacy tests.
-7. Add fixed-length missing-tail regression fixtures at transport, decoder,
+5. [x] Integrate all remaining streaming providers and audit the router/collector path.
+6. [x] Add opt-in boundary telemetry and privacy tests.
+7. [x] Add fixed-length missing-tail regression fixtures at transport, decoder,
    normalized-delta, and assembler boundaries.
-8. Add exact streamed/non-streamed parity suites and an adapter divergence
-   reporter for deterministic fixtures.
+8. [x] Add exact streamed/non-streamed parity fixtures and a privacy-safe
+   divergence reporter. Baize's built-in chat adapters currently expose only
+   streaming transport; future adapters implementing `ILlmCompletionClient`
+   can use the same comparer directly.
 
 ## Required missing-tail acceptance scenario
 

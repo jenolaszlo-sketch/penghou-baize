@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
@@ -167,6 +168,89 @@ public sealed class LlmClientBaseTests
     }
 
     [Fact]
+    public async Task StreamAsync_EmitsPrivacySafeIntegrityActivity()
+    {
+        Activity? completed = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == BaizeTelemetry.InstrumentationName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllData,
+            ActivityStopped = activity =>
+            {
+                if (activity.OperationName == "llm.stream")
+                    completed = activity;
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("provider stream")
+        };
+        var client = new ProbeClient(new StaticHandler(response));
+
+        await CollectAsync(
+            client.StreamAsync(Request, TestContext.Current.CancellationToken),
+            TestContext.Current.CancellationToken);
+
+        completed.Should().NotBeNull();
+        var streamCompleted = completed!.Events
+            .Should().ContainSingle(value => value.Name == "StreamCompleted")
+            .Subject;
+        var tags = streamCompleted.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
+        tags["baize.stream.provider_chunk_count"].Should().Be(1);
+        tags["baize.stream.provider_character_count"].Should().Be(15);
+        tags["baize.stream.normalized_character_count"].Should().Be(15);
+        tags["baize.stream.emitted_character_count"].Should().Be(15);
+        tags["baize.stream.buffered_character_count"].Should().Be(0);
+        tags["baize.stream.protocol_warning_count"].Should().Be(0);
+        tags.Should().NotContainKey("content");
+    }
+
+    [Fact]
+    public async Task StreamAsync_RejectsIncompleteToolCallAfterCleanProviderEnd()
+    {
+        Activity? completed = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == BaizeTelemetry.InstrumentationName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllData,
+            ActivityStopped = activity =>
+            {
+                if (activity.OperationName == "llm.stream")
+                    completed = activity;
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{}")
+        };
+        var client = new ProbeClient(new StaticHandler(response))
+        {
+            EmitIncompleteToolCall = true
+        };
+
+        var action = () => CollectAsync(
+            client.StreamAsync(Request),
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<LlmClientException>()
+            .Where(exception => exception.FailureKind == LlmClientFailureKind.Protocol)
+            .WithMessage("*incomplete or inconsistent tool calls*");
+        completed.Should().NotBeNull();
+        completed!.Events
+            .Where(value => value.Name == "StreamProtocolWarning")
+            .SelectMany(value => value.Tags)
+            .Should().Contain(pair =>
+                pair.Key == "baize.stream.protocol_warning.code" &&
+                Equals(pair.Value, "stream.tool-call.name-missing"));
+    }
+
+    [Fact]
     public async Task StreamAsync_ReportsHttpFailureBodyAndRateLimit()
     {
         using var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
@@ -213,6 +297,7 @@ public sealed class LlmClientBaseTests
             "Test")
     {
         public bool FailRequestMapping { get; init; }
+        public bool EmitIncompleteToolCall { get; init; }
 
         public static IAsyncEnumerable<(string? EventType, string Data)> ReadSse(
             Stream stream) => ReadSseEventsAsync(stream, CancellationToken.None);
@@ -236,6 +321,17 @@ public sealed class LlmClientBaseTests
         {
             using var reader = new StreamReader(stream);
             var content = await reader.ReadToEndAsync(cancellationToken);
+            StreamBoundaryContext.RecordProviderChunk(content.Length);
+            if (EmitIncompleteToolCall)
+            {
+                yield return new LlmStreamEvent(
+                    ToolCallDelta: new ToolCallDelta(
+                        0,
+                        Id: "call-1",
+                        ArgumentsJsonFragment: content));
+                yield break;
+            }
+
             yield return new LlmStreamEvent(Delta: content);
         }
     }

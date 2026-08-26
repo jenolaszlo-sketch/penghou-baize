@@ -10,6 +10,9 @@ using Penghou.Baize.Router;
 using Penghou.Baize.Router.Configuration;
 using Penghou.Baize.Router.Extensions;
 using ServiceCollectionExtensions = Penghou.Baize.Router.Extensions.ServiceCollectionExtensions;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -1082,6 +1085,84 @@ public sealed class LlmRouterTests
             .Should().Be(LlmRouterAttemptOutcome.Failed);
         response.RouterDiagnostics.Attempts[1].Outcome
             .Should().Be(LlmRouterAttemptOutcome.Succeeded);
+    }
+
+    [Fact]
+    public async Task Router_FailoverAccountsForDeliberatelySuppressedStreamContent()
+    {
+        const string suppressedReasoning = "private failed reasoning";
+        var activities = new ConcurrentQueue<Activity>();
+        long suppressedCharacters = -1;
+        using var activityListener = new ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == BaizeTelemetry.InstrumentationName,
+            Sample = static (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllData,
+            ActivityStopped = activities.Enqueue
+        };
+        ActivitySource.AddActivityListener(activityListener);
+        using var meterListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == BaizeTelemetry.InstrumentationName &&
+                    instrument.Name == "baize.router.suppressed_stream_characters")
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        meterListener.SetMeasurementEventCallback<long>((_, value, _, _) =>
+            Interlocked.Exchange(ref suppressedCharacters, value));
+        meterListener.Start();
+
+        var failed = new ReasoningThenFailClient(
+            suppressedReasoning,
+            new LlmClientException("a down", statusCode: 500));
+        var healthy = new StubClient("answer from b");
+        var lookup = new LlmModelLookup(
+            new Dictionary<string, Func<ILlmClient>>
+            {
+                ["model-a"] = () => failed,
+                ["model-b"] = () => healthy
+            },
+            new Dictionary<(string Model, ApiStyle ApiStyle), Func<ILlmClient>>
+            {
+                [("model-a", ApiStyle.Ollama)] = () => failed,
+                [("model-b", ApiStyle.Ollama)] = () => healthy
+            });
+        var router = new LlmRouter(
+            lookup,
+            new Dictionary<ModelStrategy, IReadOnlyList<string>>
+            {
+                [ModelStrategy.Auto] = ["model-a", "model-b"]
+            },
+            new InMemoryLlmRouterMemory());
+
+        var response = await router.CompleteStreamingAsync(
+            ModelStrategy.Auto,
+            new LlmPromptBuilder
+            {
+                Messages = [new LlmMessage("user", "Say hi")]
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be("answer from b");
+        Volatile.Read(ref suppressedCharacters).Should()
+            .Be(suppressedReasoning.Length);
+        var suppression = activities
+            .Where(activity => activity.OperationName == "llm.router.attempt")
+            .SelectMany(activity => activity.Events)
+            .Should().ContainSingle(value =>
+                value.Name == "StreamContentSuppressed")
+            .Subject;
+        var tags = suppression.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
+        tags["baize.stream.suppressed_event_count"].Should().Be(1);
+        tags["baize.stream.suppressed_character_count"].Should()
+            .Be(suppressedReasoning.Length);
+        tags.Should().NotContainKey("content");
+        tags.Values.Should().NotContain(suppressedReasoning);
     }
 
     [Fact]

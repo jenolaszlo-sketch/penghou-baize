@@ -32,7 +32,7 @@ planned client surfaces.
 | `Penghou.Baize.Batch` | Provider-neutral native batch planning and aggregate coordination |
 | `Penghou.Baize.Tools` | Tool-call extraction, normalization, and result parsing |
 | `Penghou.Baize.Extensions.AI` | `Microsoft.Extensions.AI.IChatClient` and experimental `IImageGenerator` adapters |
-| `Penghou.Baize.Diagnostics` | Opt-in bounded HTTP request/response capture for troubleshooting |
+| `Penghou.Baize.Diagnostics` | Opt-in stream parity checks and bounded HTTP capture for troubleshooting |
 
 The core, provider clients, router, batch coordinator, Extensions.AI adapter,
 and repair tools support .NET 8. Provider-neutral tools additionally target
@@ -921,6 +921,35 @@ Configuration reloads build a complete immutable routing runtime before one
 atomic swap. The router, model lookup, endpoint validator, strategy chains, and
 request limits therefore move to the same configuration version together;
 in-flight requests continue on the snapshot with which they started.
+
+### Stream integrity diagnostics
+
+Every built-in chat provider audits its canonical stream through the shared
+integrity assembler. The `llm.stream` activity ends with a content-free
+`StreamCompleted` event containing provider chunk/character counts, normalized
+and emitted UTF-16 character counts, the remaining buffer size, finish reason,
+tool-call count, and protocol-warning count. A successful stream always reports
+zero buffered characters. Router failover separately counts characters
+deliberately suppressed from an uncommitted failed attempt through
+`baize.router.suppressed_stream_characters`.
+
+For a deterministic client that implements both `ILlmClient` and
+`ILlmCompletionClient`, `Penghou.Baize.Diagnostics` can locate the first exact
+stream/non-stream divergence without retaining response content in its result:
+
+```csharp
+var parity = await LlmStreamParityComparer.CompareAsync(client, request, cancellationToken);
+if (!parity.IsExactMatch)
+{
+    Console.WriteLine(
+        $"First divergence: {parity.FirstDivergenceIndex}; " +
+        $"streamed: {parity.StreamedCharacterCount}; " +
+        $"native: {parity.NonStreamingCharacterCount}");
+}
+```
+
+The comparer intentionally sends the request twice and should be used only
+with deterministic fixtures or during explicit endpoint debugging.
 
 ### Troubleshooting captures
 

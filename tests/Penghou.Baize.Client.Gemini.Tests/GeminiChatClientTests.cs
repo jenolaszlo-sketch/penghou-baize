@@ -14,6 +14,30 @@ namespace Penghou.Baize.Gemini.Tests;
 public sealed class GeminiChatClientTests
 {
     [Fact]
+    public async Task StreamAsync_PreservesLeadingWhitespaceAndTwentyCharacterTail()
+    {
+        const string expected = "\nhead12345678901234567890";
+        var handler = new RecordingHandler(
+            """
+            data: {"candidates":[{"content":{"parts":[{"text":"\nhead"}]}}]}
+
+            data: {"candidates":[{"content":{"parts":[{"text":"12345678901234567890"}]},"finishReason":"STOP"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gemini-test");
+
+        var response = await client.StreamAsync(
+                new LlmRequest([new LlmMessage("user", "Reply")]),
+                TestContext.Current.CancellationToken)
+            .CollectAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be(expected);
+        response.Content[^20..].Should().Be("12345678901234567890");
+    }
+
+    [Fact]
     public async Task StreamAsync_MapsThinkingUsageAndProviderDiagnostics()
     {
         var handler = new RecordingHandler(

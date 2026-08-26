@@ -1,4 +1,16 @@
 #nullable enable
+Penghou.Baize.Diagnostics.LlmStreamParityComparer
+Penghou.Baize.Diagnostics.LlmStreamParityResult
+Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.get -> int?
+Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.get -> bool
+Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.LlmStreamParityResult(bool IsExactMatch, int StreamedCharacterCount, int NonStreamingCharacterCount, int? FirstDivergenceIndex) -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.get -> int
+Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.get -> int
+Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.init -> void
+static Penghou.Baize.Diagnostics.LlmStreamParityComparer.CompareAsync(Penghou.Baize.ILlmClient! client, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Diagnostics.LlmStreamParityResult!>!
 Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler
 Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler.HttpTrafficCaptureHandler(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions!>! options, Microsoft.Extensions.Logging.ILogger<Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler!>! logger) -> void
 Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions

@@ -273,6 +273,7 @@ public sealed class OllamaChatClient : LlmClientBase
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
+            StreamBoundaryContext.RecordProviderChunk(line.Length);
             receivedChunk = true;
             var chatResponse =
                 ParseResponseChunk(line);

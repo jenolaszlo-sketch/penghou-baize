@@ -61,7 +61,9 @@ internal sealed class LlmStreamAssembler
 
             var emitted = attachedMetadata
                 ? new LlmStreamEvent(Delta: segment.Value)
-                    { PartIndex = streamEvent.PartIndex }
+                {
+                    PartIndex = streamEvent.PartIndex
+                }
                 : streamEvent with { Delta = segment.Value };
             result.Add(emitted);
             attachedMetadata = true;

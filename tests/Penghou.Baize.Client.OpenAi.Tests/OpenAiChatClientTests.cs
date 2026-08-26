@@ -13,6 +13,32 @@ namespace Penghou.Baize.OpenAi.Tests;
 
 public sealed class OpenAiChatClientTests
 {
+    [Fact]
+    public async Task StreamAsync_PreservesLeadingWhitespaceAndTwentyCharacterTail()
+    {
+        const string expected = "\nhead12345678901234567890";
+        var handler = new RecordingHandler(
+            """
+            data: {"id":"chatcmpl-test","choices":[{"index":0,"delta":{"content":"\nhead"},"finish_reason":null}]}
+
+            data: {"id":"chatcmpl-test","choices":[{"index":0,"delta":{"content":"12345678901234567890"},"finish_reason":null}]}
+
+            data: {"id":"chatcmpl-test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """);
+        var client = CreateClient(handler, "gpt-test");
+
+        var response = await client.StreamAsync(
+                new LlmRequest([new LlmMessage("user", "Reply")]),
+                TestContext.Current.CancellationToken)
+            .CollectAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        response.Content.Should().Be(expected);
+        response.Content[^20..].Should().Be("12345678901234567890");
+    }
+
     [Theory]
     [InlineData(OpenAiDialect.DeepSeek, "deepseek-chat", LlmThinkingMode.Enabled, "enabled", true)]
     [InlineData(OpenAiDialect.DeepSeek, "deepseek-chat", LlmThinkingMode.Disabled, "disabled", false)]
