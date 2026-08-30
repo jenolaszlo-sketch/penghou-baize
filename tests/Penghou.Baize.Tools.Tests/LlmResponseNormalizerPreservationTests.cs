@@ -115,6 +115,113 @@ public sealed class LlmResponseNormalizerPreservationTests
         call.JsonRepairAttempts.Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task Normalize_PreservesRejectedArgumentsWithInvalidStatus()
+    {
+        var pipeline = CreatePipeline();
+        var normalizer = new LlmResponseNormalizer(
+            new ContentToolCallExtractor(pipeline),
+            pipeline);
+        const string argumentsJson = """{"unexpected":1}""";
+        var response = new LlmResponse(
+            Content: string.Empty,
+            ToolCalls:
+            [
+                new LlmToolCall(
+                    "call-1",
+                    "known_tool",
+                    argumentsJson)
+            ]);
+
+        var normalized = await normalizer.NormalizeAsync(
+            response,
+            [new LlmTool(
+                "known_tool",
+                "Known",
+                """
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" }
+                  },
+                  "required": ["name"],
+                  "additionalProperties": false
+                }
+                """)],
+            TestContext.Current.CancellationToken);
+
+        var call = normalized.ToolCalls.Should().ContainSingle().Subject;
+        call.NormalizationStatus.Should().Be(
+            LlmToolCallNormalizationStatus.InvalidArguments);
+        call.ArgumentsJson.Should().Be(argumentsJson);
+        call.JsonWasRepaired.Should().BeFalse();
+        call.JsonRepairDiagnostics.Should().NotBeNull();
+        call.JsonRepairDiagnostics!.IsRepairAccepted.Should().BeFalse();
+        call.JsonRepairDiagnostics.ShapeErrors.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Normalize_RepeatedlyPreservesExistingRepairProvenance()
+    {
+        var pipeline = CreatePipeline();
+        var normalizer = new LlmResponseNormalizer(
+            new ContentToolCallExtractor(pipeline),
+            pipeline);
+        var priorAttempt = new LlmRepairAttempt(
+            "provider/prior-repair",
+            LlmRepairStatus.Succeeded);
+        var priorDiagnostics = new LlmJsonRepairDiagnostics(
+            LlmRepairShapeStatus.Matched,
+            [],
+            SucceededBy: "prior-repair")
+        {
+            IsRepairAccepted = true
+        };
+        var call = new LlmToolCall(
+            "call-1",
+            "known_tool",
+            """{"name":"Ada"}""",
+            JsonWasRepaired: true,
+            JsonRepairAttempts: [priorAttempt])
+        {
+            JsonRepairDiagnostics = priorDiagnostics
+        };
+        var response = new LlmResponse(
+            Content: string.Empty,
+            ToolCalls: [call]);
+        var tools = new[]
+        {
+            new LlmTool(
+                "known_tool",
+                "Known",
+                """
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" }
+                  },
+                  "required": ["name"]
+                }
+                """)
+        };
+
+        var first = await normalizer.NormalizeAsync(
+            response,
+            tools,
+            TestContext.Current.CancellationToken);
+        var second = await normalizer.NormalizeAsync(
+            first,
+            tools,
+            TestContext.Current.CancellationToken);
+
+        var normalizedCall = second.ToolCalls.Should().ContainSingle().Subject;
+        normalizedCall.NormalizationStatus.Should().Be(
+            LlmToolCallNormalizationStatus.Normalized);
+        normalizedCall.JsonWasRepaired.Should().BeTrue();
+        normalizedCall.JsonRepairAttempts.Should().Equal(priorAttempt);
+        normalizedCall.JsonRepairDiagnostics.Should().Be(priorDiagnostics);
+    }
+
     private static JsonRepairPipeline CreatePipeline() =>
         new(
             [],

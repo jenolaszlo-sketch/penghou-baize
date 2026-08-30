@@ -185,6 +185,29 @@ public sealed class LlmToolResultParserBaseTests
         result.Failure.Should().Be(ToolCallParseFailure.EmptyArguments);
     }
 
+    [Fact]
+    public void Parse_ReturnsTypedFailure_WhenClrMappingIsUnsupported()
+    {
+        var parser = new UnsupportedParser();
+        var response = new LlmResponse(
+            Content: string.Empty,
+            ToolCalls:
+            [
+                new LlmToolCall(
+                    Id: "call-1",
+                    Name: "unsupported_tool",
+                    ArgumentsJson: """{"value":"System.String"}""")
+            ]);
+
+        var result = parser.Parse(response);
+
+        result.Succeeded.Should().BeFalse();
+        result.Failure.Should().Be(
+            ToolCallParseFailure.DeserializationFailed);
+        result.Error.Should().NotBeNullOrWhiteSpace();
+        result.Raw.Should().Be("""{"value":"System.String"}""");
+    }
+
     private static TestParser CreateParser()
     {
         return new TestParser();
@@ -223,5 +246,25 @@ public sealed class LlmToolResultParserBaseTests
     {
         [JsonPropertyName("count")]
         public required int Count { get; init; }
+    }
+
+    private sealed class UnsupportedParser()
+        : LlmToolResultParserBase<UnsupportedArguments>(
+            "unsupported_tool",
+            JsonSchemaExpectation.FromSchemaJson(
+                """
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": { "type": "string" }
+                  },
+                  "required": ["value"]
+                }
+                """)!);
+
+    private sealed class UnsupportedArguments
+    {
+        [JsonPropertyName("value")]
+        public required Type Value { get; init; }
     }
 }

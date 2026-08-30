@@ -155,6 +155,13 @@ public abstract class LlmToolResultParserBase<TResult>(
                 ex.Message,
                 argumentsJson);
         }
+        catch (NotSupportedException ex)
+        {
+            return ToolCallParseResult<TResult>.Failed(
+                ToolCallParseFailure.DeserializationFailed,
+                ex.Message,
+                argumentsJson);
+        }
     }
 
     private static ToolCallParseResult<TResult> FailedForStructuredOutput(

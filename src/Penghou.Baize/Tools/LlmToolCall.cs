@@ -49,5 +49,12 @@ public enum LlmToolCallNormalizationStatus
     /// preserved as produced so the application can handle the missing
     /// arguments explicitly.
     /// </summary>
-    EmptyArguments
+    EmptyArguments,
+
+    /// <summary>
+    /// The call names a declared tool and carried arguments, but the arguments
+    /// could not be accepted after deterministic JSON repair. The original
+    /// arguments are preserved with repair diagnostics for recovery or audit.
+    /// </summary>
+    InvalidArguments
 }

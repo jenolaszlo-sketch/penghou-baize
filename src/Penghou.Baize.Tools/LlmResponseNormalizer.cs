@@ -117,31 +117,48 @@ public sealed class LlmResponseNormalizer(
                 toolCall.ArgumentsJson,
                 expectation,
                 cancellationToken);
-        var attempts = PrefixAttempts(
+        var currentAttempts = PrefixAttempts(
             RepairAttemptMapper.Combine(repairResult),
             "arguments");
-        var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
+        var currentDiagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
+        var attempts = MergeAttempts(
+            toolCall.JsonRepairAttempts,
+            currentAttempts,
+            appendCurrent:
+                repairResult.WasRepaired ||
+                !repairResult.IsRepairAccepted);
+        var diagnostics =
+            toolCall.JsonRepairDiagnostics?.IsRepairAccepted == true &&
+            repairResult.IsRepairAccepted &&
+            !repairResult.WasRepaired
+                ? toolCall.JsonRepairDiagnostics
+                : currentDiagnostics;
 
-        if (repairResult.Document is null ||
-            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
+        if (!repairResult.IsRepairAccepted)
         {
             return toolCall with
             {
                 JsonRepairAttempts =
                     attempts,
-                JsonRepairDiagnostics = diagnostics
+                JsonRepairDiagnostics = diagnostics,
+                NormalizationStatus =
+                    LlmToolCallNormalizationStatus.InvalidArguments
             };
         }
 
+        var repairedDocument = repairResult.Document!;
         return toolCall with
         {
             ArgumentsJson =
-                repairResult.Document.RootElement.GetRawText(),
+                repairedDocument.RootElement.GetRawText(),
             JsonWasRepaired =
+                toolCall.JsonWasRepaired ||
                 repairResult.WasRepaired,
             JsonRepairAttempts =
                 attempts,
-            JsonRepairDiagnostics = diagnostics
+            JsonRepairDiagnostics = diagnostics,
+            NormalizationStatus =
+                LlmToolCallNormalizationStatus.Normalized
         };
     }
 
@@ -166,4 +183,17 @@ public sealed class LlmResponseNormalizer(
                     Name = $"{scope}/{attempt.Name}"
                 })
             .ToArray();
+
+    private static IReadOnlyList<LlmRepairAttempt> MergeAttempts(
+        IReadOnlyList<LlmRepairAttempt>? existing,
+        IReadOnlyList<LlmRepairAttempt> current,
+        bool appendCurrent)
+    {
+        if (existing is null || existing.Count == 0)
+            return current;
+        if (!appendCurrent)
+            return existing;
+
+        return existing.Concat(current).ToArray();
+    }
 }

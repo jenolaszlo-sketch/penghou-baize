@@ -551,6 +551,8 @@ Penghou.Baize.LlmJsonRepairDiagnostics
 Penghou.Baize.LlmJsonRepairDiagnostics.LlmJsonRepairDiagnostics(Penghou.Baize.LlmRepairShapeStatus ShapeStatus, System.Collections.Generic.IReadOnlyList<string!>! ShapeErrors, string? SucceededBy = null, Penghou.Baize.LlmTolerantRecoveryDiagnostics? TolerantRecovery = null) -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.init -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.get -> bool
+Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.init -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.get -> Penghou.Baize.LlmRepairShapeStatus
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.init -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.SucceededBy.get -> string?
@@ -889,6 +891,7 @@ Penghou.Baize.LlmToolCallContent.ToolCall.get -> Penghou.Baize.LlmToolCall!
 Penghou.Baize.LlmToolCallContent.ToolCall.init -> void
 Penghou.Baize.LlmToolCallNormalizationStatus
 Penghou.Baize.LlmToolCallNormalizationStatus.EmptyArguments = 2 -> Penghou.Baize.LlmToolCallNormalizationStatus
+Penghou.Baize.LlmToolCallNormalizationStatus.InvalidArguments = 3 -> Penghou.Baize.LlmToolCallNormalizationStatus
 Penghou.Baize.LlmToolCallNormalizationStatus.Normalized = 0 -> Penghou.Baize.LlmToolCallNormalizationStatus
 Penghou.Baize.LlmToolCallNormalizationStatus.UnknownTool = 1 -> Penghou.Baize.LlmToolCallNormalizationStatus
 Penghou.Baize.LlmToolResult

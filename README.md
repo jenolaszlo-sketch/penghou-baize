@@ -5,17 +5,19 @@
 [![License](https://img.shields.io/github/license/jenolaszlo-sketch/penghou-baize)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512BD4)](https://dotnet.microsoft.com/)
 
-Penghou.Baize is a provider-agnostic chat-completion client for .NET with a
-single, stable programming model across OpenAI-compatible endpoints, Anthropic
-Claude, Ollama, and Google Gemini. It exposes streaming, tool calling,
-multimodal input, native batch execution, usage, and diagnostics through one
-small domain surface — no provider SDK types leak into your application.
+Penghou.Baize is a provider-agnostic AI client and routing layer for .NET. It
+provides a stable chat model across OpenAI-compatible endpoints, Anthropic
+Claude, Ollama, and Google Gemini, plus a provider-neutral artifact-generation
+lifecycle implemented by OpenAI, Gemini, Runway, and fal.ai. Streaming, tool
+calling, multimodal input, native batch execution, generation, usage, and
+diagnostics use small Baize-owned contracts — provider SDK types do not leak
+into applications.
 
 Baize is deliberately a client and routing layer, not an agent framework or
 workflow engine. Generated-media and real-time APIs have different lifecycle
 requirements and are not forced into the chat response model. See
 [scope and boundaries](docs/scope-and-boundaries.md) for the current limits and
-planned client surfaces.
+implemented client surfaces.
 
 ## Packages
 
@@ -49,9 +51,9 @@ code change is required when upgrading the application's target framework.
 ## Install
 
 ```xml
-<PackageReference Include="Penghou.Baize" Version="0.2.0" />
+<PackageReference Include="Penghou.Baize" Version="0.3.0-preview.5" />
 <!-- plus the client package for your provider(s) -->
-<PackageReference Include="Penghou.Baize.OpenAi" Version="0.2.0" />
+<PackageReference Include="Penghou.Baize.OpenAi" Version="0.3.0-preview.5" />
 ```
 
 ## Documentation
@@ -64,8 +66,9 @@ code change is required when upgrading the application's target framework.
 - [Live provider verification log](docs/live-provider-verification-log.md)
 - Provider guides: [DeepSeek](docs/providers/deepseek.md) and
   [Gemini](docs/providers/gemini.md)
-- [Generation client roadmap](docs/roadmap-generation-client.md)
-- [Streaming integrity and protocol reliability roadmap](docs/roadmap-streaming-integrity.md)
+- [Generation client design and roadmap](docs/roadmap-generation-client.md)
+- [Streaming integrity and protocol reliability contract](docs/roadmap-streaming-integrity.md)
+- [Tool argument integrity roadmap](docs/roadmap-tool-integrity.md)
 - [Generation contract matrix](docs/generation-contract-matrix.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
@@ -257,7 +260,21 @@ needs to add, remove, or reorder Nuwa repair strategies. Detailed shape,
 tolerant-recovery, and winning-strategy diagnostics are available through
 `ContentRepairDiagnostics` and `LlmToolCall.JsonRepairDiagnostics`. A repaired
 document that still mismatches the supplied schema is reported but is not
-applied to the response.
+applied to the response. `IsRepairAccepted` exposes that decision directly;
+callers do not need to infer it from shape errors. Native calls whose arguments
+remain unacceptable are preserved with
+`NormalizationStatus = InvalidArguments`, enabling explicit retry or recovery.
+
+Normalization is idempotent with respect to repair provenance. Running a
+response through the normalizer again does not clear `JsonWasRepaired`, replace
+the earlier successful strategy, or duplicate the attempt history when no new
+repair was required.
+
+Repair acceptance covers JSON syntax and the declared schema shape. Typed tool
+result parsing is a separate boundary: if schema-valid JSON cannot be mapped to
+the requested CLR type, `ILlmToolResultParser<T>` returns
+`ToolCallParseFailure.DeserializationFailed` rather than treating JSON repair as
+successful execution or leaking a serializer exception.
 
 For router-created clients, repair can instead be enabled as an opt-in
 decorator:
@@ -806,8 +823,8 @@ guide](docs/extensibility/custom-route-provider.md) for the complete contract.
 
 ## Generation clients
 
-`IGenerationClient` (experimental) models artifact generation — images, video,
-audio — with an operation lifecycle that covers both immediate providers
+`IGenerationClient` models artifact generation — images, video, audio — with an
+operation lifecycle that covers both immediate providers
 (submit → succeeded) and queued providers (submit → handle → poll). Provider
 packages register endpoints through their own `AddBaize*Generation` methods,
 which populate the shared registry; `IGenerationExecutor` then routes a request
@@ -830,6 +847,21 @@ var result = await executor.ExecuteAsync(new ImageGenerationRequest
     OutputFormat = "png"
 });
 var asset = result.Assets[0].Source; // inline bytes, URI, or provider file
+```
+
+Queued operations are resumable without resubmission. Persist the complete
+handle, including opaque `ProviderData`, then pass it to `WaitAsync`; the
+executor resolves the endpoint pinned in the handle and never routes or submits
+the request again:
+
+```csharp
+var operation = await generationClient.SubmitAsync(request, cancellationToken);
+Persist(operation.Handle);
+
+var result = await executor.WaitAsync(
+    operation.Handle,
+    progress,
+    cancellationToken);
 ```
 
 Routing is capability-based (endpoints whose features satisfy the request) and
@@ -932,6 +964,11 @@ tool-call count, and protocol-warning count. A successful stream always reports
 zero buffered characters. Router failover separately counts characters
 deliberately suppressed from an uncommitted failed attempt through
 `baize.router.suppressed_stream_characters`.
+
+Clean provider termination is not treated as proof of integrity. Baize flushes
+its own lookahead and validates tool-call state before success; incomplete or
+inconsistent terminal state surfaces as an explicit `LlmClientException` after
+everything safe to emit has been preserved.
 
 For a deterministic client that implements both `ILlmClient` and
 `ILlmCompletionClient`, `Penghou.Baize.Diagnostics` can locate the first exact

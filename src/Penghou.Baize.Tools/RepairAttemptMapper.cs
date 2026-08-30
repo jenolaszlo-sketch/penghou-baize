@@ -17,7 +17,7 @@ internal static class RepairAttemptMapper
 
     public static LlmJsonRepairDiagnostics ToDiagnostics(
         JsonRepairResult result) =>
-        new(
+        new LlmJsonRepairDiagnostics(
             MapShapeStatus(result.ShapeStatus),
             result.ShapeErrors.ToArray(),
             result.SucceededBy?.Name,
@@ -28,7 +28,10 @@ internal static class RepairAttemptMapper
                     result.TolerantRecovery.Outcome,
                     result.TolerantRecovery.CorrectionCount,
                     result.TolerantRecovery.SchemaGuidedStringCorrectionCount,
-                    result.TolerantRecovery.Corrections.ToArray()));
+                    result.TolerantRecovery.Corrections.ToArray()))
+        {
+            IsRepairAccepted = result.IsRepairAccepted
+        };
 
     private static LlmRepairAttempt ToAttempt(
         StrategyReport report) =>

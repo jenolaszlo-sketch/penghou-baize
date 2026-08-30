@@ -5,7 +5,15 @@ public sealed record LlmJsonRepairDiagnostics(
     LlmRepairShapeStatus ShapeStatus,
     IReadOnlyList<string> ShapeErrors,
     string? SucceededBy = null,
-    LlmTolerantRecoveryDiagnostics? TolerantRecovery = null);
+    LlmTolerantRecoveryDiagnostics? TolerantRecovery = null)
+{
+    /// <summary>
+    /// Whether repair produced syntactically valid JSON matching Nuwa's
+    /// declared structural expectation. Typed CLR mapping and application
+    /// validation remain separate boundaries.
+    /// </summary>
+    public bool IsRepairAccepted { get; init; }
+}
 
 /// <summary>Whether repaired JSON matched the supplied schema expectation.</summary>
 public enum LlmRepairShapeStatus

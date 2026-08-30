@@ -35,6 +35,7 @@ public sealed class StructuredOutputRepairTests
             TestContext.Current.CancellationToken);
 
         response.ContentWasRepaired.Should().BeTrue();
+        response.ContentRepairDiagnostics!.IsRepairAccepted.Should().BeTrue();
         response.ContentRepairAttempts.Should().Contain(
             attempt =>
                 attempt.Name ==
@@ -113,6 +114,7 @@ public sealed class StructuredOutputRepairTests
 
         response.Content.Should().Be(content);
         response.ContentWasRepaired.Should().BeFalse();
+        response.ContentRepairDiagnostics!.IsRepairAccepted.Should().BeFalse();
         response.ContentRepairDiagnostics!.ShapeStatus.Should().Be(
             LlmRepairShapeStatus.Mismatched);
         response.ContentRepairDiagnostics.ShapeErrors.Should().Contain(

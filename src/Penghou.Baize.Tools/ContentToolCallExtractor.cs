@@ -90,8 +90,7 @@ public sealed class ContentToolCallExtractor(
             RepairAttemptMapper.Combine(repairResult));
         var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
 
-        if (repairResult.Document is null ||
-            repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
+        if (!repairResult.IsRepairAccepted)
         {
             return call with
             {
@@ -100,10 +99,11 @@ public sealed class ContentToolCallExtractor(
             };
         }
 
+        var repairedDocument = repairResult.Document!;
         return call with
         {
             ArgumentsJson =
-                repairResult.Document.RootElement.GetRawText(),
+                repairedDocument.RootElement.GetRawText(),
             JsonWasRepaired =
                 call.JsonWasRepaired ||
                 repairResult.WasRepaired,

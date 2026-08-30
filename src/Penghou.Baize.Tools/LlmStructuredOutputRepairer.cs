@@ -57,11 +57,10 @@ public sealed class LlmStructuredOutputRepairer(
                 "content");
             var diagnostics = RepairAttemptMapper.ToDiagnostics(repairResult);
 
-            activity?.SetTag("baize.repair.succeeded", repairResult.Document is not null);
+            activity?.SetTag("baize.repair.succeeded", repairResult.IsRepairAccepted);
             activity?.SetTag("baize.repair.changed", repairResult.WasRepaired);
 
-            if (repairResult.Document is null ||
-                repairResult.ShapeStatus == JsonRepairShapeStatus.Mismatched)
+            if (!repairResult.IsRepairAccepted)
             {
                 if (response.FinishReasonKind ==
                     LlmFinishReasonKind.LengthLimit)
@@ -91,10 +90,11 @@ public sealed class LlmStructuredOutputRepairer(
                     diagnostics.SucceededBy,
                     response.FinishReason);
             }
+            var repairedDocument = repairResult.Document!;
             activity?.SetStatus(ActivityStatusCode.Ok);
             return response with
             {
-                Content = repairResult.Document.RootElement.GetRawText(),
+                Content = repairedDocument.RootElement.GetRawText(),
                 ContentWasRepaired = repairResult.WasRepaired,
                 ContentRepairAttempts = attempts,
                 ContentRepairDiagnostics = diagnostics

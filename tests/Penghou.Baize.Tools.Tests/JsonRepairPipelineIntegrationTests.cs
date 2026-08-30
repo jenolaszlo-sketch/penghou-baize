@@ -200,4 +200,60 @@ public sealed class JsonRepairPipelineIntegrationTests
             "return response;");
     }
 
+    [Fact]
+    public async Task AddLlmTools_AtomicallyExpandsAndCoercesEncodedStringArray()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddLlmTools();
+
+        using var provider = services.BuildServiceProvider();
+        var extractor = provider.GetRequiredService<IContentToolCallExtractor>();
+
+        var calls = await extractor.ExtractAsync(
+            """
+            {
+              "name": "emit_files",
+              "arguments": {
+                "files": "[1, 2]"
+              }
+            }
+            """,
+            [
+                new LlmTool(
+                    "emit_files",
+                    "Emits file identifiers",
+                    """
+                    {
+                      "type": "object",
+                      "properties": {
+                        "files": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        }
+                      },
+                      "required": ["files"]
+                    }
+                    """)
+            ],
+            TestContext.Current.CancellationToken);
+
+        calls.Should().ContainSingle();
+        calls[0].JsonWasRepaired.Should().BeTrue();
+        calls[0].JsonRepairAttempts.Should().Contain(attempt =>
+            attempt.Name ==
+                "tool-call/schema-guided-json-string-expansion" &&
+            attempt.Status == LlmRepairStatus.Succeeded);
+        calls[0].JsonRepairAttempts.Should().Contain(attempt =>
+            attempt.Name ==
+                "tool-call/schema-guided-scalar-to-string" &&
+            attempt.Status == LlmRepairStatus.Succeeded);
+
+        using var arguments = JsonDocument.Parse(calls[0].ArgumentsJson);
+        arguments.RootElement.GetProperty("files")
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .Should().Equal("1", "2");
+    }
+
 }
