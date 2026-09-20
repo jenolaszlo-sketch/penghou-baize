@@ -69,11 +69,25 @@ code change is required when upgrading the application's target framework.
 - [Generation client design and roadmap](docs/roadmap-generation-client.md)
 - [Streaming integrity and protocol reliability contract](docs/roadmap-streaming-integrity.md)
 - [Tool argument integrity roadmap](docs/roadmap-tool-integrity.md)
+- [Experience-informed routing signals](docs/roadmap-experience-signals.md)
+- [Marang Gate 0.5 handoff](docs/roadmap-marang-gate-0.5.md)
 - [Generation contract matrix](docs/generation-contract-matrix.md)
 - [Create an LLM provider package](docs/extensibility/custom-llm-provider.md)
 - [Create a custom route provider](docs/extensibility/custom-route-provider.md)
 - [Runnable quick-start sample](samples/Penghou.Baize.QuickStart)
 - [Best-of-N generation sample](samples/Penghou.Baize.BestOfN)
+
+## Current status
+
+The current package line is `0.3.0-preview.5`. The provider, routing, batch,
+generation, diagnostics, and structured-output surfaces described here are
+implemented. `Penghou.Baize.Tools` consumes the stable Penghou.Nuwa 1.0 repair
+contract while keeping Nuwa behind Baize-owned normalization and diagnostics.
+
+Experience-informed routing is documented as a future evidence seam, not an
+active automatic policy. Baize records provider and endpoint outcomes; hosts
+remain responsible for deciding which historical signals are appropriate for
+routing and for preventing feedback loops or cross-tenant leakage.
 
 ## Quick start
 
@@ -1156,4 +1170,6 @@ default. Without `BAIZE_RUN_LIVE_TESTS=1`, every live test is skipped.
 
 ## License
 
-MIT
+Apache-2.0
+
+Copyright (c) 2026 Jenő Konrád László
