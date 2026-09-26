@@ -147,6 +147,13 @@ public sealed class StructuralToolArgumentValidator : ILlmToolArgumentValidator
             return;
         }
 
+        var known = new[] { "string", "integer", "number", "boolean", "null", "object", "array" };
+        if (types.Any(type => !known.Contains(type, StringComparer.Ordinal)))
+        {
+            failures.Add(new(path, "schema-error", "The schema declares an unknown type."));
+            return;
+        }
+
         if (!types.Any(type => MatchesType(value, type)))
         {
             failures.Add(new(
