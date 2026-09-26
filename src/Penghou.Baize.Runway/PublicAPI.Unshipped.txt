@@ -1,4 +1,68 @@
 #nullable enable
+override Penghou.Baize.Runway.RunwayCost.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayCost.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayCost.ToString() -> string!
+override Penghou.Baize.Runway.RunwayEstimatedCost.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayEstimatedCost.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayEstimatedCost.ToString() -> string!
+override Penghou.Baize.Runway.RunwayImageToVideoRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayImageToVideoRequest.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayImageToVideoRequest.ToString() -> string!
+override Penghou.Baize.Runway.RunwayTask.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayTask.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayTask.ToString() -> string!
+override Penghou.Baize.Runway.RunwayTaskCreateResponse.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayTaskCreateResponse.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayTaskCreateResponse.ToString() -> string!
+override Penghou.Baize.Runway.RunwayTextToVideoRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayTextToVideoRequest.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayTextToVideoRequest.ToString() -> string!
+override Penghou.Baize.Runway.RunwayUploadCreateRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayUploadCreateRequest.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayUploadCreateRequest.ToString() -> string!
+override Penghou.Baize.Runway.RunwayUploadCreateResponse.Equals(object? obj) -> bool
+override Penghou.Baize.Runway.RunwayUploadCreateResponse.GetHashCode() -> int
+override Penghou.Baize.Runway.RunwayUploadCreateResponse.ToString() -> string!
+Penghou.Baize.Runway.RunwayCost.<Clone>$() -> Penghou.Baize.Runway.RunwayCost!
+Penghou.Baize.Runway.RunwayCost.Deconstruct(out double? Credits) -> void
+Penghou.Baize.Runway.RunwayCost.Equals(Penghou.Baize.Runway.RunwayCost? other) -> bool
+Penghou.Baize.Runway.RunwayEstimatedCost.<Clone>$() -> Penghou.Baize.Runway.RunwayEstimatedCost!
+Penghou.Baize.Runway.RunwayEstimatedCost.Deconstruct(out double? Credits) -> void
+Penghou.Baize.Runway.RunwayEstimatedCost.Equals(Penghou.Baize.Runway.RunwayEstimatedCost? other) -> bool
+Penghou.Baize.Runway.RunwayImageToVideoRequest.<Clone>$() -> Penghou.Baize.Runway.RunwayImageToVideoRequest!
+Penghou.Baize.Runway.RunwayImageToVideoRequest.Equals(Penghou.Baize.Runway.RunwayImageToVideoRequest? other) -> bool
+Penghou.Baize.Runway.RunwayImageToVideoRequest.RunwayImageToVideoRequest() -> void
+Penghou.Baize.Runway.RunwayTask.<Clone>$() -> Penghou.Baize.Runway.RunwayTask!
+Penghou.Baize.Runway.RunwayTask.Deconstruct(out string? Id, out string? Status, out string? CreatedAt, out double? Progress, out System.Collections.Generic.IReadOnlyList<string!>? Output, out string? Failure, out string? FailureCode, out Penghou.Baize.Runway.RunwayEstimatedCost? EstimatedCost, out Penghou.Baize.Runway.RunwayCost? Cost) -> void
+Penghou.Baize.Runway.RunwayTask.Equals(Penghou.Baize.Runway.RunwayTask? other) -> bool
+Penghou.Baize.Runway.RunwayTaskCreateResponse.<Clone>$() -> Penghou.Baize.Runway.RunwayTaskCreateResponse!
+Penghou.Baize.Runway.RunwayTaskCreateResponse.Deconstruct(out string? Id, out Penghou.Baize.Runway.RunwayEstimatedCost? EstimatedCost) -> void
+Penghou.Baize.Runway.RunwayTaskCreateResponse.Equals(Penghou.Baize.Runway.RunwayTaskCreateResponse? other) -> bool
+Penghou.Baize.Runway.RunwayTextToVideoRequest.<Clone>$() -> Penghou.Baize.Runway.RunwayTextToVideoRequest!
+Penghou.Baize.Runway.RunwayTextToVideoRequest.Equals(Penghou.Baize.Runway.RunwayTextToVideoRequest? other) -> bool
+Penghou.Baize.Runway.RunwayTextToVideoRequest.RunwayTextToVideoRequest() -> void
+Penghou.Baize.Runway.RunwayUploadCreateRequest.<Clone>$() -> Penghou.Baize.Runway.RunwayUploadCreateRequest!
+Penghou.Baize.Runway.RunwayUploadCreateRequest.Equals(Penghou.Baize.Runway.RunwayUploadCreateRequest? other) -> bool
+Penghou.Baize.Runway.RunwayUploadCreateRequest.RunwayUploadCreateRequest() -> void
+Penghou.Baize.Runway.RunwayUploadCreateResponse.<Clone>$() -> Penghou.Baize.Runway.RunwayUploadCreateResponse!
+Penghou.Baize.Runway.RunwayUploadCreateResponse.Equals(Penghou.Baize.Runway.RunwayUploadCreateResponse? other) -> bool
+Penghou.Baize.Runway.RunwayUploadCreateResponse.RunwayUploadCreateResponse() -> void
+static Penghou.Baize.Runway.RunwayCost.operator !=(Penghou.Baize.Runway.RunwayCost? left, Penghou.Baize.Runway.RunwayCost? right) -> bool
+static Penghou.Baize.Runway.RunwayCost.operator ==(Penghou.Baize.Runway.RunwayCost? left, Penghou.Baize.Runway.RunwayCost? right) -> bool
+static Penghou.Baize.Runway.RunwayEstimatedCost.operator !=(Penghou.Baize.Runway.RunwayEstimatedCost? left, Penghou.Baize.Runway.RunwayEstimatedCost? right) -> bool
+static Penghou.Baize.Runway.RunwayEstimatedCost.operator ==(Penghou.Baize.Runway.RunwayEstimatedCost? left, Penghou.Baize.Runway.RunwayEstimatedCost? right) -> bool
+static Penghou.Baize.Runway.RunwayImageToVideoRequest.operator !=(Penghou.Baize.Runway.RunwayImageToVideoRequest? left, Penghou.Baize.Runway.RunwayImageToVideoRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayImageToVideoRequest.operator ==(Penghou.Baize.Runway.RunwayImageToVideoRequest? left, Penghou.Baize.Runway.RunwayImageToVideoRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayTask.operator !=(Penghou.Baize.Runway.RunwayTask? left, Penghou.Baize.Runway.RunwayTask? right) -> bool
+static Penghou.Baize.Runway.RunwayTask.operator ==(Penghou.Baize.Runway.RunwayTask? left, Penghou.Baize.Runway.RunwayTask? right) -> bool
+static Penghou.Baize.Runway.RunwayTaskCreateResponse.operator !=(Penghou.Baize.Runway.RunwayTaskCreateResponse? left, Penghou.Baize.Runway.RunwayTaskCreateResponse? right) -> bool
+static Penghou.Baize.Runway.RunwayTaskCreateResponse.operator ==(Penghou.Baize.Runway.RunwayTaskCreateResponse? left, Penghou.Baize.Runway.RunwayTaskCreateResponse? right) -> bool
+static Penghou.Baize.Runway.RunwayTextToVideoRequest.operator !=(Penghou.Baize.Runway.RunwayTextToVideoRequest? left, Penghou.Baize.Runway.RunwayTextToVideoRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayTextToVideoRequest.operator ==(Penghou.Baize.Runway.RunwayTextToVideoRequest? left, Penghou.Baize.Runway.RunwayTextToVideoRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayUploadCreateRequest.operator !=(Penghou.Baize.Runway.RunwayUploadCreateRequest? left, Penghou.Baize.Runway.RunwayUploadCreateRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayUploadCreateRequest.operator ==(Penghou.Baize.Runway.RunwayUploadCreateRequest? left, Penghou.Baize.Runway.RunwayUploadCreateRequest? right) -> bool
+static Penghou.Baize.Runway.RunwayUploadCreateResponse.operator !=(Penghou.Baize.Runway.RunwayUploadCreateResponse? left, Penghou.Baize.Runway.RunwayUploadCreateResponse? right) -> bool
+static Penghou.Baize.Runway.RunwayUploadCreateResponse.operator ==(Penghou.Baize.Runway.RunwayUploadCreateResponse? left, Penghou.Baize.Runway.RunwayUploadCreateResponse? right) -> bool
 override Penghou.Baize.Runway.RunwayGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
 override Penghou.Baize.Runway.RunwayGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
 override Penghou.Baize.Runway.RunwayGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!

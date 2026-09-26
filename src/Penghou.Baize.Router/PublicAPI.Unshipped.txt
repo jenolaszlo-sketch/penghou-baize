@@ -1,4 +1,81 @@
 #nullable enable
+~override Penghou.Baize.Router.ResolvedEndpoint.Equals(object obj) -> bool
+~override Penghou.Baize.Router.ResolvedEndpoint.ToString() -> string
+override Penghou.Baize.Router.LlmEndpointStats.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmEndpointStats.GetHashCode() -> int
+override Penghou.Baize.Router.LlmEndpointStats.ToString() -> string!
+override Penghou.Baize.Router.LlmEndpointValidationReport.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmEndpointValidationReport.GetHashCode() -> int
+override Penghou.Baize.Router.LlmEndpointValidationReport.ToString() -> string!
+override Penghou.Baize.Router.LlmEndpointValidationResult.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmEndpointValidationResult.GetHashCode() -> int
+override Penghou.Baize.Router.LlmEndpointValidationResult.ToString() -> string!
+override Penghou.Baize.Router.LlmRouteCandidateExplanation.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRouteCandidateExplanation.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRouteCandidateExplanation.ToString() -> string!
+override Penghou.Baize.Router.LlmRouteExplanation.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRouteExplanation.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRouteExplanation.ToString() -> string!
+override Penghou.Baize.Router.LlmRouteResolution.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRouteResolution.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRouteResolution.ToString() -> string!
+override Penghou.Baize.Router.LlmRouterRetryOptions.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRouterRetryOptions.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRouterRetryOptions.ToString() -> string!
+override Penghou.Baize.Router.LlmRouteTarget.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRouteTarget.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRoutingContext.Equals(object? obj) -> bool
+override Penghou.Baize.Router.LlmRoutingContext.GetHashCode() -> int
+override Penghou.Baize.Router.LlmRoutingContext.ToString() -> string!
+override Penghou.Baize.Router.ResolvedEndpoint.GetHashCode() -> int
+Penghou.Baize.Router.LlmEndpointStats.<Clone>$() -> Penghou.Baize.Router.LlmEndpointStats!
+Penghou.Baize.Router.LlmEndpointStats.Deconstruct(out string! EndpointId, out long TotalCalls, out long AvailabilityFailures, out long ToolRepairFailures, out long StructuredOutputFailures, out System.DateTimeOffset? UnavailableUntil) -> void
+Penghou.Baize.Router.LlmEndpointStats.Equals(Penghou.Baize.Router.LlmEndpointStats? other) -> bool
+Penghou.Baize.Router.LlmEndpointValidationReport.<Clone>$() -> Penghou.Baize.Router.LlmEndpointValidationReport!
+Penghou.Baize.Router.LlmEndpointValidationReport.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmEndpointValidationResult!>! Endpoints) -> void
+Penghou.Baize.Router.LlmEndpointValidationReport.Equals(Penghou.Baize.Router.LlmEndpointValidationReport? other) -> bool
+Penghou.Baize.Router.LlmEndpointValidationResult.<Clone>$() -> Penghou.Baize.Router.LlmEndpointValidationResult!
+Penghou.Baize.Router.LlmEndpointValidationResult.Deconstruct(out string! EndpointId, out string! Provider, out string! Model, out bool Succeeded, out string? Error) -> void
+Penghou.Baize.Router.LlmEndpointValidationResult.Equals(Penghou.Baize.Router.LlmEndpointValidationResult? other) -> bool
+Penghou.Baize.Router.LlmRouteCandidateExplanation.<Clone>$() -> Penghou.Baize.Router.LlmRouteCandidateExplanation!
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Deconstruct(out Penghou.Baize.Router.ResolvedEndpoint Endpoint, out bool Compatible, out string? RejectionReason, out int? Rank, out Penghou.Baize.Router.LlmEndpointStats! Stats) -> void
+Penghou.Baize.Router.LlmRouteCandidateExplanation.Equals(Penghou.Baize.Router.LlmRouteCandidateExplanation? other) -> bool
+Penghou.Baize.Router.LlmRouteExplanation.<Clone>$() -> Penghou.Baize.Router.LlmRouteExplanation!
+Penghou.Baize.Router.LlmRouteExplanation.Deconstruct(out Penghou.Baize.Router.LlmRouteTarget! Target, out System.Collections.Generic.IReadOnlyList<string!>! ConfiguredModels, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.LlmRouteCandidateExplanation!>! Candidates, out Penghou.Baize.Router.ResolvedEndpoint? SelectedEndpoint) -> void
+Penghou.Baize.Router.LlmRouteExplanation.Equals(Penghou.Baize.Router.LlmRouteExplanation? other) -> bool
+Penghou.Baize.Router.LlmRouteResolution.<Clone>$() -> Penghou.Baize.Router.LlmRouteResolution!
+Penghou.Baize.Router.LlmRouteResolution.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Router.ResolvedEndpoint>! Endpoints, out Penghou.Baize.Router.LlmRouteExplanation! Explanation) -> void
+Penghou.Baize.Router.LlmRouteResolution.Equals(Penghou.Baize.Router.LlmRouteResolution? other) -> bool
+Penghou.Baize.Router.LlmRouterRetryOptions.<Clone>$() -> Penghou.Baize.Router.LlmRouterRetryOptions!
+Penghou.Baize.Router.LlmRouterRetryOptions.Equals(Penghou.Baize.Router.LlmRouterRetryOptions? other) -> bool
+Penghou.Baize.Router.LlmRouterRetryOptions.LlmRouterRetryOptions() -> void
+Penghou.Baize.Router.LlmRouteTarget.<Clone>$() -> Penghou.Baize.Router.LlmRouteTarget!
+Penghou.Baize.Router.LlmRouteTarget.Equals(Penghou.Baize.Router.LlmRouteTarget? other) -> bool
+Penghou.Baize.Router.LlmRoutingContext.<Clone>$() -> Penghou.Baize.Router.LlmRoutingContext!
+Penghou.Baize.Router.LlmRoutingContext.Deconstruct(out Penghou.Baize.Router.LlmRouteTarget! Target, out Penghou.Baize.LlmRequest? Request) -> void
+Penghou.Baize.Router.LlmRoutingContext.Equals(Penghou.Baize.Router.LlmRoutingContext? other) -> bool
+Penghou.Baize.Router.ResolvedEndpoint.Deconstruct(out string! EndpointId, out string! Model, out Penghou.Baize.LlmProviderKey Provider) -> void
+Penghou.Baize.Router.ResolvedEndpoint.Equals(Penghou.Baize.Router.ResolvedEndpoint other) -> bool
+static Penghou.Baize.Router.LlmEndpointStats.operator !=(Penghou.Baize.Router.LlmEndpointStats? left, Penghou.Baize.Router.LlmEndpointStats? right) -> bool
+static Penghou.Baize.Router.LlmEndpointStats.operator ==(Penghou.Baize.Router.LlmEndpointStats? left, Penghou.Baize.Router.LlmEndpointStats? right) -> bool
+static Penghou.Baize.Router.LlmEndpointValidationReport.operator !=(Penghou.Baize.Router.LlmEndpointValidationReport? left, Penghou.Baize.Router.LlmEndpointValidationReport? right) -> bool
+static Penghou.Baize.Router.LlmEndpointValidationReport.operator ==(Penghou.Baize.Router.LlmEndpointValidationReport? left, Penghou.Baize.Router.LlmEndpointValidationReport? right) -> bool
+static Penghou.Baize.Router.LlmEndpointValidationResult.operator !=(Penghou.Baize.Router.LlmEndpointValidationResult? left, Penghou.Baize.Router.LlmEndpointValidationResult? right) -> bool
+static Penghou.Baize.Router.LlmEndpointValidationResult.operator ==(Penghou.Baize.Router.LlmEndpointValidationResult? left, Penghou.Baize.Router.LlmEndpointValidationResult? right) -> bool
+static Penghou.Baize.Router.LlmRouteCandidateExplanation.operator !=(Penghou.Baize.Router.LlmRouteCandidateExplanation? left, Penghou.Baize.Router.LlmRouteCandidateExplanation? right) -> bool
+static Penghou.Baize.Router.LlmRouteCandidateExplanation.operator ==(Penghou.Baize.Router.LlmRouteCandidateExplanation? left, Penghou.Baize.Router.LlmRouteCandidateExplanation? right) -> bool
+static Penghou.Baize.Router.LlmRouteExplanation.operator !=(Penghou.Baize.Router.LlmRouteExplanation? left, Penghou.Baize.Router.LlmRouteExplanation? right) -> bool
+static Penghou.Baize.Router.LlmRouteExplanation.operator ==(Penghou.Baize.Router.LlmRouteExplanation? left, Penghou.Baize.Router.LlmRouteExplanation? right) -> bool
+static Penghou.Baize.Router.LlmRouteResolution.operator !=(Penghou.Baize.Router.LlmRouteResolution? left, Penghou.Baize.Router.LlmRouteResolution? right) -> bool
+static Penghou.Baize.Router.LlmRouteResolution.operator ==(Penghou.Baize.Router.LlmRouteResolution? left, Penghou.Baize.Router.LlmRouteResolution? right) -> bool
+static Penghou.Baize.Router.LlmRouterRetryOptions.operator !=(Penghou.Baize.Router.LlmRouterRetryOptions? left, Penghou.Baize.Router.LlmRouterRetryOptions? right) -> bool
+static Penghou.Baize.Router.LlmRouterRetryOptions.operator ==(Penghou.Baize.Router.LlmRouterRetryOptions? left, Penghou.Baize.Router.LlmRouterRetryOptions? right) -> bool
+static Penghou.Baize.Router.LlmRouteTarget.operator !=(Penghou.Baize.Router.LlmRouteTarget? left, Penghou.Baize.Router.LlmRouteTarget? right) -> bool
+static Penghou.Baize.Router.LlmRouteTarget.operator ==(Penghou.Baize.Router.LlmRouteTarget? left, Penghou.Baize.Router.LlmRouteTarget? right) -> bool
+static Penghou.Baize.Router.LlmRoutingContext.operator !=(Penghou.Baize.Router.LlmRoutingContext? left, Penghou.Baize.Router.LlmRoutingContext? right) -> bool
+static Penghou.Baize.Router.LlmRoutingContext.operator ==(Penghou.Baize.Router.LlmRoutingContext? left, Penghou.Baize.Router.LlmRoutingContext? right) -> bool
+static Penghou.Baize.Router.ResolvedEndpoint.operator !=(Penghou.Baize.Router.ResolvedEndpoint left, Penghou.Baize.Router.ResolvedEndpoint right) -> bool
+static Penghou.Baize.Router.ResolvedEndpoint.operator ==(Penghou.Baize.Router.ResolvedEndpoint left, Penghou.Baize.Router.ResolvedEndpoint right) -> bool
 abstract Penghou.Baize.Router.LlmRouteProviderBase.ResolveAsync(Penghou.Baize.Router.LlmRoutingContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Baize.Router.LlmRouteResolution!>
 override Penghou.Baize.Router.ConfiguredLlmRouteProvider.ResolveAsync(Penghou.Baize.Router.LlmRoutingContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Baize.Router.LlmRouteResolution!>
 override Penghou.Baize.Router.LlmRouteTarget.ToString() -> string!

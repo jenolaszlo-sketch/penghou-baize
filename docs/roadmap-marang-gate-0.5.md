@@ -29,18 +29,22 @@ provider operation handles.
 
 These are reusable Baize semantics, not Marang-specific orchestration.
 
-### P0 — close the already-planned tool integrity gaps
+### P0 — closed: the already-planned tool integrity gaps
 
-1. Reject blank and duplicate tool declarations at the earliest common request
-   boundary, with the same rule for native and pseudo-tool paths. The current
-   normalizer/extractor groups by name and selects the first declaration, which
-   makes schema selection order-dependent. See
-   [roadmap-tool-integrity.md](roadmap-tool-integrity.md).
-2. Add the replaceable authoritative argument-validator boundary described in
-   that roadmap. Nuwa's repair expectation covers a structural subset; it is
-   not proof that arbitrary JSON Schema keywords were enforced. Return typed,
-   path-aware validation failures and distinguish repair acceptance, schema
-   validation, CLR mapping, and application validation.
+1. Blank and duplicate tool declarations are rejected at the earliest common
+   request boundary (`LlmToolDeclarations.Validate`, called from the
+   `LlmRequest` constructor, `LlmResponseNormalizer`, and
+   `ContentToolCallExtractor` with ordinal comparison), with the same rule
+   for native and pseudo-tool paths. The error names the duplicate without
+   tool arguments; declaration order never selects a winner.
+2. The replaceable authoritative argument-validator boundary
+   (`ILlmToolArgumentValidator`) runs after Nuwa repair in both the
+   normalizer and the extractor. The structural default reports typed,
+   path-aware failures and explicit unsupported keywords without mutating
+   arguments; failures mark calls `InvalidArguments` with validator
+   diagnostics. `AddLlmTools` registers the default; adapters replace it.
+   Repair acceptance, schema validation, CLR mapping, and application
+   validation remain distinct stages.
 
 Marang should not build a competing validator or silently choose a duplicate
 schema. A temporary Marang adapter may inject an authoritative validator only

@@ -1,4 +1,28 @@
 #nullable enable
+override Penghou.Baize.Fal.FalQueueResponse.Equals(object? obj) -> bool
+override Penghou.Baize.Fal.FalQueueResponse.GetHashCode() -> int
+override Penghou.Baize.Fal.FalQueueResponse.ToString() -> string!
+override Penghou.Baize.Fal.FalRequestMetrics.Equals(object? obj) -> bool
+override Penghou.Baize.Fal.FalRequestMetrics.GetHashCode() -> int
+override Penghou.Baize.Fal.FalRequestMetrics.ToString() -> string!
+override Penghou.Baize.Fal.FalRequestStatus.Equals(object? obj) -> bool
+override Penghou.Baize.Fal.FalRequestStatus.GetHashCode() -> int
+override Penghou.Baize.Fal.FalRequestStatus.ToString() -> string!
+Penghou.Baize.Fal.FalQueueResponse.<Clone>$() -> Penghou.Baize.Fal.FalQueueResponse!
+Penghou.Baize.Fal.FalQueueResponse.Deconstruct(out string? RequestId, out string? Status, out string? ResponseUrl, out string? StatusUrl, out string? CancelUrl) -> void
+Penghou.Baize.Fal.FalQueueResponse.Equals(Penghou.Baize.Fal.FalQueueResponse? other) -> bool
+Penghou.Baize.Fal.FalRequestMetrics.<Clone>$() -> Penghou.Baize.Fal.FalRequestMetrics!
+Penghou.Baize.Fal.FalRequestMetrics.Deconstruct(out double? QueueTime, out double? InferenceTime, out double? TotalTime) -> void
+Penghou.Baize.Fal.FalRequestMetrics.Equals(Penghou.Baize.Fal.FalRequestMetrics? other) -> bool
+Penghou.Baize.Fal.FalRequestStatus.<Clone>$() -> Penghou.Baize.Fal.FalRequestStatus!
+Penghou.Baize.Fal.FalRequestStatus.Deconstruct(out string? RequestId, out string? Status, out int? Position, out Penghou.Baize.Fal.FalRequestMetrics? Metrics) -> void
+Penghou.Baize.Fal.FalRequestStatus.Equals(Penghou.Baize.Fal.FalRequestStatus? other) -> bool
+static Penghou.Baize.Fal.FalQueueResponse.operator !=(Penghou.Baize.Fal.FalQueueResponse? left, Penghou.Baize.Fal.FalQueueResponse? right) -> bool
+static Penghou.Baize.Fal.FalQueueResponse.operator ==(Penghou.Baize.Fal.FalQueueResponse? left, Penghou.Baize.Fal.FalQueueResponse? right) -> bool
+static Penghou.Baize.Fal.FalRequestMetrics.operator !=(Penghou.Baize.Fal.FalRequestMetrics? left, Penghou.Baize.Fal.FalRequestMetrics? right) -> bool
+static Penghou.Baize.Fal.FalRequestMetrics.operator ==(Penghou.Baize.Fal.FalRequestMetrics? left, Penghou.Baize.Fal.FalRequestMetrics? right) -> bool
+static Penghou.Baize.Fal.FalRequestStatus.operator !=(Penghou.Baize.Fal.FalRequestStatus? left, Penghou.Baize.Fal.FalRequestStatus? right) -> bool
+static Penghou.Baize.Fal.FalRequestStatus.operator ==(Penghou.Baize.Fal.FalRequestStatus? left, Penghou.Baize.Fal.FalRequestStatus? right) -> bool
 override Penghou.Baize.Fal.FalGenerationClient.CancelAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
 override Penghou.Baize.Fal.FalGenerationClient.GetAsync(Penghou.Baize.Generation.GenerationOperationHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!
 override Penghou.Baize.Fal.FalGenerationClient.SubmitAsync(Penghou.Baize.Generation.GenerationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Generation.GenerationOperation!>!

@@ -1,16 +1,12 @@
 #nullable enable
-Penghou.Baize.Diagnostics.LlmStreamParityComparer
-Penghou.Baize.Diagnostics.LlmStreamParityResult
-Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.get -> int?
-Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.init -> void
-Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.get -> bool
-Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.init -> void
-Penghou.Baize.Diagnostics.LlmStreamParityResult.LlmStreamParityResult(bool IsExactMatch, int StreamedCharacterCount, int NonStreamingCharacterCount, int? FirstDivergenceIndex) -> void
-Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.get -> int
-Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.init -> void
-Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.get -> int
-Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.init -> void
-static Penghou.Baize.Diagnostics.LlmStreamParityComparer.CompareAsync(Penghou.Baize.ILlmClient! client, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Diagnostics.LlmStreamParityResult!>!
+override Penghou.Baize.Diagnostics.LlmStreamParityResult.Equals(object? obj) -> bool
+override Penghou.Baize.Diagnostics.LlmStreamParityResult.GetHashCode() -> int
+override Penghou.Baize.Diagnostics.LlmStreamParityResult.ToString() -> string!
+Penghou.Baize.Diagnostics.LlmStreamParityResult.<Clone>$() -> Penghou.Baize.Diagnostics.LlmStreamParityResult!
+Penghou.Baize.Diagnostics.LlmStreamParityResult.Deconstruct(out bool IsExactMatch, out int StreamedCharacterCount, out int NonStreamingCharacterCount, out int? FirstDivergenceIndex) -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.Equals(Penghou.Baize.Diagnostics.LlmStreamParityResult? other) -> bool
+static Penghou.Baize.Diagnostics.LlmStreamParityResult.operator !=(Penghou.Baize.Diagnostics.LlmStreamParityResult? left, Penghou.Baize.Diagnostics.LlmStreamParityResult? right) -> bool
+static Penghou.Baize.Diagnostics.LlmStreamParityResult.operator ==(Penghou.Baize.Diagnostics.LlmStreamParityResult? left, Penghou.Baize.Diagnostics.LlmStreamParityResult? right) -> bool
 Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler
 Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler.HttpTrafficCaptureHandler(Microsoft.Extensions.Options.IOptionsMonitor<Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions!>! options, Microsoft.Extensions.Logging.ILogger<Penghou.Baize.Diagnostics.HttpTrafficCaptureHandler!>! logger) -> void
 Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions
@@ -31,6 +27,18 @@ Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxBodyBytes.get -> long
 Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxBodyBytes.set -> void
 Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxRetainedSessions.get -> int
 Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions.MaxRetainedSessions.set -> void
+Penghou.Baize.Diagnostics.LlmStreamParityComparer
+Penghou.Baize.Diagnostics.LlmStreamParityResult
+Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.get -> int?
+Penghou.Baize.Diagnostics.LlmStreamParityResult.FirstDivergenceIndex.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.get -> bool
+Penghou.Baize.Diagnostics.LlmStreamParityResult.IsExactMatch.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.LlmStreamParityResult(bool IsExactMatch, int StreamedCharacterCount, int NonStreamingCharacterCount, int? FirstDivergenceIndex) -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.get -> int
+Penghou.Baize.Diagnostics.LlmStreamParityResult.NonStreamingCharacterCount.init -> void
+Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.get -> int
+Penghou.Baize.Diagnostics.LlmStreamParityResult.StreamedCharacterCount.init -> void
 Penghou.Baize.Diagnostics.ServiceCollectionExtensions
+static Penghou.Baize.Diagnostics.LlmStreamParityComparer.CompareAsync(Penghou.Baize.ILlmClient! client, Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.Diagnostics.LlmStreamParityResult!>!
 static Penghou.Baize.Diagnostics.ServiceCollectionExtensions.AddBaizeHttpDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! sectionName = "Baize:Diagnostics") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Penghou.Baize.Diagnostics.ServiceCollectionExtensions.AddBaizeHttpDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Baize.Diagnostics.HttpTrafficCaptureOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -1,4 +1,12 @@
 #nullable enable
+override Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Equals(object? obj) -> bool
+override Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.GetHashCode() -> int
+override Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.ToString() -> string!
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.<Clone>$() -> Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions!
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.BaizeImageGeneratorOptions() -> void
+Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Equals(Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? other) -> bool
+static Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.operator !=(Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? left, Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? right) -> bool
+static Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.operator ==(Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? left, Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions? right) -> bool
 Penghou.Baize.Extensions.AI.BaizeChatClient
 Penghou.Baize.Extensions.AI.BaizeChatClient.BaizeChatClient(Penghou.Baize.ILlmClient! client, string? providerName = null, System.Uri? providerUri = null, string? modelId = null, bool ownsClient = false) -> void
 Penghou.Baize.Extensions.AI.BaizeChatClient.Dispose() -> void

@@ -169,3 +169,115 @@ static Penghou.Baize.Batch.BaizeBatchRequest.Create(string! id, string! model, P
 static Penghou.Baize.Batch.BaizeBatchRequest.CreateForProvider(string! id, string! provider, string! model, Penghou.Baize.LlmRequest! request) -> Penghou.Baize.Batch.BaizeBatchRequest!
 static Penghou.Baize.Batch.BatchServiceCollectionExtensions.AddBaizeBatch(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Penghou.Baize.Batch.BatchPlannerOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Penghou.Baize.Batch.BatchServiceCollectionExtensions.AddBaizeBatch(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Penghou.Baize.Batch.BatchPlannerOptions? options, Penghou.Baize.Batch.BatchCoordinatorOptions? coordinatorOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+override Penghou.Baize.Batch.BaizeBatchHandle.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchHandle.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchHandle.ToString() -> string!
+override Penghou.Baize.Batch.BaizeBatchRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchRequest.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchRequest.ToString() -> string!
+override Penghou.Baize.Batch.BaizeBatchResultSet.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchResultSet.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchResultSet.ToString() -> string!
+override Penghou.Baize.Batch.BaizeBatchStatus.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchStatus.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchStatus.ToString() -> string!
+override Penghou.Baize.Batch.BaizeBatchSubmission.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchSubmission.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchSubmission.ToString() -> string!
+override Penghou.Baize.Batch.BaizeBatchSubmissionFailure.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BaizeBatchSubmissionFailure.GetHashCode() -> int
+override Penghou.Baize.Batch.BaizeBatchSubmissionFailure.ToString() -> string!
+override Penghou.Baize.Batch.BatchCoordinatorOptions.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BatchCoordinatorOptions.GetHashCode() -> int
+override Penghou.Baize.Batch.BatchCoordinatorOptions.ToString() -> string!
+override Penghou.Baize.Batch.BatchPlan.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BatchPlan.GetHashCode() -> int
+override Penghou.Baize.Batch.BatchPlan.ToString() -> string!
+override Penghou.Baize.Batch.BatchPlannerOptions.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BatchPlannerOptions.GetHashCode() -> int
+override Penghou.Baize.Batch.BatchPlannerOptions.ToString() -> string!
+override Penghou.Baize.Batch.BatchPollingUpdate.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BatchPollingUpdate.GetHashCode() -> int
+override Penghou.Baize.Batch.BatchPollingUpdate.ToString() -> string!
+override Penghou.Baize.Batch.BatchWaitOptions.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.BatchWaitOptions.GetHashCode() -> int
+override Penghou.Baize.Batch.BatchWaitOptions.ToString() -> string!
+override Penghou.Baize.Batch.ProviderBatchGroup.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.ProviderBatchGroup.GetHashCode() -> int
+override Penghou.Baize.Batch.ProviderBatchGroup.ToString() -> string!
+override Penghou.Baize.Batch.ProviderBatchPart.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.ProviderBatchPart.GetHashCode() -> int
+override Penghou.Baize.Batch.ProviderBatchPart.ToString() -> string!
+override Penghou.Baize.Batch.ProviderBatchPartStatus.Equals(object? obj) -> bool
+override Penghou.Baize.Batch.ProviderBatchPartStatus.GetHashCode() -> int
+override Penghou.Baize.Batch.ProviderBatchPartStatus.ToString() -> string!
+Penghou.Baize.Batch.BaizeBatchHandle.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchHandle!
+Penghou.Baize.Batch.BaizeBatchHandle.Deconstruct(out string! LogicalBatchId, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPart!>! Parts) -> void
+Penghou.Baize.Batch.BaizeBatchHandle.Equals(Penghou.Baize.Batch.BaizeBatchHandle? other) -> bool
+Penghou.Baize.Batch.BaizeBatchRequest.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchRequest!
+Penghou.Baize.Batch.BaizeBatchRequest.Deconstruct(out string! Id, out Penghou.Baize.LlmRequest! Request, out string? Model, out string? Provider, out string? EndpointId) -> void
+Penghou.Baize.Batch.BaizeBatchRequest.Equals(Penghou.Baize.Batch.BaizeBatchRequest? other) -> bool
+Penghou.Baize.Batch.BaizeBatchResultSet.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchResultSet!
+Penghou.Baize.Batch.BaizeBatchResultSet.Deconstruct(out string! LogicalBatchId, out Penghou.Baize.BaizeBatchState State, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>! Results) -> void
+Penghou.Baize.Batch.BaizeBatchResultSet.Equals(Penghou.Baize.Batch.BaizeBatchResultSet? other) -> bool
+Penghou.Baize.Batch.BaizeBatchStatus.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchStatus!
+Penghou.Baize.Batch.BaizeBatchStatus.Deconstruct(out string! LogicalBatchId, out Penghou.Baize.BaizeBatchState State, out int Total, out int Completed, out int Failed, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchPartStatus!>? Parts) -> void
+Penghou.Baize.Batch.BaizeBatchStatus.Equals(Penghou.Baize.Batch.BaizeBatchStatus? other) -> bool
+Penghou.Baize.Batch.BaizeBatchSubmission.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchSubmission!
+Penghou.Baize.Batch.BaizeBatchSubmission.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.BaizeBatchRequest!>! Requests, out string? Id, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Penghou.Baize.Batch.BaizeBatchSubmission.Equals(Penghou.Baize.Batch.BaizeBatchSubmission? other) -> bool
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.<Clone>$() -> Penghou.Baize.Batch.BaizeBatchSubmissionFailure!
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.Deconstruct(out int GroupIndex, out string! EndpointId, out System.Exception! Error) -> void
+Penghou.Baize.Batch.BaizeBatchSubmissionFailure.Equals(Penghou.Baize.Batch.BaizeBatchSubmissionFailure? other) -> bool
+Penghou.Baize.Batch.BatchCoordinatorOptions.<Clone>$() -> Penghou.Baize.Batch.BatchCoordinatorOptions!
+Penghou.Baize.Batch.BatchCoordinatorOptions.BatchCoordinatorOptions() -> void
+Penghou.Baize.Batch.BatchCoordinatorOptions.Equals(Penghou.Baize.Batch.BatchCoordinatorOptions? other) -> bool
+Penghou.Baize.Batch.BatchPlan.<Clone>$() -> Penghou.Baize.Batch.BatchPlan!
+Penghou.Baize.Batch.BatchPlan.Deconstruct(out string! LogicalBatchId, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Batch.ProviderBatchGroup!>! Groups) -> void
+Penghou.Baize.Batch.BatchPlan.Equals(Penghou.Baize.Batch.BatchPlan? other) -> bool
+Penghou.Baize.Batch.BatchPlannerOptions.<Clone>$() -> Penghou.Baize.Batch.BatchPlannerOptions!
+Penghou.Baize.Batch.BatchPlannerOptions.BatchPlannerOptions() -> void
+Penghou.Baize.Batch.BatchPlannerOptions.Equals(Penghou.Baize.Batch.BatchPlannerOptions? other) -> bool
+Penghou.Baize.Batch.BatchPollingUpdate.<Clone>$() -> Penghou.Baize.Batch.BatchPollingUpdate!
+Penghou.Baize.Batch.BatchPollingUpdate.Deconstruct(out int PollNumber, out Penghou.Baize.Batch.BaizeBatchStatus? Status, out int ConsecutiveTransientFailures, out System.TimeSpan? NextDelay, out string? Error) -> void
+Penghou.Baize.Batch.BatchPollingUpdate.Equals(Penghou.Baize.Batch.BatchPollingUpdate? other) -> bool
+Penghou.Baize.Batch.BatchWaitOptions.<Clone>$() -> Penghou.Baize.Batch.BatchWaitOptions!
+Penghou.Baize.Batch.BatchWaitOptions.BatchWaitOptions() -> void
+Penghou.Baize.Batch.BatchWaitOptions.Equals(Penghou.Baize.Batch.BatchWaitOptions? other) -> bool
+Penghou.Baize.Batch.ProviderBatchGroup.<Clone>$() -> Penghou.Baize.Batch.ProviderBatchGroup!
+Penghou.Baize.Batch.ProviderBatchGroup.Deconstruct(out string! EndpointId, out string! ProviderId, out string? Model, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchItem!>! Items) -> void
+Penghou.Baize.Batch.ProviderBatchGroup.Equals(Penghou.Baize.Batch.ProviderBatchGroup? other) -> bool
+Penghou.Baize.Batch.ProviderBatchPart.<Clone>$() -> Penghou.Baize.Batch.ProviderBatchPart!
+Penghou.Baize.Batch.ProviderBatchPart.Deconstruct(out string! ProviderId, out string! BatchId, out string! EndpointId, out System.Collections.Generic.IReadOnlyList<string!>! RequestIds, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Penghou.Baize.Batch.ProviderBatchPart.Equals(Penghou.Baize.Batch.ProviderBatchPart? other) -> bool
+Penghou.Baize.Batch.ProviderBatchPartStatus.<Clone>$() -> Penghou.Baize.Batch.ProviderBatchPartStatus!
+Penghou.Baize.Batch.ProviderBatchPartStatus.Deconstruct(out Penghou.Baize.Batch.ProviderBatchPart! Part, out Penghou.Baize.ProviderBatchStatus! Status) -> void
+Penghou.Baize.Batch.ProviderBatchPartStatus.Equals(Penghou.Baize.Batch.ProviderBatchPartStatus? other) -> bool
+static Penghou.Baize.Batch.BaizeBatchHandle.operator !=(Penghou.Baize.Batch.BaizeBatchHandle? left, Penghou.Baize.Batch.BaizeBatchHandle? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchHandle.operator ==(Penghou.Baize.Batch.BaizeBatchHandle? left, Penghou.Baize.Batch.BaizeBatchHandle? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchRequest.operator !=(Penghou.Baize.Batch.BaizeBatchRequest? left, Penghou.Baize.Batch.BaizeBatchRequest? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchRequest.operator ==(Penghou.Baize.Batch.BaizeBatchRequest? left, Penghou.Baize.Batch.BaizeBatchRequest? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchResultSet.operator !=(Penghou.Baize.Batch.BaizeBatchResultSet? left, Penghou.Baize.Batch.BaizeBatchResultSet? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchResultSet.operator ==(Penghou.Baize.Batch.BaizeBatchResultSet? left, Penghou.Baize.Batch.BaizeBatchResultSet? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchStatus.operator !=(Penghou.Baize.Batch.BaizeBatchStatus? left, Penghou.Baize.Batch.BaizeBatchStatus? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchStatus.operator ==(Penghou.Baize.Batch.BaizeBatchStatus? left, Penghou.Baize.Batch.BaizeBatchStatus? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchSubmission.operator !=(Penghou.Baize.Batch.BaizeBatchSubmission? left, Penghou.Baize.Batch.BaizeBatchSubmission? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchSubmission.operator ==(Penghou.Baize.Batch.BaizeBatchSubmission? left, Penghou.Baize.Batch.BaizeBatchSubmission? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchSubmissionFailure.operator !=(Penghou.Baize.Batch.BaizeBatchSubmissionFailure? left, Penghou.Baize.Batch.BaizeBatchSubmissionFailure? right) -> bool
+static Penghou.Baize.Batch.BaizeBatchSubmissionFailure.operator ==(Penghou.Baize.Batch.BaizeBatchSubmissionFailure? left, Penghou.Baize.Batch.BaizeBatchSubmissionFailure? right) -> bool
+static Penghou.Baize.Batch.BatchCoordinatorOptions.operator !=(Penghou.Baize.Batch.BatchCoordinatorOptions? left, Penghou.Baize.Batch.BatchCoordinatorOptions? right) -> bool
+static Penghou.Baize.Batch.BatchCoordinatorOptions.operator ==(Penghou.Baize.Batch.BatchCoordinatorOptions? left, Penghou.Baize.Batch.BatchCoordinatorOptions? right) -> bool
+static Penghou.Baize.Batch.BatchPlan.operator !=(Penghou.Baize.Batch.BatchPlan? left, Penghou.Baize.Batch.BatchPlan? right) -> bool
+static Penghou.Baize.Batch.BatchPlan.operator ==(Penghou.Baize.Batch.BatchPlan? left, Penghou.Baize.Batch.BatchPlan? right) -> bool
+static Penghou.Baize.Batch.BatchPlannerOptions.operator !=(Penghou.Baize.Batch.BatchPlannerOptions? left, Penghou.Baize.Batch.BatchPlannerOptions? right) -> bool
+static Penghou.Baize.Batch.BatchPlannerOptions.operator ==(Penghou.Baize.Batch.BatchPlannerOptions? left, Penghou.Baize.Batch.BatchPlannerOptions? right) -> bool
+static Penghou.Baize.Batch.BatchPollingUpdate.operator !=(Penghou.Baize.Batch.BatchPollingUpdate? left, Penghou.Baize.Batch.BatchPollingUpdate? right) -> bool
+static Penghou.Baize.Batch.BatchPollingUpdate.operator ==(Penghou.Baize.Batch.BatchPollingUpdate? left, Penghou.Baize.Batch.BatchPollingUpdate? right) -> bool
+static Penghou.Baize.Batch.BatchWaitOptions.operator !=(Penghou.Baize.Batch.BatchWaitOptions? left, Penghou.Baize.Batch.BatchWaitOptions? right) -> bool
+static Penghou.Baize.Batch.BatchWaitOptions.operator ==(Penghou.Baize.Batch.BatchWaitOptions? left, Penghou.Baize.Batch.BatchWaitOptions? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchGroup.operator !=(Penghou.Baize.Batch.ProviderBatchGroup? left, Penghou.Baize.Batch.ProviderBatchGroup? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchGroup.operator ==(Penghou.Baize.Batch.ProviderBatchGroup? left, Penghou.Baize.Batch.ProviderBatchGroup? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchPart.operator !=(Penghou.Baize.Batch.ProviderBatchPart? left, Penghou.Baize.Batch.ProviderBatchPart? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchPart.operator ==(Penghou.Baize.Batch.ProviderBatchPart? left, Penghou.Baize.Batch.ProviderBatchPart? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchPartStatus.operator !=(Penghou.Baize.Batch.ProviderBatchPartStatus? left, Penghou.Baize.Batch.ProviderBatchPartStatus? right) -> bool
+static Penghou.Baize.Batch.ProviderBatchPartStatus.operator ==(Penghou.Baize.Batch.ProviderBatchPartStatus? left, Penghou.Baize.Batch.ProviderBatchPartStatus? right) -> bool

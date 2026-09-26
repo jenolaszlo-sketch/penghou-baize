@@ -1,4 +1,600 @@
 #nullable enable
+abstract Penghou.Baize.Generation.GeneratedAssetSource.<Clone>$() -> Penghou.Baize.Generation.GeneratedAssetSource!
+abstract Penghou.Baize.Generation.GenerationRequest.<Clone>$() -> Penghou.Baize.Generation.GenerationRequest!
+abstract Penghou.Baize.LlmContentPart.<Clone>$() -> Penghou.Baize.LlmContentPart!
+abstract Penghou.Baize.LlmMediaSource.<Clone>$() -> Penghou.Baize.LlmMediaSource!
+override abstract Penghou.Baize.LlmMediaContent.<Clone>$() -> Penghou.Baize.LlmMediaContent!
+override Penghou.Baize.BaizeBatchItem.Equals(object? obj) -> bool
+override Penghou.Baize.BaizeBatchItem.GetHashCode() -> int
+override Penghou.Baize.BaizeBatchItem.ToString() -> string!
+override Penghou.Baize.BaizeBatchResult.Equals(object? obj) -> bool
+override Penghou.Baize.BaizeBatchResult.GetHashCode() -> int
+override Penghou.Baize.BaizeBatchResult.ToString() -> string!
+override Penghou.Baize.BaizeError.Equals(object? obj) -> bool
+override Penghou.Baize.BaizeError.GetHashCode() -> int
+override Penghou.Baize.BaizeError.ToString() -> string!
+override Penghou.Baize.BatchSubmissionOptions.Equals(object? obj) -> bool
+override Penghou.Baize.BatchSubmissionOptions.GetHashCode() -> int
+override Penghou.Baize.BatchSubmissionOptions.ToString() -> string!
+override Penghou.Baize.Generation.AudioGenerationRequest.<Clone>$() -> Penghou.Baize.Generation.AudioGenerationRequest!
+override Penghou.Baize.Generation.AudioGenerationRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.AudioGenerationRequest.GetHashCode() -> int
+override Penghou.Baize.Generation.AudioGenerationRequest.ToString() -> string!
+override Penghou.Baize.Generation.GeneratedAsset.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GeneratedAsset.GetHashCode() -> int
+override Penghou.Baize.Generation.GeneratedAsset.ToString() -> string!
+override Penghou.Baize.Generation.GeneratedAssetSource.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GeneratedAssetSource.GetHashCode() -> int
+override Penghou.Baize.Generation.GeneratedAssetSource.ToString() -> string!
+override Penghou.Baize.Generation.GenerationBatchChunk.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationBatchChunk.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationBatchChunk.ToString() -> string!
+override Penghou.Baize.Generation.GenerationBatchRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationBatchRequest.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationBatchRequest.ToString() -> string!
+override Penghou.Baize.Generation.GenerationBatchResult.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationBatchResult.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationBatchResult.ToString() -> string!
+override Penghou.Baize.Generation.GenerationCapabilities.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationCapabilities.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationCapabilities.ToString() -> string!
+override Penghou.Baize.Generation.GenerationConstraints.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationConstraints.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationConstraints.ToString() -> string!
+override Penghou.Baize.Generation.GenerationEndpoint.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationEndpoint.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationEndpoint.ToString() -> string!
+override Penghou.Baize.Generation.GenerationError.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationError.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationError.ToString() -> string!
+override Penghou.Baize.Generation.GenerationImageSize.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationImageSize.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationImageSize.ToString() -> string!
+override Penghou.Baize.Generation.GenerationOperation.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationOperation.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationOperation.ToString() -> string!
+override Penghou.Baize.Generation.GenerationOperationHandle.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationOperationHandle.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationOperationHandle.ToString() -> string!
+override Penghou.Baize.Generation.GenerationProgress.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationProgress.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationProgress.ToString() -> string!
+override Penghou.Baize.Generation.GenerationRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationRequest.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationRequest.ToString() -> string!
+override Penghou.Baize.Generation.GenerationResult.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationResult.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationResult.ToString() -> string!
+override Penghou.Baize.Generation.GenerationVideoSize.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.GenerationVideoSize.GetHashCode() -> int
+override Penghou.Baize.Generation.GenerationVideoSize.ToString() -> string!
+override Penghou.Baize.Generation.ImageGenerationRequest.<Clone>$() -> Penghou.Baize.Generation.ImageGenerationRequest!
+override Penghou.Baize.Generation.ImageGenerationRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.ImageGenerationRequest.GetHashCode() -> int
+override Penghou.Baize.Generation.ImageGenerationRequest.ToString() -> string!
+override Penghou.Baize.Generation.InlineGeneratedAssetSource.<Clone>$() -> Penghou.Baize.Generation.InlineGeneratedAssetSource!
+override Penghou.Baize.Generation.InlineGeneratedAssetSource.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.InlineGeneratedAssetSource.GetHashCode() -> int
+override Penghou.Baize.Generation.InlineGeneratedAssetSource.ToString() -> string!
+override Penghou.Baize.Generation.ProviderGeneratedAssetSource.<Clone>$() -> Penghou.Baize.Generation.ProviderGeneratedAssetSource!
+override Penghou.Baize.Generation.ProviderGeneratedAssetSource.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.ProviderGeneratedAssetSource.GetHashCode() -> int
+override Penghou.Baize.Generation.ProviderGeneratedAssetSource.ToString() -> string!
+override Penghou.Baize.Generation.UriGeneratedAssetSource.<Clone>$() -> Penghou.Baize.Generation.UriGeneratedAssetSource!
+override Penghou.Baize.Generation.UriGeneratedAssetSource.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.UriGeneratedAssetSource.GetHashCode() -> int
+override Penghou.Baize.Generation.UriGeneratedAssetSource.ToString() -> string!
+override Penghou.Baize.Generation.VideoGenerationRequest.<Clone>$() -> Penghou.Baize.Generation.VideoGenerationRequest!
+override Penghou.Baize.Generation.VideoGenerationRequest.Equals(object? obj) -> bool
+override Penghou.Baize.Generation.VideoGenerationRequest.GetHashCode() -> int
+override Penghou.Baize.Generation.VideoGenerationRequest.ToString() -> string!
+override Penghou.Baize.LlmAudioContent.<Clone>$() -> Penghou.Baize.LlmAudioContent!
+override Penghou.Baize.LlmAudioContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmAudioContent.GetHashCode() -> int
+override Penghou.Baize.LlmAudioContent.ToString() -> string!
+override Penghou.Baize.LlmClientMetadata.Equals(object? obj) -> bool
+override Penghou.Baize.LlmClientMetadata.GetHashCode() -> int
+override Penghou.Baize.LlmClientMetadata.ToString() -> string!
+override Penghou.Baize.LlmClientProviderContext.Equals(object? obj) -> bool
+override Penghou.Baize.LlmClientProviderContext.GetHashCode() -> int
+override Penghou.Baize.LlmClientProviderContext.ToString() -> string!
+override Penghou.Baize.LlmContentPart.Equals(object? obj) -> bool
+override Penghou.Baize.LlmContentPart.GetHashCode() -> int
+override Penghou.Baize.LlmContentPart.ToString() -> string!
+override Penghou.Baize.LlmContentRequirement.Equals(object? obj) -> bool
+override Penghou.Baize.LlmContentRequirement.GetHashCode() -> int
+override Penghou.Baize.LlmContentRequirement.ToString() -> string!
+override Penghou.Baize.LlmEndpointCapabilities.Equals(object? obj) -> bool
+override Penghou.Baize.LlmEndpointCapabilities.GetHashCode() -> int
+override Penghou.Baize.LlmEndpointCapabilities.ToString() -> string!
+override Penghou.Baize.LlmFileContent.<Clone>$() -> Penghou.Baize.LlmFileContent!
+override Penghou.Baize.LlmFileContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmFileContent.GetHashCode() -> int
+override Penghou.Baize.LlmFileContent.ToString() -> string!
+override Penghou.Baize.LlmImageContent.<Clone>$() -> Penghou.Baize.LlmImageContent!
+override Penghou.Baize.LlmImageContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmImageContent.GetHashCode() -> int
+override Penghou.Baize.LlmImageContent.ToString() -> string!
+override Penghou.Baize.LlmInlineDataSource.<Clone>$() -> Penghou.Baize.LlmInlineDataSource!
+override Penghou.Baize.LlmInlineDataSource.Equals(object? obj) -> bool
+override Penghou.Baize.LlmInlineDataSource.GetHashCode() -> int
+override Penghou.Baize.LlmInlineDataSource.ToString() -> string!
+override Penghou.Baize.LlmJsonRepairDiagnostics.Equals(object? obj) -> bool
+override Penghou.Baize.LlmJsonRepairDiagnostics.GetHashCode() -> int
+override Penghou.Baize.LlmJsonRepairDiagnostics.ToString() -> string!
+override Penghou.Baize.LlmMediaContent.EqualityContract.get -> System.Type!
+override Penghou.Baize.LlmMediaContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmMediaContent.GetHashCode() -> int
+override Penghou.Baize.LlmMediaContent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override Penghou.Baize.LlmMediaContent.ToString() -> string!
+override Penghou.Baize.LlmMediaSource.Equals(object? obj) -> bool
+override Penghou.Baize.LlmMediaSource.GetHashCode() -> int
+override Penghou.Baize.LlmMediaSource.ToString() -> string!
+override Penghou.Baize.LlmMessage.Equals(object? obj) -> bool
+override Penghou.Baize.LlmMessage.GetHashCode() -> int
+override Penghou.Baize.LlmMessage.ToString() -> string!
+override Penghou.Baize.LlmProviderContinuation.Equals(object? obj) -> bool
+override Penghou.Baize.LlmProviderContinuation.GetHashCode() -> int
+override Penghou.Baize.LlmProviderContinuation.ToString() -> string!
+override Penghou.Baize.LlmProviderDiagnostics.Equals(object? obj) -> bool
+override Penghou.Baize.LlmProviderDiagnostics.GetHashCode() -> int
+override Penghou.Baize.LlmProviderDiagnostics.ToString() -> string!
+override Penghou.Baize.LlmProviderFileSource.<Clone>$() -> Penghou.Baize.LlmProviderFileSource!
+override Penghou.Baize.LlmProviderFileSource.Equals(object? obj) -> bool
+override Penghou.Baize.LlmProviderFileSource.GetHashCode() -> int
+override Penghou.Baize.LlmProviderFileSource.ToString() -> string!
+override Penghou.Baize.LlmRateLimitInfo.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRateLimitInfo.GetHashCode() -> int
+override Penghou.Baize.LlmRateLimitInfo.ToString() -> string!
+override Penghou.Baize.LlmReasoningContent.<Clone>$() -> Penghou.Baize.LlmReasoningContent!
+override Penghou.Baize.LlmReasoningContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmReasoningContent.GetHashCode() -> int
+override Penghou.Baize.LlmReasoningContent.ToString() -> string!
+override Penghou.Baize.LlmRepairAttempt.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRepairAttempt.GetHashCode() -> int
+override Penghou.Baize.LlmRepairAttempt.ToString() -> string!
+override Penghou.Baize.LlmRequest.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRequest.GetHashCode() -> int
+override Penghou.Baize.LlmRequest.ToString() -> string!
+override Penghou.Baize.LlmRequestRequirements.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRequestRequirements.GetHashCode() -> int
+override Penghou.Baize.LlmRequestRequirements.ToString() -> string!
+override Penghou.Baize.LlmResponse.Equals(object? obj) -> bool
+override Penghou.Baize.LlmResponse.GetHashCode() -> int
+override Penghou.Baize.LlmResponse.ToString() -> string!
+override Penghou.Baize.LlmRouterAttempt.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRouterAttempt.GetHashCode() -> int
+override Penghou.Baize.LlmRouterAttempt.ToString() -> string!
+override Penghou.Baize.LlmRouterDiagnostics.Equals(object? obj) -> bool
+override Penghou.Baize.LlmRouterDiagnostics.GetHashCode() -> int
+override Penghou.Baize.LlmRouterDiagnostics.ToString() -> string!
+override Penghou.Baize.LlmSchemaAdaptation.Equals(object? obj) -> bool
+override Penghou.Baize.LlmSchemaAdaptation.GetHashCode() -> int
+override Penghou.Baize.LlmSchemaAdaptation.ToString() -> string!
+override Penghou.Baize.LlmSchemaAdaptationContext.Equals(object? obj) -> bool
+override Penghou.Baize.LlmSchemaAdaptationContext.GetHashCode() -> int
+override Penghou.Baize.LlmSchemaAdaptationContext.ToString() -> string!
+override Penghou.Baize.LlmSchemaAdaptationResult.Equals(object? obj) -> bool
+override Penghou.Baize.LlmSchemaAdaptationResult.GetHashCode() -> int
+override Penghou.Baize.LlmSchemaAdaptationResult.ToString() -> string!
+override Penghou.Baize.LlmStreamEvent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmStreamEvent.GetHashCode() -> int
+override Penghou.Baize.LlmStreamEvent.ToString() -> string!
+override Penghou.Baize.LlmTextContent.<Clone>$() -> Penghou.Baize.LlmTextContent!
+override Penghou.Baize.LlmTextContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmTextContent.GetHashCode() -> int
+override Penghou.Baize.LlmTextContent.ToString() -> string!
+override Penghou.Baize.LlmTolerantRecoveryDiagnostics.Equals(object? obj) -> bool
+override Penghou.Baize.LlmTolerantRecoveryDiagnostics.GetHashCode() -> int
+override Penghou.Baize.LlmTolerantRecoveryDiagnostics.ToString() -> string!
+override Penghou.Baize.LlmTool.Equals(object? obj) -> bool
+override Penghou.Baize.LlmTool.GetHashCode() -> int
+override Penghou.Baize.LlmTool.ToString() -> string!
+override Penghou.Baize.LlmToolArgumentValidationFailure.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolArgumentValidationFailure.GetHashCode() -> int
+override Penghou.Baize.LlmToolArgumentValidationFailure.ToString() -> string!
+override Penghou.Baize.LlmToolArgumentValidationResult.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolArgumentValidationResult.GetHashCode() -> int
+override Penghou.Baize.LlmToolArgumentValidationResult.ToString() -> string!
+override Penghou.Baize.LlmToolCall.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolCall.GetHashCode() -> int
+override Penghou.Baize.LlmToolCall.ToString() -> string!
+override Penghou.Baize.LlmToolCallContent.<Clone>$() -> Penghou.Baize.LlmToolCallContent!
+override Penghou.Baize.LlmToolCallContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolCallContent.GetHashCode() -> int
+override Penghou.Baize.LlmToolCallContent.ToString() -> string!
+override Penghou.Baize.LlmToolResult.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolResult.GetHashCode() -> int
+override Penghou.Baize.LlmToolResult.ToString() -> string!
+override Penghou.Baize.LlmToolResultContent.<Clone>$() -> Penghou.Baize.LlmToolResultContent!
+override Penghou.Baize.LlmToolResultContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmToolResultContent.GetHashCode() -> int
+override Penghou.Baize.LlmToolResultContent.ToString() -> string!
+override Penghou.Baize.LlmUriSource.<Clone>$() -> Penghou.Baize.LlmUriSource!
+override Penghou.Baize.LlmUriSource.Equals(object? obj) -> bool
+override Penghou.Baize.LlmUriSource.GetHashCode() -> int
+override Penghou.Baize.LlmUriSource.ToString() -> string!
+override Penghou.Baize.LlmUsage.Equals(object? obj) -> bool
+override Penghou.Baize.LlmUsage.GetHashCode() -> int
+override Penghou.Baize.LlmUsage.ToString() -> string!
+override Penghou.Baize.LlmVideoContent.<Clone>$() -> Penghou.Baize.LlmVideoContent!
+override Penghou.Baize.LlmVideoContent.Equals(object? obj) -> bool
+override Penghou.Baize.LlmVideoContent.GetHashCode() -> int
+override Penghou.Baize.LlmVideoContent.ToString() -> string!
+override Penghou.Baize.ProviderBatchHandle.Equals(object? obj) -> bool
+override Penghou.Baize.ProviderBatchHandle.GetHashCode() -> int
+override Penghou.Baize.ProviderBatchHandle.ToString() -> string!
+override Penghou.Baize.ProviderBatchStatus.Equals(object? obj) -> bool
+override Penghou.Baize.ProviderBatchStatus.GetHashCode() -> int
+override Penghou.Baize.ProviderBatchStatus.ToString() -> string!
+override Penghou.Baize.ToolCallDelta.Equals(object? obj) -> bool
+override Penghou.Baize.ToolCallDelta.GetHashCode() -> int
+override Penghou.Baize.ToolCallDelta.ToString() -> string!
+override sealed Penghou.Baize.Generation.AudioGenerationRequest.Equals(Penghou.Baize.Generation.GenerationRequest? other) -> bool
+override sealed Penghou.Baize.Generation.ImageGenerationRequest.Equals(Penghou.Baize.Generation.GenerationRequest? other) -> bool
+override sealed Penghou.Baize.Generation.InlineGeneratedAssetSource.Equals(Penghou.Baize.Generation.GeneratedAssetSource? other) -> bool
+override sealed Penghou.Baize.Generation.ProviderGeneratedAssetSource.Equals(Penghou.Baize.Generation.GeneratedAssetSource? other) -> bool
+override sealed Penghou.Baize.Generation.UriGeneratedAssetSource.Equals(Penghou.Baize.Generation.GeneratedAssetSource? other) -> bool
+override sealed Penghou.Baize.Generation.VideoGenerationRequest.Equals(Penghou.Baize.Generation.GenerationRequest? other) -> bool
+override sealed Penghou.Baize.LlmAudioContent.Equals(Penghou.Baize.LlmMediaContent? other) -> bool
+override sealed Penghou.Baize.LlmFileContent.Equals(Penghou.Baize.LlmMediaContent? other) -> bool
+override sealed Penghou.Baize.LlmImageContent.Equals(Penghou.Baize.LlmMediaContent? other) -> bool
+override sealed Penghou.Baize.LlmInlineDataSource.Equals(Penghou.Baize.LlmMediaSource? other) -> bool
+override sealed Penghou.Baize.LlmMediaContent.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+override sealed Penghou.Baize.LlmProviderFileSource.Equals(Penghou.Baize.LlmMediaSource? other) -> bool
+override sealed Penghou.Baize.LlmReasoningContent.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+override sealed Penghou.Baize.LlmTextContent.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+override sealed Penghou.Baize.LlmToolCallContent.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+override sealed Penghou.Baize.LlmToolResultContent.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+override sealed Penghou.Baize.LlmUriSource.Equals(Penghou.Baize.LlmMediaSource? other) -> bool
+override sealed Penghou.Baize.LlmVideoContent.Equals(Penghou.Baize.LlmMediaContent? other) -> bool
+Penghou.Baize.BaizeBatchItem.<Clone>$() -> Penghou.Baize.BaizeBatchItem!
+Penghou.Baize.BaizeBatchItem.Deconstruct(out string! RequestId, out Penghou.Baize.LlmRequest! Request) -> void
+Penghou.Baize.BaizeBatchItem.Equals(Penghou.Baize.BaizeBatchItem? other) -> bool
+Penghou.Baize.BaizeBatchResult.<Clone>$() -> Penghou.Baize.BaizeBatchResult!
+Penghou.Baize.BaizeBatchResult.Deconstruct(out string! RequestId, out Penghou.Baize.BaizeBatchItemState State, out Penghou.Baize.LlmResponse? Response, out Penghou.Baize.BaizeError? Error) -> void
+Penghou.Baize.BaizeBatchResult.Equals(Penghou.Baize.BaizeBatchResult? other) -> bool
+Penghou.Baize.BaizeError.<Clone>$() -> Penghou.Baize.BaizeError!
+Penghou.Baize.BaizeError.Deconstruct(out string! Message, out Penghou.Baize.LlmClientFailureKind FailureKind, out int? StatusCode, out string? ProviderStatus) -> void
+Penghou.Baize.BaizeError.Equals(Penghou.Baize.BaizeError? other) -> bool
+Penghou.Baize.BatchSubmissionOptions.<Clone>$() -> Penghou.Baize.BatchSubmissionOptions!
+Penghou.Baize.BatchSubmissionOptions.BatchSubmissionOptions() -> void
+Penghou.Baize.BatchSubmissionOptions.Equals(Penghou.Baize.BatchSubmissionOptions? other) -> bool
+Penghou.Baize.Generation.AudioGenerationRequest.AudioGenerationRequest() -> void
+Penghou.Baize.Generation.AudioGenerationRequest.Equals(Penghou.Baize.Generation.AudioGenerationRequest? other) -> bool
+Penghou.Baize.Generation.GeneratedAsset.<Clone>$() -> Penghou.Baize.Generation.GeneratedAsset!
+Penghou.Baize.Generation.GeneratedAsset.Deconstruct(out Penghou.Baize.Generation.GeneratedAssetSource! Source, out string? ContentType, out string? FileName, out long? Size, out System.DateTimeOffset? ExpiresAt, out System.Collections.Generic.IReadOnlyDictionary<string!, object?>? Metadata) -> void
+Penghou.Baize.Generation.GeneratedAsset.Equals(Penghou.Baize.Generation.GeneratedAsset? other) -> bool
+Penghou.Baize.Generation.GeneratedAssetSource.GeneratedAssetSource() -> void
+Penghou.Baize.Generation.GeneratedAssetSource.GeneratedAssetSource(Penghou.Baize.Generation.GeneratedAssetSource! original) -> void
+Penghou.Baize.Generation.GenerationBatchChunk.<Clone>$() -> Penghou.Baize.Generation.GenerationBatchChunk!
+Penghou.Baize.Generation.GenerationBatchChunk.Deconstruct(out int Index, out Penghou.Baize.Generation.GenerationResult? Result, out Penghou.Baize.BaizeException? Error) -> void
+Penghou.Baize.Generation.GenerationBatchChunk.Equals(Penghou.Baize.Generation.GenerationBatchChunk? other) -> bool
+Penghou.Baize.Generation.GenerationBatchRequest.<Clone>$() -> Penghou.Baize.Generation.GenerationBatchRequest!
+Penghou.Baize.Generation.GenerationBatchRequest.Deconstruct(out Penghou.Baize.Generation.GenerationRequest! Request, out int TotalCount, out int MaxConcurrency) -> void
+Penghou.Baize.Generation.GenerationBatchRequest.Equals(Penghou.Baize.Generation.GenerationBatchRequest? other) -> bool
+Penghou.Baize.Generation.GenerationBatchResult.<Clone>$() -> Penghou.Baize.Generation.GenerationBatchResult!
+Penghou.Baize.Generation.GenerationBatchResult.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GenerationBatchChunk!>! Chunks, out int RequestedCount) -> void
+Penghou.Baize.Generation.GenerationBatchResult.Equals(Penghou.Baize.Generation.GenerationBatchResult? other) -> bool
+Penghou.Baize.Generation.GenerationCapabilities.<Clone>$() -> Penghou.Baize.Generation.GenerationCapabilities!
+Penghou.Baize.Generation.GenerationCapabilities.Equals(Penghou.Baize.Generation.GenerationCapabilities? other) -> bool
+Penghou.Baize.Generation.GenerationCapabilities.GenerationCapabilities() -> void
+Penghou.Baize.Generation.GenerationConstraints.<Clone>$() -> Penghou.Baize.Generation.GenerationConstraints!
+Penghou.Baize.Generation.GenerationConstraints.Equals(Penghou.Baize.Generation.GenerationConstraints? other) -> bool
+Penghou.Baize.Generation.GenerationConstraints.GenerationConstraints() -> void
+Penghou.Baize.Generation.GenerationEndpoint.<Clone>$() -> Penghou.Baize.Generation.GenerationEndpoint!
+Penghou.Baize.Generation.GenerationEndpoint.Deconstruct(out string! Provider, out string! EndpointId, out Penghou.Baize.Generation.IGenerationClient! Client) -> void
+Penghou.Baize.Generation.GenerationEndpoint.Equals(Penghou.Baize.Generation.GenerationEndpoint? other) -> bool
+Penghou.Baize.Generation.GenerationError.<Clone>$() -> Penghou.Baize.Generation.GenerationError!
+Penghou.Baize.Generation.GenerationError.Deconstruct(out Penghou.Baize.Generation.GenerationErrorKind Kind, out string! Message, out int? StatusCode, out string? ProviderStatus) -> void
+Penghou.Baize.Generation.GenerationError.Equals(Penghou.Baize.Generation.GenerationError? other) -> bool
+Penghou.Baize.Generation.GenerationImageSize.<Clone>$() -> Penghou.Baize.Generation.GenerationImageSize!
+Penghou.Baize.Generation.GenerationImageSize.Deconstruct(out int Width, out int Height) -> void
+Penghou.Baize.Generation.GenerationImageSize.Equals(Penghou.Baize.Generation.GenerationImageSize? other) -> bool
+Penghou.Baize.Generation.GenerationOperation.<Clone>$() -> Penghou.Baize.Generation.GenerationOperation!
+Penghou.Baize.Generation.GenerationOperation.Deconstruct(out Penghou.Baize.Generation.GenerationOperationHandle! Handle, out Penghou.Baize.Generation.GenerationOperationState State, out Penghou.Baize.Generation.GenerationResult? Result, out Penghou.Baize.Generation.GenerationError? Error, out double? Progress, out System.Collections.Generic.IReadOnlyDictionary<string!, object?>? ProviderMetadata) -> void
+Penghou.Baize.Generation.GenerationOperation.Equals(Penghou.Baize.Generation.GenerationOperation? other) -> bool
+Penghou.Baize.Generation.GenerationOperationHandle.<Clone>$() -> Penghou.Baize.Generation.GenerationOperationHandle!
+Penghou.Baize.Generation.GenerationOperationHandle.Deconstruct(out string! Provider, out string! EndpointId, out string! Id, out string? Model, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? ProviderData) -> void
+Penghou.Baize.Generation.GenerationOperationHandle.Equals(Penghou.Baize.Generation.GenerationOperationHandle? other) -> bool
+Penghou.Baize.Generation.GenerationProgress.<Clone>$() -> Penghou.Baize.Generation.GenerationProgress!
+Penghou.Baize.Generation.GenerationProgress.Deconstruct(out double? Fraction, out string? Phase, out int? QueuePosition) -> void
+Penghou.Baize.Generation.GenerationProgress.Equals(Penghou.Baize.Generation.GenerationProgress? other) -> bool
+Penghou.Baize.Generation.GenerationRequest.GenerationRequest() -> void
+Penghou.Baize.Generation.GenerationRequest.GenerationRequest(Penghou.Baize.Generation.GenerationRequest! original) -> void
+Penghou.Baize.Generation.GenerationResult.<Clone>$() -> Penghou.Baize.Generation.GenerationResult!
+Penghou.Baize.Generation.GenerationResult.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GeneratedAsset!>! Assets, out System.Collections.Generic.IReadOnlyDictionary<string!, object?>? Metadata) -> void
+Penghou.Baize.Generation.GenerationResult.Equals(Penghou.Baize.Generation.GenerationResult? other) -> bool
+Penghou.Baize.Generation.GenerationVideoSize.<Clone>$() -> Penghou.Baize.Generation.GenerationVideoSize!
+Penghou.Baize.Generation.GenerationVideoSize.Deconstruct(out int Width, out int Height) -> void
+Penghou.Baize.Generation.GenerationVideoSize.Equals(Penghou.Baize.Generation.GenerationVideoSize? other) -> bool
+Penghou.Baize.Generation.ImageGenerationRequest.Equals(Penghou.Baize.Generation.ImageGenerationRequest? other) -> bool
+Penghou.Baize.Generation.ImageGenerationRequest.ImageGenerationRequest() -> void
+Penghou.Baize.Generation.InlineGeneratedAssetSource.Equals(Penghou.Baize.Generation.InlineGeneratedAssetSource? other) -> bool
+Penghou.Baize.Generation.ProviderGeneratedAssetSource.Equals(Penghou.Baize.Generation.ProviderGeneratedAssetSource? other) -> bool
+Penghou.Baize.Generation.UriGeneratedAssetSource.Equals(Penghou.Baize.Generation.UriGeneratedAssetSource? other) -> bool
+Penghou.Baize.Generation.VideoGenerationRequest.Equals(Penghou.Baize.Generation.VideoGenerationRequest? other) -> bool
+Penghou.Baize.Generation.VideoGenerationRequest.VideoGenerationRequest() -> void
+Penghou.Baize.ILlmToolArgumentValidator
+Penghou.Baize.ILlmToolArgumentValidator.ValidateAsync(Penghou.Baize.LlmTool! tool, string! argumentsJson, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmToolArgumentValidationResult!>!
+Penghou.Baize.LlmAudioContent.Equals(Penghou.Baize.LlmAudioContent? other) -> bool
+Penghou.Baize.LlmClientMetadata.<Clone>$() -> Penghou.Baize.LlmClientMetadata!
+Penghou.Baize.LlmClientMetadata.Deconstruct(out string! Provider, out string! Model, out System.Uri? Endpoint, out string? EndpointId) -> void
+Penghou.Baize.LlmClientMetadata.Equals(Penghou.Baize.LlmClientMetadata? other) -> bool
+Penghou.Baize.LlmClientProviderContext.<Clone>$() -> Penghou.Baize.LlmClientProviderContext!
+Penghou.Baize.LlmClientProviderContext.Deconstruct(out string! Model, out System.Net.Http.IHttpClientFactory! HttpClientFactory, out string! ApiKey, out string! BaseUrl, out Penghou.Baize.LlmEndpointCapabilities! Capabilities, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Settings) -> void
+Penghou.Baize.LlmClientProviderContext.Equals(Penghou.Baize.LlmClientProviderContext? other) -> bool
+Penghou.Baize.LlmContentPart.LlmContentPart() -> void
+Penghou.Baize.LlmContentPart.LlmContentPart(Penghou.Baize.LlmContentPart! original) -> void
+Penghou.Baize.LlmContentRequirement.<Clone>$() -> Penghou.Baize.LlmContentRequirement!
+Penghou.Baize.LlmContentRequirement.Deconstruct(out Penghou.Baize.LlmContentType Type, out Penghou.Baize.LlmContentTransport? Transport) -> void
+Penghou.Baize.LlmContentRequirement.Equals(Penghou.Baize.LlmContentRequirement? other) -> bool
+Penghou.Baize.LlmEndpointCapabilities.<Clone>$() -> Penghou.Baize.LlmEndpointCapabilities!
+Penghou.Baize.LlmEndpointCapabilities.Equals(Penghou.Baize.LlmEndpointCapabilities? other) -> bool
+Penghou.Baize.LlmEndpointCapabilities.LlmEndpointCapabilities() -> void
+Penghou.Baize.LlmFileContent.Equals(Penghou.Baize.LlmFileContent? other) -> bool
+Penghou.Baize.LlmImageContent.Equals(Penghou.Baize.LlmImageContent? other) -> bool
+Penghou.Baize.LlmInlineDataSource.Equals(Penghou.Baize.LlmInlineDataSource? other) -> bool
+Penghou.Baize.LlmJsonRepairDiagnostics.<Clone>$() -> Penghou.Baize.LlmJsonRepairDiagnostics!
+Penghou.Baize.LlmJsonRepairDiagnostics.Deconstruct(out Penghou.Baize.LlmRepairShapeStatus ShapeStatus, out System.Collections.Generic.IReadOnlyList<string!>! ShapeErrors, out string? SucceededBy, out Penghou.Baize.LlmTolerantRecoveryDiagnostics? TolerantRecovery) -> void
+Penghou.Baize.LlmJsonRepairDiagnostics.Equals(Penghou.Baize.LlmJsonRepairDiagnostics? other) -> bool
+Penghou.Baize.LlmMediaContent.LlmMediaContent(Penghou.Baize.LlmMediaContent! original) -> void
+Penghou.Baize.LlmMediaSource.LlmMediaSource() -> void
+Penghou.Baize.LlmMediaSource.LlmMediaSource(Penghou.Baize.LlmMediaSource! original) -> void
+Penghou.Baize.LlmMessage.<Clone>$() -> Penghou.Baize.LlmMessage!
+Penghou.Baize.LlmMessage.Equals(Penghou.Baize.LlmMessage? other) -> bool
+Penghou.Baize.LlmProviderContinuation.<Clone>$() -> Penghou.Baize.LlmProviderContinuation!
+Penghou.Baize.LlmProviderContinuation.Deconstruct(out string! Provider, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Values) -> void
+Penghou.Baize.LlmProviderContinuation.Equals(Penghou.Baize.LlmProviderContinuation? other) -> bool
+Penghou.Baize.LlmProviderDiagnostics.<Clone>$() -> Penghou.Baize.LlmProviderDiagnostics!
+Penghou.Baize.LlmProviderDiagnostics.Deconstruct(out string! Provider, out string? ActualModel, out string? Api, out bool? Done, out string? DoneReason, out double? TotalDurationMilliseconds, out double? LoadDurationMilliseconds, out double? PromptEvaluationDurationMilliseconds, out double? GenerationDurationMilliseconds, out double? GenerationTokensPerSecond, out int? NativeToolCallCount, out int? ContentLength, out string? ResponseId, out string? ServiceTier, out int? ThinkingTokens, out string? SystemFingerprint) -> void
+Penghou.Baize.LlmProviderDiagnostics.Equals(Penghou.Baize.LlmProviderDiagnostics? other) -> bool
+Penghou.Baize.LlmProviderFileSource.Equals(Penghou.Baize.LlmProviderFileSource? other) -> bool
+Penghou.Baize.LlmRateLimitInfo.<Clone>$() -> Penghou.Baize.LlmRateLimitInfo!
+Penghou.Baize.LlmRateLimitInfo.Deconstruct(out int? RequestsRemaining, out int? RequestsLimit, out System.DateTimeOffset? RequestsResetAt, out int? TokensRemaining, out int? TokensLimit, out System.DateTimeOffset? TokensResetAt, out System.TimeSpan? RetryAfter) -> void
+Penghou.Baize.LlmRateLimitInfo.Equals(Penghou.Baize.LlmRateLimitInfo? other) -> bool
+Penghou.Baize.LlmReasoningContent.Deconstruct(out string! Text) -> void
+Penghou.Baize.LlmReasoningContent.Equals(Penghou.Baize.LlmReasoningContent? other) -> bool
+Penghou.Baize.LlmRepairAttempt.<Clone>$() -> Penghou.Baize.LlmRepairAttempt!
+Penghou.Baize.LlmRepairAttempt.Deconstruct(out string! Name, out Penghou.Baize.LlmRepairStatus Status, out string? Repaired, out string? Note) -> void
+Penghou.Baize.LlmRepairAttempt.Equals(Penghou.Baize.LlmRepairAttempt? other) -> bool
+Penghou.Baize.LlmRequest.<Clone>$() -> Penghou.Baize.LlmRequest!
+Penghou.Baize.LlmRequest.Equals(Penghou.Baize.LlmRequest? other) -> bool
+Penghou.Baize.LlmRequestRequirements.<Clone>$() -> Penghou.Baize.LlmRequestRequirements!
+Penghou.Baize.LlmRequestRequirements.Equals(Penghou.Baize.LlmRequestRequirements? other) -> bool
+Penghou.Baize.LlmRequestRequirements.LlmRequestRequirements() -> void
+Penghou.Baize.LlmResponse.<Clone>$() -> Penghou.Baize.LlmResponse!
+Penghou.Baize.LlmResponse.Deconstruct(out string! Content, out string? Reasoning, out string? FinishReason, out Penghou.Baize.LlmUsage? Usage, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>? ToolCalls, out Penghou.Baize.LlmProviderDiagnostics? Diagnostics, out Penghou.Baize.LlmRouterDiagnostics? RouterDiagnostics, out bool ContentWasRepaired, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>? ContentRepairAttempts, out Penghou.Baize.LlmProviderContinuation? ReasoningContinuation, out Penghou.Baize.LlmProviderContinuation? ContentContinuation) -> void
+Penghou.Baize.LlmResponse.Equals(Penghou.Baize.LlmResponse? other) -> bool
+Penghou.Baize.LlmRouterAttempt.<Clone>$() -> Penghou.Baize.LlmRouterAttempt!
+Penghou.Baize.LlmRouterAttempt.Deconstruct(out string! EndpointId, out string! EndpointModel, out string! EndpointApiStyle, out Penghou.Baize.LlmRouterAttemptOutcome Outcome, out System.TimeSpan Duration, out string? Error, out System.DateTimeOffset? UnavailableUntil) -> void
+Penghou.Baize.LlmRouterAttempt.Equals(Penghou.Baize.LlmRouterAttempt? other) -> bool
+Penghou.Baize.LlmRouterDiagnostics.<Clone>$() -> Penghou.Baize.LlmRouterDiagnostics!
+Penghou.Baize.LlmRouterDiagnostics.Deconstruct(out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRouterAttempt!>! Attempts) -> void
+Penghou.Baize.LlmRouterDiagnostics.Equals(Penghou.Baize.LlmRouterDiagnostics? other) -> bool
+Penghou.Baize.LlmSchemaAdaptation.<Clone>$() -> Penghou.Baize.LlmSchemaAdaptation!
+Penghou.Baize.LlmSchemaAdaptation.Deconstruct(out string! Path, out string! Keyword, out string! Action, out string! Reason, out bool IsLossy) -> void
+Penghou.Baize.LlmSchemaAdaptation.Equals(Penghou.Baize.LlmSchemaAdaptation? other) -> bool
+Penghou.Baize.LlmSchemaAdaptationContext.<Clone>$() -> Penghou.Baize.LlmSchemaAdaptationContext!
+Penghou.Baize.LlmSchemaAdaptationContext.Deconstruct(out Penghou.Baize.LlmProviderKey Provider, out string! Model, out string? ApiVersion, out Penghou.Baize.LlmSchemaPurpose Purpose) -> void
+Penghou.Baize.LlmSchemaAdaptationContext.Equals(Penghou.Baize.LlmSchemaAdaptationContext? other) -> bool
+Penghou.Baize.LlmSchemaAdaptationResult.<Clone>$() -> Penghou.Baize.LlmSchemaAdaptationResult!
+Penghou.Baize.LlmSchemaAdaptationResult.Deconstruct(out System.Text.Json.JsonElement Schema, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmSchemaAdaptation!>! Adaptations) -> void
+Penghou.Baize.LlmSchemaAdaptationResult.Equals(Penghou.Baize.LlmSchemaAdaptationResult? other) -> bool
+Penghou.Baize.LlmStreamEvent.<Clone>$() -> Penghou.Baize.LlmStreamEvent!
+Penghou.Baize.LlmStreamEvent.Deconstruct(out string? Delta, out string? ReasoningContent, out string? FinishReason, out Penghou.Baize.LlmUsage? Usage, out Penghou.Baize.ToolCallDelta? ToolCallDelta, out Penghou.Baize.LlmProviderDiagnostics? Diagnostics, out Penghou.Baize.LlmRateLimitInfo? RateLimit, out Penghou.Baize.LlmRouterDiagnostics? RouterDiagnostics, out Penghou.Baize.LlmProviderContinuation? Continuation) -> void
+Penghou.Baize.LlmStreamEvent.Equals(Penghou.Baize.LlmStreamEvent? other) -> bool
+Penghou.Baize.LlmTextContent.Deconstruct(out string! Text) -> void
+Penghou.Baize.LlmTextContent.Equals(Penghou.Baize.LlmTextContent? other) -> bool
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.<Clone>$() -> Penghou.Baize.LlmTolerantRecoveryDiagnostics!
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Deconstruct(out bool Succeeded, out string! Outcome, out int CorrectionCount, out int SchemaGuidedStringCorrectionCount, out System.Collections.Generic.IReadOnlyList<string!>! Corrections) -> void
+Penghou.Baize.LlmTolerantRecoveryDiagnostics.Equals(Penghou.Baize.LlmTolerantRecoveryDiagnostics? other) -> bool
+Penghou.Baize.LlmTool.<Clone>$() -> Penghou.Baize.LlmTool!
+Penghou.Baize.LlmTool.Deconstruct(out string! Name, out string! Description, out string! InputSchemaJson, out bool Strict) -> void
+Penghou.Baize.LlmTool.Equals(Penghou.Baize.LlmTool? other) -> bool
+Penghou.Baize.LlmToolArgumentValidationFailure
+Penghou.Baize.LlmToolArgumentValidationFailure.<Clone>$() -> Penghou.Baize.LlmToolArgumentValidationFailure!
+Penghou.Baize.LlmToolArgumentValidationFailure.Code.get -> string!
+Penghou.Baize.LlmToolArgumentValidationFailure.Code.init -> void
+Penghou.Baize.LlmToolArgumentValidationFailure.Deconstruct(out string! Path, out string! Code, out string! Message) -> void
+Penghou.Baize.LlmToolArgumentValidationFailure.Equals(Penghou.Baize.LlmToolArgumentValidationFailure? other) -> bool
+Penghou.Baize.LlmToolArgumentValidationFailure.LlmToolArgumentValidationFailure(string! Path, string! Code, string! Message) -> void
+Penghou.Baize.LlmToolArgumentValidationFailure.Message.get -> string!
+Penghou.Baize.LlmToolArgumentValidationFailure.Message.init -> void
+Penghou.Baize.LlmToolArgumentValidationFailure.Path.get -> string!
+Penghou.Baize.LlmToolArgumentValidationFailure.Path.init -> void
+Penghou.Baize.LlmToolArgumentValidationResult
+Penghou.Baize.LlmToolArgumentValidationResult.<Clone>$() -> Penghou.Baize.LlmToolArgumentValidationResult!
+Penghou.Baize.LlmToolArgumentValidationResult.Deconstruct(out bool IsValid, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolArgumentValidationFailure!>! Failures, out string! ValidatorId, out System.Collections.Generic.IReadOnlyList<string!>? UnsupportedKeywords) -> void
+Penghou.Baize.LlmToolArgumentValidationResult.Equals(Penghou.Baize.LlmToolArgumentValidationResult? other) -> bool
+Penghou.Baize.LlmToolArgumentValidationResult.Failures.get -> System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolArgumentValidationFailure!>!
+Penghou.Baize.LlmToolArgumentValidationResult.Failures.init -> void
+Penghou.Baize.LlmToolArgumentValidationResult.IsValid.get -> bool
+Penghou.Baize.LlmToolArgumentValidationResult.IsValid.init -> void
+Penghou.Baize.LlmToolArgumentValidationResult.LlmToolArgumentValidationResult(bool IsValid, System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolArgumentValidationFailure!>! Failures, string! ValidatorId, System.Collections.Generic.IReadOnlyList<string!>? UnsupportedKeywords = null) -> void
+Penghou.Baize.LlmToolArgumentValidationResult.UnsupportedKeywords.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Penghou.Baize.LlmToolArgumentValidationResult.UnsupportedKeywords.init -> void
+Penghou.Baize.LlmToolArgumentValidationResult.ValidatorId.get -> string!
+Penghou.Baize.LlmToolArgumentValidationResult.ValidatorId.init -> void
+Penghou.Baize.LlmToolCall.<Clone>$() -> Penghou.Baize.LlmToolCall!
+Penghou.Baize.LlmToolCall.ArgumentValidation.get -> Penghou.Baize.LlmToolArgumentValidationResult?
+Penghou.Baize.LlmToolCall.ArgumentValidation.init -> void
+Penghou.Baize.LlmToolCall.Deconstruct(out string! Id, out string! Name, out string! ArgumentsJson, out bool JsonWasRepaired, out System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmRepairAttempt!>? JsonRepairAttempts, out Penghou.Baize.LlmToolCallNormalizationStatus NormalizationStatus, out Penghou.Baize.LlmProviderContinuation? Continuation) -> void
+Penghou.Baize.LlmToolCall.Equals(Penghou.Baize.LlmToolCall? other) -> bool
+Penghou.Baize.LlmToolCallContent.Deconstruct(out Penghou.Baize.LlmToolCall! ToolCall) -> void
+Penghou.Baize.LlmToolCallContent.Equals(Penghou.Baize.LlmToolCallContent? other) -> bool
+Penghou.Baize.LlmToolDeclarations
+Penghou.Baize.LlmToolResult.<Clone>$() -> Penghou.Baize.LlmToolResult!
+Penghou.Baize.LlmToolResult.Deconstruct(out string! ToolCallId, out string! ToolName, out string! Content, out bool Succeeded) -> void
+Penghou.Baize.LlmToolResult.Equals(Penghou.Baize.LlmToolResult? other) -> bool
+Penghou.Baize.LlmToolResultContent.Deconstruct(out Penghou.Baize.LlmToolResult! Result) -> void
+Penghou.Baize.LlmToolResultContent.Equals(Penghou.Baize.LlmToolResultContent? other) -> bool
+Penghou.Baize.LlmUriSource.Equals(Penghou.Baize.LlmUriSource? other) -> bool
+Penghou.Baize.LlmUsage.<Clone>$() -> Penghou.Baize.LlmUsage!
+Penghou.Baize.LlmUsage.Deconstruct(out int? PromptTokens, out int? CompletionTokens, out int? TotalTokens, out int? PromptCacheHitTokens, out int? PromptCacheMissTokens, out int? ThinkingTokens) -> void
+Penghou.Baize.LlmUsage.Equals(Penghou.Baize.LlmUsage? other) -> bool
+Penghou.Baize.LlmVideoContent.Equals(Penghou.Baize.LlmVideoContent? other) -> bool
+Penghou.Baize.ProviderBatchHandle.<Clone>$() -> Penghou.Baize.ProviderBatchHandle!
+Penghou.Baize.ProviderBatchHandle.Deconstruct(out string! ProviderId, out string! BatchId, out string? EndpointId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Penghou.Baize.ProviderBatchHandle.Equals(Penghou.Baize.ProviderBatchHandle? other) -> bool
+Penghou.Baize.ProviderBatchStatus.<Clone>$() -> Penghou.Baize.ProviderBatchStatus!
+Penghou.Baize.ProviderBatchStatus.Deconstruct(out Penghou.Baize.BaizeBatchState State, out string? ProviderStatus, out int? Total, out int? Completed, out int? Failed, out System.TimeSpan? RetryAfter) -> void
+Penghou.Baize.ProviderBatchStatus.Equals(Penghou.Baize.ProviderBatchStatus? other) -> bool
+Penghou.Baize.ToolCallDelta.<Clone>$() -> Penghou.Baize.ToolCallDelta!
+Penghou.Baize.ToolCallDelta.Deconstruct(out int Index, out string? Id, out string? Name, out string? ArgumentsJsonFragment, out Penghou.Baize.LlmProviderContinuation? Continuation) -> void
+Penghou.Baize.ToolCallDelta.Equals(Penghou.Baize.ToolCallDelta? other) -> bool
+static Penghou.Baize.BaizeBatchItem.operator !=(Penghou.Baize.BaizeBatchItem? left, Penghou.Baize.BaizeBatchItem? right) -> bool
+static Penghou.Baize.BaizeBatchItem.operator ==(Penghou.Baize.BaizeBatchItem? left, Penghou.Baize.BaizeBatchItem? right) -> bool
+static Penghou.Baize.BaizeBatchResult.operator !=(Penghou.Baize.BaizeBatchResult? left, Penghou.Baize.BaizeBatchResult? right) -> bool
+static Penghou.Baize.BaizeBatchResult.operator ==(Penghou.Baize.BaizeBatchResult? left, Penghou.Baize.BaizeBatchResult? right) -> bool
+static Penghou.Baize.BaizeError.operator !=(Penghou.Baize.BaizeError? left, Penghou.Baize.BaizeError? right) -> bool
+static Penghou.Baize.BaizeError.operator ==(Penghou.Baize.BaizeError? left, Penghou.Baize.BaizeError? right) -> bool
+static Penghou.Baize.BatchSubmissionOptions.operator !=(Penghou.Baize.BatchSubmissionOptions? left, Penghou.Baize.BatchSubmissionOptions? right) -> bool
+static Penghou.Baize.BatchSubmissionOptions.operator ==(Penghou.Baize.BatchSubmissionOptions? left, Penghou.Baize.BatchSubmissionOptions? right) -> bool
+static Penghou.Baize.Generation.AudioGenerationRequest.operator !=(Penghou.Baize.Generation.AudioGenerationRequest? left, Penghou.Baize.Generation.AudioGenerationRequest? right) -> bool
+static Penghou.Baize.Generation.AudioGenerationRequest.operator ==(Penghou.Baize.Generation.AudioGenerationRequest? left, Penghou.Baize.Generation.AudioGenerationRequest? right) -> bool
+static Penghou.Baize.Generation.GeneratedAsset.operator !=(Penghou.Baize.Generation.GeneratedAsset? left, Penghou.Baize.Generation.GeneratedAsset? right) -> bool
+static Penghou.Baize.Generation.GeneratedAsset.operator ==(Penghou.Baize.Generation.GeneratedAsset? left, Penghou.Baize.Generation.GeneratedAsset? right) -> bool
+static Penghou.Baize.Generation.GeneratedAssetSource.operator !=(Penghou.Baize.Generation.GeneratedAssetSource? left, Penghou.Baize.Generation.GeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.GeneratedAssetSource.operator ==(Penghou.Baize.Generation.GeneratedAssetSource? left, Penghou.Baize.Generation.GeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchChunk.operator !=(Penghou.Baize.Generation.GenerationBatchChunk? left, Penghou.Baize.Generation.GenerationBatchChunk? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchChunk.operator ==(Penghou.Baize.Generation.GenerationBatchChunk? left, Penghou.Baize.Generation.GenerationBatchChunk? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchRequest.operator !=(Penghou.Baize.Generation.GenerationBatchRequest? left, Penghou.Baize.Generation.GenerationBatchRequest? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchRequest.operator ==(Penghou.Baize.Generation.GenerationBatchRequest? left, Penghou.Baize.Generation.GenerationBatchRequest? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchResult.operator !=(Penghou.Baize.Generation.GenerationBatchResult? left, Penghou.Baize.Generation.GenerationBatchResult? right) -> bool
+static Penghou.Baize.Generation.GenerationBatchResult.operator ==(Penghou.Baize.Generation.GenerationBatchResult? left, Penghou.Baize.Generation.GenerationBatchResult? right) -> bool
+static Penghou.Baize.Generation.GenerationCapabilities.operator !=(Penghou.Baize.Generation.GenerationCapabilities? left, Penghou.Baize.Generation.GenerationCapabilities? right) -> bool
+static Penghou.Baize.Generation.GenerationCapabilities.operator ==(Penghou.Baize.Generation.GenerationCapabilities? left, Penghou.Baize.Generation.GenerationCapabilities? right) -> bool
+static Penghou.Baize.Generation.GenerationConstraints.operator !=(Penghou.Baize.Generation.GenerationConstraints? left, Penghou.Baize.Generation.GenerationConstraints? right) -> bool
+static Penghou.Baize.Generation.GenerationConstraints.operator ==(Penghou.Baize.Generation.GenerationConstraints? left, Penghou.Baize.Generation.GenerationConstraints? right) -> bool
+static Penghou.Baize.Generation.GenerationEndpoint.operator !=(Penghou.Baize.Generation.GenerationEndpoint? left, Penghou.Baize.Generation.GenerationEndpoint? right) -> bool
+static Penghou.Baize.Generation.GenerationEndpoint.operator ==(Penghou.Baize.Generation.GenerationEndpoint? left, Penghou.Baize.Generation.GenerationEndpoint? right) -> bool
+static Penghou.Baize.Generation.GenerationError.operator !=(Penghou.Baize.Generation.GenerationError? left, Penghou.Baize.Generation.GenerationError? right) -> bool
+static Penghou.Baize.Generation.GenerationError.operator ==(Penghou.Baize.Generation.GenerationError? left, Penghou.Baize.Generation.GenerationError? right) -> bool
+static Penghou.Baize.Generation.GenerationImageSize.operator !=(Penghou.Baize.Generation.GenerationImageSize? left, Penghou.Baize.Generation.GenerationImageSize? right) -> bool
+static Penghou.Baize.Generation.GenerationImageSize.operator ==(Penghou.Baize.Generation.GenerationImageSize? left, Penghou.Baize.Generation.GenerationImageSize? right) -> bool
+static Penghou.Baize.Generation.GenerationOperation.operator !=(Penghou.Baize.Generation.GenerationOperation? left, Penghou.Baize.Generation.GenerationOperation? right) -> bool
+static Penghou.Baize.Generation.GenerationOperation.operator ==(Penghou.Baize.Generation.GenerationOperation? left, Penghou.Baize.Generation.GenerationOperation? right) -> bool
+static Penghou.Baize.Generation.GenerationOperationHandle.operator !=(Penghou.Baize.Generation.GenerationOperationHandle? left, Penghou.Baize.Generation.GenerationOperationHandle? right) -> bool
+static Penghou.Baize.Generation.GenerationOperationHandle.operator ==(Penghou.Baize.Generation.GenerationOperationHandle? left, Penghou.Baize.Generation.GenerationOperationHandle? right) -> bool
+static Penghou.Baize.Generation.GenerationProgress.operator !=(Penghou.Baize.Generation.GenerationProgress? left, Penghou.Baize.Generation.GenerationProgress? right) -> bool
+static Penghou.Baize.Generation.GenerationProgress.operator ==(Penghou.Baize.Generation.GenerationProgress? left, Penghou.Baize.Generation.GenerationProgress? right) -> bool
+static Penghou.Baize.Generation.GenerationRequest.operator !=(Penghou.Baize.Generation.GenerationRequest? left, Penghou.Baize.Generation.GenerationRequest? right) -> bool
+static Penghou.Baize.Generation.GenerationRequest.operator ==(Penghou.Baize.Generation.GenerationRequest? left, Penghou.Baize.Generation.GenerationRequest? right) -> bool
+static Penghou.Baize.Generation.GenerationResult.operator !=(Penghou.Baize.Generation.GenerationResult? left, Penghou.Baize.Generation.GenerationResult? right) -> bool
+static Penghou.Baize.Generation.GenerationResult.operator ==(Penghou.Baize.Generation.GenerationResult? left, Penghou.Baize.Generation.GenerationResult? right) -> bool
+static Penghou.Baize.Generation.GenerationVideoSize.operator !=(Penghou.Baize.Generation.GenerationVideoSize? left, Penghou.Baize.Generation.GenerationVideoSize? right) -> bool
+static Penghou.Baize.Generation.GenerationVideoSize.operator ==(Penghou.Baize.Generation.GenerationVideoSize? left, Penghou.Baize.Generation.GenerationVideoSize? right) -> bool
+static Penghou.Baize.Generation.ImageGenerationRequest.operator !=(Penghou.Baize.Generation.ImageGenerationRequest? left, Penghou.Baize.Generation.ImageGenerationRequest? right) -> bool
+static Penghou.Baize.Generation.ImageGenerationRequest.operator ==(Penghou.Baize.Generation.ImageGenerationRequest? left, Penghou.Baize.Generation.ImageGenerationRequest? right) -> bool
+static Penghou.Baize.Generation.InlineGeneratedAssetSource.operator !=(Penghou.Baize.Generation.InlineGeneratedAssetSource? left, Penghou.Baize.Generation.InlineGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.InlineGeneratedAssetSource.operator ==(Penghou.Baize.Generation.InlineGeneratedAssetSource? left, Penghou.Baize.Generation.InlineGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.ProviderGeneratedAssetSource.operator !=(Penghou.Baize.Generation.ProviderGeneratedAssetSource? left, Penghou.Baize.Generation.ProviderGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.ProviderGeneratedAssetSource.operator ==(Penghou.Baize.Generation.ProviderGeneratedAssetSource? left, Penghou.Baize.Generation.ProviderGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.UriGeneratedAssetSource.operator !=(Penghou.Baize.Generation.UriGeneratedAssetSource? left, Penghou.Baize.Generation.UriGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.UriGeneratedAssetSource.operator ==(Penghou.Baize.Generation.UriGeneratedAssetSource? left, Penghou.Baize.Generation.UriGeneratedAssetSource? right) -> bool
+static Penghou.Baize.Generation.VideoGenerationRequest.operator !=(Penghou.Baize.Generation.VideoGenerationRequest? left, Penghou.Baize.Generation.VideoGenerationRequest? right) -> bool
+static Penghou.Baize.Generation.VideoGenerationRequest.operator ==(Penghou.Baize.Generation.VideoGenerationRequest? left, Penghou.Baize.Generation.VideoGenerationRequest? right) -> bool
+static Penghou.Baize.LlmAudioContent.operator !=(Penghou.Baize.LlmAudioContent? left, Penghou.Baize.LlmAudioContent? right) -> bool
+static Penghou.Baize.LlmAudioContent.operator ==(Penghou.Baize.LlmAudioContent? left, Penghou.Baize.LlmAudioContent? right) -> bool
+static Penghou.Baize.LlmClientMetadata.operator !=(Penghou.Baize.LlmClientMetadata? left, Penghou.Baize.LlmClientMetadata? right) -> bool
+static Penghou.Baize.LlmClientMetadata.operator ==(Penghou.Baize.LlmClientMetadata? left, Penghou.Baize.LlmClientMetadata? right) -> bool
+static Penghou.Baize.LlmClientProviderContext.operator !=(Penghou.Baize.LlmClientProviderContext? left, Penghou.Baize.LlmClientProviderContext? right) -> bool
+static Penghou.Baize.LlmClientProviderContext.operator ==(Penghou.Baize.LlmClientProviderContext? left, Penghou.Baize.LlmClientProviderContext? right) -> bool
+static Penghou.Baize.LlmContentPart.operator !=(Penghou.Baize.LlmContentPart? left, Penghou.Baize.LlmContentPart? right) -> bool
+static Penghou.Baize.LlmContentPart.operator ==(Penghou.Baize.LlmContentPart? left, Penghou.Baize.LlmContentPart? right) -> bool
+static Penghou.Baize.LlmContentRequirement.operator !=(Penghou.Baize.LlmContentRequirement? left, Penghou.Baize.LlmContentRequirement? right) -> bool
+static Penghou.Baize.LlmContentRequirement.operator ==(Penghou.Baize.LlmContentRequirement? left, Penghou.Baize.LlmContentRequirement? right) -> bool
+static Penghou.Baize.LlmEndpointCapabilities.operator !=(Penghou.Baize.LlmEndpointCapabilities? left, Penghou.Baize.LlmEndpointCapabilities? right) -> bool
+static Penghou.Baize.LlmEndpointCapabilities.operator ==(Penghou.Baize.LlmEndpointCapabilities? left, Penghou.Baize.LlmEndpointCapabilities? right) -> bool
+static Penghou.Baize.LlmFileContent.operator !=(Penghou.Baize.LlmFileContent? left, Penghou.Baize.LlmFileContent? right) -> bool
+static Penghou.Baize.LlmFileContent.operator ==(Penghou.Baize.LlmFileContent? left, Penghou.Baize.LlmFileContent? right) -> bool
+static Penghou.Baize.LlmImageContent.operator !=(Penghou.Baize.LlmImageContent? left, Penghou.Baize.LlmImageContent? right) -> bool
+static Penghou.Baize.LlmImageContent.operator ==(Penghou.Baize.LlmImageContent? left, Penghou.Baize.LlmImageContent? right) -> bool
+static Penghou.Baize.LlmInlineDataSource.operator !=(Penghou.Baize.LlmInlineDataSource? left, Penghou.Baize.LlmInlineDataSource? right) -> bool
+static Penghou.Baize.LlmInlineDataSource.operator ==(Penghou.Baize.LlmInlineDataSource? left, Penghou.Baize.LlmInlineDataSource? right) -> bool
+static Penghou.Baize.LlmJsonRepairDiagnostics.operator !=(Penghou.Baize.LlmJsonRepairDiagnostics? left, Penghou.Baize.LlmJsonRepairDiagnostics? right) -> bool
+static Penghou.Baize.LlmJsonRepairDiagnostics.operator ==(Penghou.Baize.LlmJsonRepairDiagnostics? left, Penghou.Baize.LlmJsonRepairDiagnostics? right) -> bool
+static Penghou.Baize.LlmMediaContent.operator !=(Penghou.Baize.LlmMediaContent? left, Penghou.Baize.LlmMediaContent? right) -> bool
+static Penghou.Baize.LlmMediaContent.operator ==(Penghou.Baize.LlmMediaContent? left, Penghou.Baize.LlmMediaContent? right) -> bool
+static Penghou.Baize.LlmMediaSource.operator !=(Penghou.Baize.LlmMediaSource? left, Penghou.Baize.LlmMediaSource? right) -> bool
+static Penghou.Baize.LlmMediaSource.operator ==(Penghou.Baize.LlmMediaSource? left, Penghou.Baize.LlmMediaSource? right) -> bool
+static Penghou.Baize.LlmMessage.operator !=(Penghou.Baize.LlmMessage? left, Penghou.Baize.LlmMessage? right) -> bool
+static Penghou.Baize.LlmMessage.operator ==(Penghou.Baize.LlmMessage? left, Penghou.Baize.LlmMessage? right) -> bool
+static Penghou.Baize.LlmProviderContinuation.operator !=(Penghou.Baize.LlmProviderContinuation? left, Penghou.Baize.LlmProviderContinuation? right) -> bool
+static Penghou.Baize.LlmProviderContinuation.operator ==(Penghou.Baize.LlmProviderContinuation? left, Penghou.Baize.LlmProviderContinuation? right) -> bool
+static Penghou.Baize.LlmProviderDiagnostics.operator !=(Penghou.Baize.LlmProviderDiagnostics? left, Penghou.Baize.LlmProviderDiagnostics? right) -> bool
+static Penghou.Baize.LlmProviderDiagnostics.operator ==(Penghou.Baize.LlmProviderDiagnostics? left, Penghou.Baize.LlmProviderDiagnostics? right) -> bool
+static Penghou.Baize.LlmProviderFileSource.operator !=(Penghou.Baize.LlmProviderFileSource? left, Penghou.Baize.LlmProviderFileSource? right) -> bool
+static Penghou.Baize.LlmProviderFileSource.operator ==(Penghou.Baize.LlmProviderFileSource? left, Penghou.Baize.LlmProviderFileSource? right) -> bool
+static Penghou.Baize.LlmRateLimitInfo.operator !=(Penghou.Baize.LlmRateLimitInfo? left, Penghou.Baize.LlmRateLimitInfo? right) -> bool
+static Penghou.Baize.LlmRateLimitInfo.operator ==(Penghou.Baize.LlmRateLimitInfo? left, Penghou.Baize.LlmRateLimitInfo? right) -> bool
+static Penghou.Baize.LlmReasoningContent.operator !=(Penghou.Baize.LlmReasoningContent? left, Penghou.Baize.LlmReasoningContent? right) -> bool
+static Penghou.Baize.LlmReasoningContent.operator ==(Penghou.Baize.LlmReasoningContent? left, Penghou.Baize.LlmReasoningContent? right) -> bool
+static Penghou.Baize.LlmRepairAttempt.operator !=(Penghou.Baize.LlmRepairAttempt? left, Penghou.Baize.LlmRepairAttempt? right) -> bool
+static Penghou.Baize.LlmRepairAttempt.operator ==(Penghou.Baize.LlmRepairAttempt? left, Penghou.Baize.LlmRepairAttempt? right) -> bool
+static Penghou.Baize.LlmRequest.operator !=(Penghou.Baize.LlmRequest? left, Penghou.Baize.LlmRequest? right) -> bool
+static Penghou.Baize.LlmRequest.operator ==(Penghou.Baize.LlmRequest? left, Penghou.Baize.LlmRequest? right) -> bool
+static Penghou.Baize.LlmRequestRequirements.operator !=(Penghou.Baize.LlmRequestRequirements? left, Penghou.Baize.LlmRequestRequirements? right) -> bool
+static Penghou.Baize.LlmRequestRequirements.operator ==(Penghou.Baize.LlmRequestRequirements? left, Penghou.Baize.LlmRequestRequirements? right) -> bool
+static Penghou.Baize.LlmResponse.operator !=(Penghou.Baize.LlmResponse? left, Penghou.Baize.LlmResponse? right) -> bool
+static Penghou.Baize.LlmResponse.operator ==(Penghou.Baize.LlmResponse? left, Penghou.Baize.LlmResponse? right) -> bool
+static Penghou.Baize.LlmRouterAttempt.operator !=(Penghou.Baize.LlmRouterAttempt? left, Penghou.Baize.LlmRouterAttempt? right) -> bool
+static Penghou.Baize.LlmRouterAttempt.operator ==(Penghou.Baize.LlmRouterAttempt? left, Penghou.Baize.LlmRouterAttempt? right) -> bool
+static Penghou.Baize.LlmRouterDiagnostics.operator !=(Penghou.Baize.LlmRouterDiagnostics? left, Penghou.Baize.LlmRouterDiagnostics? right) -> bool
+static Penghou.Baize.LlmRouterDiagnostics.operator ==(Penghou.Baize.LlmRouterDiagnostics? left, Penghou.Baize.LlmRouterDiagnostics? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptation.operator !=(Penghou.Baize.LlmSchemaAdaptation? left, Penghou.Baize.LlmSchemaAdaptation? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptation.operator ==(Penghou.Baize.LlmSchemaAdaptation? left, Penghou.Baize.LlmSchemaAdaptation? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptationContext.operator !=(Penghou.Baize.LlmSchemaAdaptationContext? left, Penghou.Baize.LlmSchemaAdaptationContext? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptationContext.operator ==(Penghou.Baize.LlmSchemaAdaptationContext? left, Penghou.Baize.LlmSchemaAdaptationContext? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptationResult.operator !=(Penghou.Baize.LlmSchemaAdaptationResult? left, Penghou.Baize.LlmSchemaAdaptationResult? right) -> bool
+static Penghou.Baize.LlmSchemaAdaptationResult.operator ==(Penghou.Baize.LlmSchemaAdaptationResult? left, Penghou.Baize.LlmSchemaAdaptationResult? right) -> bool
+static Penghou.Baize.LlmStreamEvent.operator !=(Penghou.Baize.LlmStreamEvent? left, Penghou.Baize.LlmStreamEvent? right) -> bool
+static Penghou.Baize.LlmStreamEvent.operator ==(Penghou.Baize.LlmStreamEvent? left, Penghou.Baize.LlmStreamEvent? right) -> bool
+static Penghou.Baize.LlmTextContent.operator !=(Penghou.Baize.LlmTextContent? left, Penghou.Baize.LlmTextContent? right) -> bool
+static Penghou.Baize.LlmTextContent.operator ==(Penghou.Baize.LlmTextContent? left, Penghou.Baize.LlmTextContent? right) -> bool
+static Penghou.Baize.LlmTolerantRecoveryDiagnostics.operator !=(Penghou.Baize.LlmTolerantRecoveryDiagnostics? left, Penghou.Baize.LlmTolerantRecoveryDiagnostics? right) -> bool
+static Penghou.Baize.LlmTolerantRecoveryDiagnostics.operator ==(Penghou.Baize.LlmTolerantRecoveryDiagnostics? left, Penghou.Baize.LlmTolerantRecoveryDiagnostics? right) -> bool
+static Penghou.Baize.LlmTool.operator !=(Penghou.Baize.LlmTool? left, Penghou.Baize.LlmTool? right) -> bool
+static Penghou.Baize.LlmTool.operator ==(Penghou.Baize.LlmTool? left, Penghou.Baize.LlmTool? right) -> bool
+static Penghou.Baize.LlmToolArgumentValidationFailure.operator !=(Penghou.Baize.LlmToolArgumentValidationFailure? left, Penghou.Baize.LlmToolArgumentValidationFailure? right) -> bool
+static Penghou.Baize.LlmToolArgumentValidationFailure.operator ==(Penghou.Baize.LlmToolArgumentValidationFailure? left, Penghou.Baize.LlmToolArgumentValidationFailure? right) -> bool
+static Penghou.Baize.LlmToolArgumentValidationResult.operator !=(Penghou.Baize.LlmToolArgumentValidationResult? left, Penghou.Baize.LlmToolArgumentValidationResult? right) -> bool
+static Penghou.Baize.LlmToolArgumentValidationResult.operator ==(Penghou.Baize.LlmToolArgumentValidationResult? left, Penghou.Baize.LlmToolArgumentValidationResult? right) -> bool
+static Penghou.Baize.LlmToolCall.operator !=(Penghou.Baize.LlmToolCall? left, Penghou.Baize.LlmToolCall? right) -> bool
+static Penghou.Baize.LlmToolCall.operator ==(Penghou.Baize.LlmToolCall? left, Penghou.Baize.LlmToolCall? right) -> bool
+static Penghou.Baize.LlmToolCallContent.operator !=(Penghou.Baize.LlmToolCallContent? left, Penghou.Baize.LlmToolCallContent? right) -> bool
+static Penghou.Baize.LlmToolCallContent.operator ==(Penghou.Baize.LlmToolCallContent? left, Penghou.Baize.LlmToolCallContent? right) -> bool
+static Penghou.Baize.LlmToolDeclarations.Validate(System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools) -> void
+static Penghou.Baize.LlmToolResult.operator !=(Penghou.Baize.LlmToolResult? left, Penghou.Baize.LlmToolResult? right) -> bool
+static Penghou.Baize.LlmToolResult.operator ==(Penghou.Baize.LlmToolResult? left, Penghou.Baize.LlmToolResult? right) -> bool
+static Penghou.Baize.LlmToolResultContent.operator !=(Penghou.Baize.LlmToolResultContent? left, Penghou.Baize.LlmToolResultContent? right) -> bool
+static Penghou.Baize.LlmToolResultContent.operator ==(Penghou.Baize.LlmToolResultContent? left, Penghou.Baize.LlmToolResultContent? right) -> bool
+static Penghou.Baize.LlmUriSource.operator !=(Penghou.Baize.LlmUriSource? left, Penghou.Baize.LlmUriSource? right) -> bool
+static Penghou.Baize.LlmUriSource.operator ==(Penghou.Baize.LlmUriSource? left, Penghou.Baize.LlmUriSource? right) -> bool
+static Penghou.Baize.LlmUsage.operator !=(Penghou.Baize.LlmUsage? left, Penghou.Baize.LlmUsage? right) -> bool
+static Penghou.Baize.LlmUsage.operator ==(Penghou.Baize.LlmUsage? left, Penghou.Baize.LlmUsage? right) -> bool
+static Penghou.Baize.LlmVideoContent.operator !=(Penghou.Baize.LlmVideoContent? left, Penghou.Baize.LlmVideoContent? right) -> bool
+static Penghou.Baize.LlmVideoContent.operator ==(Penghou.Baize.LlmVideoContent? left, Penghou.Baize.LlmVideoContent? right) -> bool
+static Penghou.Baize.ProviderBatchHandle.operator !=(Penghou.Baize.ProviderBatchHandle? left, Penghou.Baize.ProviderBatchHandle? right) -> bool
+static Penghou.Baize.ProviderBatchHandle.operator ==(Penghou.Baize.ProviderBatchHandle? left, Penghou.Baize.ProviderBatchHandle? right) -> bool
+static Penghou.Baize.ProviderBatchStatus.operator !=(Penghou.Baize.ProviderBatchStatus? left, Penghou.Baize.ProviderBatchStatus? right) -> bool
+static Penghou.Baize.ProviderBatchStatus.operator ==(Penghou.Baize.ProviderBatchStatus? left, Penghou.Baize.ProviderBatchStatus? right) -> bool
+static Penghou.Baize.ToolCallDelta.operator !=(Penghou.Baize.ToolCallDelta? left, Penghou.Baize.ToolCallDelta? right) -> bool
+static Penghou.Baize.ToolCallDelta.operator ==(Penghou.Baize.ToolCallDelta? left, Penghou.Baize.ToolCallDelta? right) -> bool
+virtual Penghou.Baize.Generation.GeneratedAssetSource.EqualityContract.get -> System.Type!
+virtual Penghou.Baize.Generation.GeneratedAssetSource.Equals(Penghou.Baize.Generation.GeneratedAssetSource? other) -> bool
+virtual Penghou.Baize.Generation.GeneratedAssetSource.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Penghou.Baize.Generation.GenerationRequest.EqualityContract.get -> System.Type!
+virtual Penghou.Baize.Generation.GenerationRequest.Equals(Penghou.Baize.Generation.GenerationRequest? other) -> bool
+virtual Penghou.Baize.Generation.GenerationRequest.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Penghou.Baize.LlmContentPart.EqualityContract.get -> System.Type!
+virtual Penghou.Baize.LlmContentPart.Equals(Penghou.Baize.LlmContentPart? other) -> bool
+virtual Penghou.Baize.LlmContentPart.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Penghou.Baize.LlmMediaContent.Equals(Penghou.Baize.LlmMediaContent? other) -> bool
+virtual Penghou.Baize.LlmMediaSource.EqualityContract.get -> System.Type!
+virtual Penghou.Baize.LlmMediaSource.Equals(Penghou.Baize.LlmMediaSource? other) -> bool
+virtual Penghou.Baize.LlmMediaSource.PrintMembers(System.Text.StringBuilder! builder) -> bool
 abstract Penghou.Baize.BaizeBatchClientBase.ApplyAuth(System.Net.Http.HttpRequestMessage! request) -> void
 abstract Penghou.Baize.BaizeBatchClientBase.CancelAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 abstract Penghou.Baize.BaizeBatchClientBase.GetResultsAsync(Penghou.Baize.ProviderBatchHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.BaizeBatchResult!>!>!
@@ -548,11 +1144,11 @@ Penghou.Baize.LlmInlineDataSource.Data.get -> System.ReadOnlyMemory<byte>
 Penghou.Baize.LlmInlineDataSource.LlmInlineDataSource(System.ReadOnlyMemory<byte> data) -> void
 Penghou.Baize.LlmJson
 Penghou.Baize.LlmJsonRepairDiagnostics
+Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.get -> bool
+Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.init -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.LlmJsonRepairDiagnostics(Penghou.Baize.LlmRepairShapeStatus ShapeStatus, System.Collections.Generic.IReadOnlyList<string!>! ShapeErrors, string? SucceededBy = null, Penghou.Baize.LlmTolerantRecoveryDiagnostics? TolerantRecovery = null) -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeErrors.init -> void
-Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.get -> bool
-Penghou.Baize.LlmJsonRepairDiagnostics.IsRepairAccepted.init -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.get -> Penghou.Baize.LlmRepairShapeStatus
 Penghou.Baize.LlmJsonRepairDiagnostics.ShapeStatus.init -> void
 Penghou.Baize.LlmJsonRepairDiagnostics.SucceededBy.get -> string?

@@ -14,6 +14,9 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds the content tool-call extraction and response normalization
     /// services (and their JSON-repair dependencies) as singletons.
+    /// Authoritative argument validation defaults to structural validation
+    /// and is replaceable by registering another
+    /// <see cref="ILlmToolArgumentValidator"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
     /// <returns>The same <paramref name="services"/> for chaining.</returns>
@@ -31,6 +34,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IContentToolCallExtractor, ContentToolCallExtractor>();
         services.TryAddSingleton<ILlmResponseNormalizer, LlmResponseNormalizer>();
         services.TryAddSingleton<ILlmStructuredOutputRepairer, LlmStructuredOutputRepairer>();
+        services.TryAddSingleton<ILlmToolArgumentValidator, StructuralToolArgumentValidator>();
 
         return services;
     }

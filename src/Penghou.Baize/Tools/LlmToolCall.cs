@@ -27,6 +27,14 @@ public sealed record LlmToolCall(
 {
     /// <summary>Detailed diagnostics from arguments JSON repair.</summary>
     public LlmJsonRepairDiagnostics? JsonRepairDiagnostics { get; init; }
+
+    /// <summary>
+    /// Authoritative argument-validation outcome, when a validator ran. Repair
+    /// acceptance and schema validation are distinct: a repaired call whose
+    /// arguments violate the declared schema keeps its repaired JSON with
+    /// <see cref="LlmToolCallNormalizationStatus.InvalidArguments"/>.
+    /// </summary>
+    public LlmToolArgumentValidationResult? ArgumentValidation { get; init; }
 }
 
 /// <summary>How a native tool call was left by normalization.</summary>

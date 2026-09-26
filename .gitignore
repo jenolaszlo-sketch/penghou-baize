@@ -11,6 +11,8 @@ logs/
 /artifacts/live-diagnostics/
 /coverage-local-*/
 coverage-*/
+coverage.*.xml
+coverage.json
 .env
 .env.local
 .env.*.local

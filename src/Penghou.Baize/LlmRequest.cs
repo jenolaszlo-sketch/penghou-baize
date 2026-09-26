@@ -35,6 +35,7 @@ public sealed record LlmRequest
         _temperature = temperature;
         _maxTokens = maxTokens;
         _tools = tools?.ToArray() ?? [];
+        LlmToolDeclarations.Validate(_tools);
         _responseFormat = responseFormat;
         _thinkingConfig = thinkingConfig;
         _metadata = metadata is null

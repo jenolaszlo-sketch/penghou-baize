@@ -1,6 +1,18 @@
 #nullable enable
+const Penghou.Baize.Tools.StructuralToolArgumentValidator.ValidatorId = "structural/v1" -> string!
+override Penghou.Baize.Tools.ToolCallParseResult<TResult>.Equals(object? obj) -> bool
+override Penghou.Baize.Tools.ToolCallParseResult<TResult>.GetHashCode() -> int
+override Penghou.Baize.Tools.ToolCallParseResult<TResult>.ToString() -> string!
+Penghou.Baize.Tools.ContentToolCallExtractor.ContentToolCallExtractor(Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline, Penghou.Baize.ILlmToolArgumentValidator? argumentValidator = null) -> void
+Penghou.Baize.Tools.LlmResponseNormalizer.LlmResponseNormalizer(Penghou.Baize.Tools.IContentToolCallExtractor! contentToolCallExtractor, Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline, Penghou.Baize.ILlmToolArgumentValidator? argumentValidator = null) -> void
+Penghou.Baize.Tools.StructuralToolArgumentValidator
+Penghou.Baize.Tools.StructuralToolArgumentValidator.StructuralToolArgumentValidator() -> void
+Penghou.Baize.Tools.StructuralToolArgumentValidator.ValidateAsync(Penghou.Baize.LlmTool! tool, string! argumentsJson, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmToolArgumentValidationResult!>!
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.<Clone>$() -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!
+Penghou.Baize.Tools.ToolCallParseResult<TResult>.Equals(Penghou.Baize.Tools.ToolCallParseResult<TResult>? other) -> bool
+static Penghou.Baize.Tools.ToolCallParseResult<TResult>.operator !=(Penghou.Baize.Tools.ToolCallParseResult<TResult>? left, Penghou.Baize.Tools.ToolCallParseResult<TResult>? right) -> bool
+static Penghou.Baize.Tools.ToolCallParseResult<TResult>.operator ==(Penghou.Baize.Tools.ToolCallParseResult<TResult>? left, Penghou.Baize.Tools.ToolCallParseResult<TResult>? right) -> bool
 Penghou.Baize.Tools.ContentToolCallExtractor
-Penghou.Baize.Tools.ContentToolCallExtractor.ContentToolCallExtractor(Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline) -> void
 Penghou.Baize.Tools.ContentToolCallExtractor.ExtractAsync(string? content, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>!>!
 Penghou.Baize.Tools.Extensions.ServiceCollectionExtensions
 Penghou.Baize.Tools.IContentToolCallExtractor
@@ -13,7 +25,6 @@ Penghou.Baize.Tools.ILlmToolResultParser<TResult>
 Penghou.Baize.Tools.ILlmToolResultParser<TResult>.Parse(Penghou.Baize.LlmResponse! response) -> Penghou.Baize.Tools.ToolCallParseResult<TResult>!
 Penghou.Baize.Tools.LlmClientRepairExtensions
 Penghou.Baize.Tools.LlmResponseNormalizer
-Penghou.Baize.Tools.LlmResponseNormalizer.LlmResponseNormalizer(Penghou.Baize.Tools.IContentToolCallExtractor! contentToolCallExtractor, Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline) -> void
 Penghou.Baize.Tools.LlmResponseNormalizer.NormalizeAsync(Penghou.Baize.LlmResponse! response, System.Collections.Generic.IReadOnlyCollection<Penghou.Baize.LlmTool!>! tools, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
 Penghou.Baize.Tools.LlmStructuredOutputRepairer
 Penghou.Baize.Tools.LlmStructuredOutputRepairer.LlmStructuredOutputRepairer(Penghou.Nuwa.IJsonRepairPipeline! jsonRepairPipeline, Microsoft.Extensions.Logging.ILogger<Penghou.Baize.Tools.LlmStructuredOutputRepairer!>? logger = null) -> void

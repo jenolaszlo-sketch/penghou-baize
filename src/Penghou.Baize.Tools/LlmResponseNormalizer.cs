@@ -12,9 +12,11 @@ namespace Penghou.Baize.Tools;
 /// </summary>
 /// <param name="contentToolCallExtractor">Extracts tool calls embedded in model content.</param>
 /// <param name="jsonRepairPipeline">Repairs malformed tool-call JSON.</param>
+/// <param name="argumentValidator">Authoritative argument validation; defaults to structural validation.</param>
 public sealed class LlmResponseNormalizer(
     IContentToolCallExtractor contentToolCallExtractor,
-    IJsonRepairPipeline jsonRepairPipeline)
+    IJsonRepairPipeline jsonRepairPipeline,
+    ILlmToolArgumentValidator? argumentValidator = null)
     : ILlmResponseNormalizer
 {
     /// <inheritdoc />
@@ -25,6 +27,7 @@ public sealed class LlmResponseNormalizer(
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(tools);
+        LlmToolDeclarations.Validate(tools);
 
         if (tools.Count == 0)
             return response;
@@ -64,6 +67,7 @@ public sealed class LlmResponseNormalizer(
                 {
                     normalized.Add(await CanonicalizeArguments(
                         toolCall,
+                        toolsByName[toolCall.Name],
                         GetExpectation(
                             toolCall.Name,
                             toolsByName),
@@ -109,6 +113,7 @@ public sealed class LlmResponseNormalizer(
 
     private async Task<LlmToolCall> CanonicalizeArguments(
         LlmToolCall toolCall,
+        LlmTool tool,
         JsonSchemaExpectation? expectation,
         CancellationToken cancellationToken)
     {
@@ -147,7 +152,7 @@ public sealed class LlmResponseNormalizer(
         }
 
         var repairedDocument = repairResult.Document!;
-        return toolCall with
+        var repaired = toolCall with
         {
             ArgumentsJson =
                 repairedDocument.RootElement.GetRawText(),
@@ -156,9 +161,35 @@ public sealed class LlmResponseNormalizer(
                 repairResult.WasRepaired,
             JsonRepairAttempts =
                 attempts,
-            JsonRepairDiagnostics = diagnostics,
+            JsonRepairDiagnostics =
+                diagnostics,
+        };
+        return await ApplyArgumentValidationAsync(repaired, tool, cancellationToken);
+    }
+
+    private async Task<LlmToolCall> ApplyArgumentValidationAsync(
+        LlmToolCall toolCall,
+        LlmTool tool,
+        CancellationToken cancellationToken)
+    {
+        var validator = argumentValidator ?? new StructuralToolArgumentValidator();
+        var validation = await validator.ValidateAsync(
+            tool, toolCall.ArgumentsJson, cancellationToken).ConfigureAwait(false);
+        if (validation.IsValid)
+        {
+            return toolCall with
+            {
+                ArgumentValidation = validation,
+                NormalizationStatus =
+                    LlmToolCallNormalizationStatus.Normalized
+            };
+        }
+
+        return toolCall with
+        {
+            ArgumentValidation = validation,
             NormalizationStatus =
-                LlmToolCallNormalizationStatus.Normalized
+                LlmToolCallNormalizationStatus.InvalidArguments
         };
     }
 

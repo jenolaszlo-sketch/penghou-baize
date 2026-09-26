@@ -1,6 +1,7 @@
 # Tool argument integrity roadmap
 
-Status: planned follow-up after `0.3.0-preview.5`.
+Status: P0 items complete on main; the first authoritative adapter beyond
+the structural default is still open.
 
 Baize currently repairs malformed tool arguments through Nuwa, exposes whether
 that structural repair was accepted, preserves rejected calls as
@@ -16,12 +17,14 @@ and `additionalProperties: false`. It intentionally is not a complete JSON
 Schema implementation. Baize must therefore avoid presenting Nuwa acceptance
 as proof that every keyword in an arbitrary schema dialect was enforced.
 
-Introduce a provider-neutral validation boundary, tentatively
-`ILlmToolArgumentValidator`, that receives the tool definition and immutable
-argument JSON after Nuwa repair. The default implementation should preserve the
-current structural behavior; an adapter package may provide authoritative
-validation through an established JSON Schema implementation without forcing
-that dependency on every Baize consumer.
+Introduce a provider-neutral validation boundary, `ILlmToolArgumentValidator`,
+with a structural default and DI replaceability. Landed:
+`ILlmToolArgumentValidator`, `LlmToolArgumentValidationResult` (validity,
+path-aware failures, validator identity, explicit unsupported keywords),
+and `StructuralToolArgumentValidator` run after Nuwa repair in both the
+normalizer and the extractor, marking failures `InvalidArguments` with
+validator diagnostics on the call. `AddLlmTools` registers the default;
+adapters replace it with `TryAddSingleton`.
 
 Acceptance criteria:
 

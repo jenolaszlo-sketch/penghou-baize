@@ -12,7 +12,8 @@ namespace Penghou.Baize.Tools;
 /// arguments JSON against its individual tool schema.
 /// </summary>
 public sealed class ContentToolCallExtractor(
-    IJsonRepairPipeline jsonRepairPipeline)
+    IJsonRepairPipeline jsonRepairPipeline,
+    ILlmToolArgumentValidator? argumentValidator = null)
     : IContentToolCallExtractor
 {
     /// <inheritdoc />
@@ -22,6 +23,7 @@ public sealed class ContentToolCallExtractor(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tools);
+        LlmToolDeclarations.Validate(tools);
 
         if (string.IsNullOrWhiteSpace(content))
             return [];
@@ -100,7 +102,7 @@ public sealed class ContentToolCallExtractor(
         }
 
         var repairedDocument = repairResult.Document!;
-        return call with
+        var repaired = call with
         {
             ArgumentsJson =
                 repairedDocument.RootElement.GetRawText(),
@@ -109,6 +111,26 @@ public sealed class ContentToolCallExtractor(
                 repairResult.WasRepaired,
             JsonRepairAttempts = attempts,
             JsonRepairDiagnostics = diagnostics
+        };
+
+        if (!toolsByName.TryGetValue(call.Name, out var validatedTool))
+        {
+            return repaired;
+        }
+
+        var validator = argumentValidator ?? new StructuralToolArgumentValidator();
+        var validation = await validator.ValidateAsync(
+            validatedTool, repaired.ArgumentsJson, cancellationToken).ConfigureAwait(false);
+        if (validation.IsValid)
+        {
+            return repaired with { ArgumentValidation = validation };
+        }
+
+        return repaired with
+        {
+            ArgumentValidation = validation,
+            NormalizationStatus =
+                LlmToolCallNormalizationStatus.InvalidArguments
         };
     }
 
