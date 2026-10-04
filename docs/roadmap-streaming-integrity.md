@@ -351,3 +351,13 @@ fixture rather than a vacuous pass.
   flushed and validated independently.
 - Exact marker-length and lookahead-size boundary tests pass at `N - 1`, `N`,
   `N + 1`, longer, and shorter-than-lookahead response lengths.
+
+## Governable transport migration
+
+New work is tracked by [GM-2/4/5](governable-model-http-plan.md). The integrity
+implementation above remains a regression requirement. A replaceable semantic
+transport must preserve lazy stream opening, terminal/error/usage events,
+cancellation, disposal and exact character ownership. Every retry, repair and
+fallback stream opens through the boundary again. Explicit host denial is not
+an availability error. Initial revocation blocks new opens; active stream
+termination and drain are separately qualified follow-ups.

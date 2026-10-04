@@ -1,0 +1,927 @@
+Baize Governable Model and HTTP Access
+1. Purpose
+Refactor Baize so outbound model access and HTTP access cross replaceable abstractions.
+This allows a host such as Hufu to control:
+- whether model invocation is allowed
+- which providers are allowed
+- which models are allowed
+- whether generic HTTP is allowed
+- revocation between calls
+- call, token, and cost budgets
+- credential access
+- auditing
+Baize must not depend on Hufu.
+The dependency direction must remain:
+Baize
+  ↓
+Penghou.Abstractions
+  ↓
+host-selected implementation
+
+Normal applications can use direct implementations:
+Baize
+  ↓
+DefaultModelTransport
+  ↓
+Provider
+
+A Hufu-enabled host can compose:
+Baize
+  ↓
+HufuModelTransport
+  ↓
+DefaultModelTransport
+  ↓
+Provider
+
+Baize behaves the same in both cases.
+2. Design Principle
+Baize describes what operation it wants performed.
+Baize does not decide whether the operation is authorized.
+Do not introduce:
+if (hufu.CanUseModel(...))
+{
+    ...
+}
+
+Do not reference Hufu contracts from Baize.
+Instead:
+await modelTransport.InvokeAsync(request, cancellationToken);
+
+The injected transport either performs the request or rejects it.
+Authorization must be enforced at the execution boundary, not used as an advisory pre-check.
+3. Scope
+This work should introduce the seams required for external governance.
+Initial scope:
+- model transport abstraction
+- generic HTTP transport abstraction
+- model request and response contracts
+- neutral execution context
+- estimated and actual usage
+- neutral denial/failure semantics
+- default Baize implementations
+- dependency injection
+- tests proving transports can be replaced and decorated
+Do not implement Hufu policy logic inside Baize.
+Do not require the first iteration to implement:
+- persistent cost budgets
+- active stream termination after revocation
+- credential vaulting
+- Gagamba network enforcement
+- domain allowlists
+- Cedar policies
+- Biscuit tokens
+Those are follow-up integrations.
+4. Package Boundaries
+Recommended structure:
+Penghou.Abstractions
+    shared transport contracts
+
+Penghou.Baize
+    routing
+    provider abstraction
+    retries
+    model request construction
+    usage handling
+
+Penghou.Baize.Http
+    direct/default HTTP implementation if a separate package is justified
+
+Penghou.Hufu.Baize
+    future Hufu enforcement adapters
+
+Penghou.Hufu
+    authority and policy system
+
+Dependency rules:
+Penghou.Baize
+    → Penghou.Abstractions
+
+Future:
+Penghou.Hufu.Baize
+    → Penghou.Baize
+    → Penghou.Abstractions
+    → Penghou.Hufu
+
+Forbidden:
+Penghou.Baize
+    → Penghou.Hufu
+
+Add an architectural test enforcing this rule.
+5. Model Invocation and HTTP Are Different Capabilities
+Do not reduce model invocation to generic HTTP.
+These are separate semantic operations:
+model.invoke
+http.request
+
+A caller may be allowed to use a model while having no arbitrary network access.
+Example:
+model.invoke:
+    openai/luna = allow
+
+http.request:
+    deny
+
+This should be a valid configuration.
+Model access must therefore cross a model-specific abstraction before provider HTTP occurs.
+6. IModelTransport
+Introduce a provider-neutral model execution contract.
+Example:
+public interface IModelTransport
+{
+    Task<ModelTransportResponse> InvokeAsync(
+        ModelTransportRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+If streaming already exists in Baize, either extend this abstraction appropriately or add a separate streaming operation.
+Do not leak Hufu concepts into this interface.
+7. ModelTransportRequest
+The transport request must expose enough semantic information for an external layer to make an authorization decision without parsing provider-specific HTTP.
+Suggested shape:
+public sealed record ModelTransportRequest
+{
+    public required string Provider { get; init; }
+
+    public required string Model { get; init; }
+
+    public required ModelOperation Operation { get; init; }
+
+    public required object Payload { get; init; }
+
+    public string? CredentialProfile { get; init; }
+
+    public ModelUsageIntent? UsageIntent { get; init; }
+
+    public ExecutionContext? Context { get; init; }
+}
+
+The actual implementation may use generic types or stronger provider-independent payload contracts if Baize already has suitable abstractions.
+The important requirement is that the transport can identify:
+provider
+model
+operation
+execution context
+expected usage
+
+before the provider call occurs.
+8. ModelOperation
+Support an extensible operation type.
+Initial operations may include:
+public enum ModelOperation
+{
+    Generate,
+    Stream,
+    Embed,
+    Rerank,
+    Moderate
+}
+
+Do not assume every provider supports every operation.
+If an enum would make extensibility unnecessarily difficult, use an equivalent strongly typed value abstraction.
+9. Execution Context
+Introduce neutral metadata that can flow through Baize without Baize assigning security meaning to it.
+Example:
+public sealed record ExecutionContext
+{
+    public string? WorkflowId { get; init; }
+
+    public string? ActivityId { get; init; }
+
+    public string? AgentId { get; init; }
+
+    public string? CorrelationId { get; init; }
+
+    public IReadOnlyDictionary<string, string>? Metadata { get; init; }
+}
+
+Baize must propagate this data unchanged.
+It must not interpret fields such as ActivityId as authorization data.
+This enables a host to correlate:
+workflow
+  → activity
+      → agent
+          → model call
+
+without introducing a dependency on the workflow or authority system.
+10. Usage Intent
+Expose usage information known before execution.
+Example:
+public sealed record ModelUsageIntent
+{
+    public long? EstimatedInputTokens { get; init; }
+
+    public long? MaximumOutputTokens { get; init; }
+
+    public decimal? EstimatedCost { get; init; }
+
+    public string? Currency { get; init; }
+}
+
+These values are descriptive estimates.
+They are not guarantees.
+They should allow an external decorator to make decisions such as:
+remaining activity budget = $0.10
+estimated request cost = $0.25
+→ deny before execution
+
+Baize itself does not perform authority checks from these values.
+11. Actual Usage
+Return provider usage where available.
+Example:
+public sealed record ModelUsage
+{
+    public long? InputTokens { get; init; }
+
+    public long? OutputTokens { get; init; }
+
+    public long? CachedInputTokens { get; init; }
+
+    public decimal? Cost { get; init; }
+
+    public string? Currency { get; init; }
+}
+
+Suggested response:
+public sealed record ModelTransportResponse
+{
+    public required object Payload { get; init; }
+
+    public ModelUsage? Usage { get; init; }
+
+    public string? ProviderRequestId { get; init; }
+}
+
+This allows a future authority layer to reserve estimated resources before a call and settle against actual usage afterward.
+12. IHttpTransport
+Introduce a separate generic outbound HTTP abstraction.
+Example:
+public interface IHttpTransport
+{
+    Task<HttpTransportResponse> SendAsync(
+        HttpTransportRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+Possible request:
+public sealed record HttpTransportRequest
+{
+    public required HttpMethod Method { get; init; }
+
+    public required Uri Uri { get; init; }
+
+    public IReadOnlyDictionary<string, string>? Headers { get; init; }
+
+    public HttpContent? Content { get; init; }
+
+    public ExecutionContext? Context { get; init; }
+}
+
+Use existing abstractions if equivalent contracts already exist.
+Do not unnecessarily duplicate existing HTTP types.
+13. Default Composition
+A normal Baize host should be able to run without Hufu.
+Example:
+Baize
+  ↓
+DefaultModelTransport
+  ↓
+SystemHttpTransport
+  ↓
+Provider API
+
+DefaultModelTransport may translate provider-neutral model requests into provider-specific HTTP calls.
+Example:
+public sealed class DefaultModelTransport : IModelTransport
+{
+    private readonly IHttpTransport _httpTransport;
+}
+
+Baize should depend on IModelTransport, not directly on HttpClient.
+Provider implementations should use the injected transport rather than constructing uncontrolled HTTP clients internally.
+14. Future Hufu Composition
+The architecture must support a decorator like:
+public sealed class HufuModelTransport : IModelTransport
+{
+    private readonly IModelTransport _inner;
+    private readonly IHufuAuthority _authority;
+
+    public async Task<ModelTransportResponse> InvokeAsync(
+        ModelTransportRequest request,
+        CancellationToken cancellationToken)
+    {
+        // authorize request
+        // optionally reserve budget
+        // invoke inner transport
+        // record actual usage
+        // settle budget
+    }
+}
+
+This code belongs outside Baize.
+Possible composition:
+Baize
+  ↓
+HufuModelTransport
+  ↓
+DefaultModelTransport
+  ↓
+ProviderHttpTransport
+  ↓
+Internet
+
+Baize only sees IModelTransport.
+15. Model Authorization Must Not Require Generic HTTP Authorization
+Avoid this accidental topology:
+model.invoke = allow
+    ↓
+internal provider HTTP
+    ↓
+http.request = deny
+    ↓
+model invocation fails
+
+An authorized model invocation must not automatically require arbitrary HTTP authority.
+Distinguish:
+trusted provider transport
+
+from:
+caller-requested arbitrary HTTP
+
+Desired conceptual flow:
+Baize
+  ↓
+model authorization
+  ↓
+trusted provider transport
+  ↓
+Provider API
+
+Separately:
+Agent / Luban
+  ↓
+generic HTTP request
+  ↓
+HTTP authorization
+  ↓
+Internet
+
+The trusted internal HTTP implementation used by an approved model invocation must not be mistaken for an arbitrary agent HTTP request.
+16. Credentials
+Design the transport so provider credentials do not need to be present in the model request.
+Avoid:
+ModelTransportRequest.ApiKey
+
+Prefer:
+CredentialProfile = "openai-primary"
+
+A trusted implementation can resolve:
+openai-primary
+    ↓
+actual secret
+
+at the provider boundary.
+Possible future abstraction:
+public interface ICredentialResolver
+{
+    ValueTask<CredentialMaterial> ResolveAsync(
+        string profile,
+        CancellationToken cancellationToken = default);
+}
+
+Do not implement a credential system unless required for the current work.
+The important requirement is that the new contracts do not force secrets into Baize request objects.
+17. Credential Resolution Ordering
+Future authority-enabled implementations should perform operations in this order:
+model request
+  ↓
+authorization
+  ↓
+credential resolution
+  ↓
+provider request
+
+Not:
+credential resolution
+  ↓
+authorization
+
+Unauthorized operations should ideally never cause credential material to be loaded.
+18. Revocation Semantics
+Baize must not cache authorization results.
+Example future scenario:
+Call 1:
+    Luna allowed
+    → succeeds
+
+authority changes:
+    Luna revoked
+
+Call 2:
+    → transport checks again
+    → denied
+
+Every externally consequential model invocation must cross IModelTransport.
+The transport abstraction is the authoritative execution boundary.
+19. Streaming
+Streaming should use the same authority boundary.
+For the first implementation, acceptable semantics are:
+authorization checked when stream opens
+
+A stream already in progress may continue until:
+completion
+cancellation
+provider failure
+
+Future Hufu integration may cancel active streams after revocation.
+Leave room for:
+authority revoked
+  ↓
+active invocation identified
+  ↓
+CancellationToken cancelled
+  ↓
+provider stream terminated
+
+Do not require active revocation in the initial Baize refactor.
+20. Routing
+Baize routing may eventually become aware of model availability without depending on Hufu.
+Do not inject IHufuAuthority into routing.
+If useful, introduce a generic candidate filtering abstraction.
+Example:
+public interface IModelCandidateFilter
+{
+    ValueTask<IReadOnlyList<ModelCandidate>> FilterAsync(
+        IReadOnlyList<ModelCandidate> candidates,
+        ExecutionContext? context,
+        CancellationToken cancellationToken = default);
+}
+
+Default implementation:
+NoOpModelCandidateFilter
+
+Future Hufu implementation:
+HufuModelCandidateFilter
+
+Example:
+Candidates:
+    Sol
+    Luna
+    DeepSeek
+
+Authority permits:
+    Luna
+    DeepSeek
+
+Router sees:
+    Luna
+    DeepSeek
+
+This is only an optimization.
+Final authorization still occurs at IModelTransport.
+21. TOCTOU Requirement
+Never rely on candidate filtering as authorization.
+This sequence must be safe:
+routing:
+    Luna allowed
+
+authority changes:
+    Luna revoked
+
+execution:
+    HufuModelTransport checks again
+    → deny
+
+The execution boundary is authoritative.
+Routing-time availability is advisory.
+22. Denial and Failure Semantics
+Baize must distinguish policy denial from provider failure.
+Introduce neutral errors such as:
+ModelAccessDeniedException
+ModelBudgetExceededException
+ModelUnavailableException
+ModelTransportException
+
+Exact naming can follow existing Baize conventions.
+The important distinction is:
+authority denied operation
+
+versus:
+provider failed
+
+Do not expose Hufu-specific exception types from Baize APIs.
+23. Routing on Denial
+Do not automatically treat explicit authorization denial as ordinary provider failure.
+This would be dangerous:
+Sol denied
+→ fallback Luna
+→ denied
+→ fallback DeepSeek
+→ ...
+
+An authority decision may mean:
+No model invocation is allowed for this activity.
+
+Recommended rule:
+Provider unavailable or failed
+Normal fallback may continue according to Baize routing policy.
+Explicit authority denial
+Stop unless the request or routing policy explicitly supports an authorized alternative.
+The transport error must make this distinction possible.
+24. Observability
+Baize should expose neutral model invocation telemetry.
+Suggested events:
+ModelInvocationStarted
+ModelInvocationCompleted
+ModelInvocationFailed
+ModelInvocationCancelled
+
+Useful fields:
+Provider
+Model
+Operation
+WorkflowId
+ActivityId
+AgentId
+CorrelationId
+EstimatedUsage
+ActualUsage
+Duration
+ProviderRequestId
+
+Do not log by default:
+API keys
+Authorization headers
+raw secrets
+raw prompts
+raw responses
+
+Prompt/response recording should remain an explicit higher-level decision.
+25. HTTP Governance
+The same design should later allow Hufu to control arbitrary HTTP operations.
+Examples:
+GET api.github.com/repos/*
+
+or:
+host:
+    api.nuget.org
+
+methods:
+    GET
+
+These policies belong to Hufu or another host layer.
+Baize should only expose the IHttpTransport seam where applicable.
+26. Relationship with Gagamba
+Application-level authority does not replace network sandboxing.
+Long-term defense in depth:
+Baize
+  ↓
+Hufu semantic authorization
+  ↓
+trusted provider transport
+  ↓
+Gagamba network boundary
+  ↓
+Provider API
+
+Hufu answers:
+Is this activity authorized to invoke this model?
+
+Gagamba answers:
+Can this process physically reach this destination?
+
+A sandboxed agent may therefore have:
+direct network:
+    denied
+
+while a trusted broker has:
+provider API destinations:
+    allowed
+
+This prevents bypass through:
+curl
+PowerShell
+raw HttpClient
+raw sockets
+other networking libraries
+
+27. Desired Long-Term Topology
+Host Authority Domain
+
+Hufu
+  ├── policy
+  ├── grants
+  ├── revocation
+  ├── budgets
+  └── credential access
+        │
+        ▼
+HufuModelTransport
+        │
+        ▼
+DefaultModelTransport
+        │
+        ▼
+Provider API
+
+
+Sandbox Execution Domain
+
+Agent / Solo / Qingniao
+        │
+        ▼
+Baize
+        │
+        ▼
+IModelTransport
+
+No raw provider credential required.
+No arbitrary network access required.
+
+Baize must remain usable without this topology.
+28. Initial Implementation Plan
+Phase 1: Introduce abstractions
+Implement or adapt:
+IModelTransport
+IHttpTransport
+ModelTransportRequest
+ModelTransportResponse
+ModelUsageIntent
+ModelUsage
+ExecutionContext
+neutral transport exceptions
+
+Do not add Hufu references.
+Phase 2: Move provider execution behind transport
+Ensure every provider invocation flows through:
+IModelTransport
+
+Provider-specific implementations must not bypass the seam.
+Avoid hidden direct HttpClient construction.
+Phase 3: Default implementations
+Provide default behavior preserving current Baize functionality:
+Baize
+  ↓
+DefaultModelTransport
+  ↓
+default HTTP implementation
+
+Existing users should not need Hufu.
+Phase 4: Decoration tests
+Prove a host can wrap the transport:
+Baize
+  ↓
+TestDecorator
+  ↓
+DefaultModelTransport
+
+The decorator must be able to:
+inspect request
+deny request
+modify neutral metadata where appropriate
+observe response
+
+without modifying Baize.
+Phase 5: Hufu integration later
+Create separately:
+Penghou.Hufu.Baize
+
+Possible implementation:
+HufuModelTransport
+HufuModelCandidateFilter
+
+This is explicitly outside the current Baize refactor unless requested separately.
+29. Required Tests
+B1: Default model transport
+Baize
+  → default transport
+  → fake provider
+
+Expected:
+success
+
+Existing behavior remains functional.
+B2: Custom model transport
+Inject a custom IModelTransport.
+Verify Baize uses it instead of constructing its own uncontrolled provider connection.
+B3: Decorated model transport
+Configure:
+Baize
+  → decorator
+  → fake provider transport
+
+Verify the decorator sees the complete neutral request before execution.
+B4: Denied invocation
+Decorator throws:
+ModelAccessDeniedException
+
+Verify:
+provider is never called
+denial remains distinguishable
+Baize does not bypass the transport
+
+B5: Context propagation
+Supply:
+WorkflowId
+ActivityId
+AgentId
+CorrelationId
+Metadata
+
+Verify the transport receives the same values.
+B6: Usage intent propagation
+Supply:
+estimated input tokens
+maximum output tokens
+estimated cost
+currency
+
+Verify the transport receives them.
+B7: Actual usage propagation
+Fake provider returns:
+input tokens
+output tokens
+cost
+provider request ID
+
+Verify Baize preserves the information.
+B8: Revocation simulation
+Use a stateful test decorator.
+request 1:
+    allowed
+
+change state:
+    revoked
+
+request 2:
+    denied
+
+Verify Baize does not cache previous permission.
+B9: Provider failure
+Fake provider throws a normal transport/provider failure.
+Verify it remains distinguishable from authorization denial and normal Baize fallback behavior still works.
+B10: Denial does not silently fallback
+Configure multiple candidates.
+Cause the selected model to produce an explicit authorization denial.
+Verify Baize does not reinterpret that denial as an ordinary transient provider error.
+B11: HTTP replacement
+Inject a fake IHttpTransport.
+Verify provider HTTP can be redirected through the supplied abstraction where the architecture requires it.
+B12: No Hufu dependency
+Add an architectural test ensuring:
+Penghou.Baize
+
+does not reference:
+Penghou.Hufu
+Penghou.Hufu.*
+
+This must remain a permanent dependency rule.
+30. Acceptance Criteria
+The refactor is complete when all of the following are true:
+1. Baize has no dependency on Hufu.
+2. Every model invocation crosses IModelTransport.
+3. The host can replace or decorate IModelTransport.
+4. Provider and model identity are visible at the transport boundary.
+5. Model operation is visible before provider execution.
+6. Workflow/activity/agent context can flow through without Baize interpreting it.
+7. Estimated usage can be supplied before execution.
+8. Actual usage can be returned after execution.
+9. Explicit transport denial prevents provider execution.
+10. Denial remains distinguishable from provider failure.
+11. Baize does not cache authorization assumptions.
+12. Model access remains semantically separate from generic HTTP access.
+13. Provider credentials are not required in public Baize request contracts.
+14. Existing Baize use remains possible without Hufu.
+15. Current provider behavior remains backwards-compatible where reasonably possible.
+16. Architectural tests prevent a future Baize → Hufu dependency.
+31. Follow-Up: Hufu Adapter
+Once the Baize seam is stable, implement a separate integration package.
+Suggested:
+Penghou.Hufu.Baize
+
+Responsibilities may include:
+model authorization
+provider restrictions
+model restrictions
+activity-scoped grants
+revocation
+call budgets
+token budgets
+cost budgets
+usage settlement
+credential profiles
+audit correlation
+
+Possible authority examples:
+Activity: implement-parser
+
+model.invoke:
+    deepseek/v4-flash    allow
+    openai/luna          allow
+    openai/sol           deny
+
+http.request:
+    deny
+
+budget:
+    calls <= 20
+    cost <= $1.00
+
+Baize should not need modification to support this.
+32. Follow-Up: Credential Broker
+Later move provider credentials outside the sandboxed agent execution domain.
+Desired topology:
+Agent
+  ↓
+Baize
+  ↓
+IModelTransport
+  ↓
+trusted broker
+  ├── authorization
+  ├── credentials
+  └── provider HTTP
+
+The agent receives neither:
+API key
+
+nor necessarily:
+general network access
+
+33. Follow-Up: Budget Enforcement
+A Hufu decorator should eventually support:
+max calls
+max input tokens
+max output tokens
+max total tokens
+max cost
+provider-specific limits
+model-specific limits
+activity-specific limits
+
+Potential flow:
+request
+  ↓
+estimate
+  ↓
+authorize
+  ↓
+reserve budget
+  ↓
+provider call
+  ↓
+actual usage
+  ↓
+settle reservation
+
+Concurrency must eventually be handled so parallel agents cannot independently spend the same remaining budget.
+This is not part of the initial Baize refactor.
+34. Follow-Up: Authority-Aware Routing
+Baize routing should eventually choose only among models currently available to the caller.
+Conceptually:
+configured candidates
+  ↓
+availability filter
+  ↓
+quality/cost/latency router
+  ↓
+selected model
+  ↓
+authoritative transport check
+
+Example:
+Configured:
+    Sol
+    Luna
+    DeepSeek
+
+Currently authorized:
+    Luna
+    DeepSeek
+
+Router evaluates:
+    Luna
+    DeepSeek
+
+The final transport check remains mandatory.
+35. Follow-Up: Generic Outbound Authority
+The same pattern should eventually cover other externally consequential operations:
+HTTP
+MCP
+database connections
+queues
+Git remotes
+cloud APIs
+external search
+artifact upload
+
+The libraries using these capabilities should depend on neutral abstractions.
+Hufu should enforce authority through composition rather than becoming a dependency of those libraries.
+36. Architectural Rule
+Adopt the following rule for Baize:
+Baize describes and routes model operations. It does not own authority. Every model invocation crosses a replaceable execution abstraction so a host can enforce policy without Baize depending on the policy system.
+
+More generally:
+Libraries request capabilities through neutral abstractions. Hufu may govern those capabilities through composition, but the libraries do not depend on Hufu.
+
+This preserves loose coupling while allowing model access, network access, credentials, budgets, and revocation to become first-class authority boundaries later.

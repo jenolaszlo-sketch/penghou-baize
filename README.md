@@ -1,5 +1,9 @@
 # Penghou.Baize
 
+Architecture reference: [resource boundaries and deferred extraction](docs/roadmap-resource-boundaries.md)
+tracks Baize's relationship to the shared resource-capability direction. The
+immediate IO/Luban/Hufu correction does not reorganize Baize.
+
 [![NuGet](https://img.shields.io/nuget/v/Penghou.Baize)](https://www.nuget.org/packages/Penghou.Baize)
 [![CI](https://github.com/jenolaszlo-sketch/penghou-baize/actions/workflows/ci.yml/badge.svg)](https://github.com/jenolaszlo-sketch/penghou-baize/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/jenolaszlo-sketch/penghou-baize)](LICENSE)
@@ -59,6 +63,8 @@ code change is required when upgrading the application's target framework.
 ## Documentation
 
 - [What Baize is—and is not](docs/scope-and-boundaries.md)
+- [Governable model and HTTP access: implementation roadmap](docs/governable-model-http-plan.md)
+- [Governable transport handoff](docs/governable-model-http-handoff.md)
 - [Getting started and fluent routing](docs/getting-started.md)
 - [Validation and troubleshooting](docs/validation-and-troubleshooting.md)
 - [Coverage policy and package baselines](docs/coverage.md)
@@ -78,6 +84,11 @@ code change is required when upgrading the application's target framework.
 - [Best-of-N generation sample](samples/Penghou.Baize.BestOfN)
 
 ## Current status
+
+The [governable transport refactor](docs/governable-model-http-plan.md) is planned.
+It adds replaceable neutral model and HTTP execution boundaries for host-selected
+governance while keeping Baize independent of Hufu. Existing APIs do not yet
+provide the complete transport coverage described by that plan.
 
 The current package line is `0.3.0-preview.5`. The provider, routing, batch,
 generation, diagnostics, and structured-output surfaces described here are

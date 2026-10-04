@@ -753,3 +753,14 @@ Remaining follow-ups (Phase 10 / future):
 >
 > > Preserve chat for conversation, use generation for artifact intent, keep
 > > provider clients small, and move lifecycle orchestration above them.
+
+## Governable transport migration
+
+Track the new transport refactor in [GM-3/4/5](governable-model-http-plan.md).
+Generation's completed phases stay complete. Migration must cover each supported
+submission, status/result retrieval, cancellation, upload and generated-asset
+fetch. Bind endpoint/model/context and operation-handle provenance, and preserve
+asynchronous lifecycle, provider diagnostics and usage. A handle grants no
+authority; denying access after submission does not cancel remote work already
+accepted. Do not turn ambiguous submission outcomes into automatic duplicate
+paid calls. The refactor cannot be graduated on chat-only coverage.
