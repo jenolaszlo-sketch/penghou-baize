@@ -1,10 +1,9 @@
 # Governable chat and HTTP transports
 
-Updated 2026-10-05. This is the GM-2 chat-first source milestone. Baize core
+Updated 2026-10-05. This is the published GM-2 chat-first milestone. Baize core
 consumes exact published `Penghou.Model.Abstractions` and
 `Penghou.Http.Abstractions` **0.1.0-preview.1** packages. No Hufu dependency is
-introduced. Baize 0.3.0-preview.7 is prepared for this chat-first milestone; NuGet publication
-is pending. Full batch/generation governance remains a later milestone.
+introduced. Baize 0.3.0-preview.7 is published and indexed for this chat-first milestone. Full batch/generation governance remains a later milestone.
 
 ## Host composition
 
@@ -128,5 +127,10 @@ dispatch. This qualifies core consumption, not every Baize package release.
 
 CI retains full regression/coverage gates and adds transport adoption and fresh
 package consumers on Windows, Ubuntu and macOS for net8.0/net10.0. Local evidence
-and the next gate are recorded in the implementation handoff. Remote matrix
-results remain pending until these source changes are committed and pushed.
+and the next gate are recorded in the implementation handoff. The
+[release CI](https://github.com/jenolaszlo-sketch/penghou-baize/actions/runs/37251898339)
+passed all jobs. A post-publication fresh consumer restored all 12 Baize packages
+at 0.3.0-preview.7 and both neutral dependencies from public NuGet only, verified
+no Hufu in the closure, and exercised core semantic denial and HTTP ownership on
+net8.0/net10.0. Referencing every package proves delivery/dependency compatibility;
+it does not close the remaining batch/generation semantic coverage.

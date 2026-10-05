@@ -1,6 +1,6 @@
 {
   "date": "2026-10-05",
-  "milestone": "GM-2 chat-first source adoption",
+  "milestone": "GM-2 chat-first published adoption",
   "baseRevision": "da6e6ceee1c67822fdd564442117c28ec57ce90c",
   "publishedNeutralPackages": {
     "Penghou.Model.Abstractions": "0.1.0-preview.1",
@@ -39,17 +39,38 @@
     "ubuntu-latest",
     "macos-15"
   ],
-  "remoteMatrix": "pending pushed candidate CI; inspect Actions for current state",
+  "remoteMatrix": "all seven jobs passed",
   "open": [
     "GM-3 batch/generation semantic admission and handles",
     "large upload memory/ownership qualification",
     "remaining GM-4 executor/custom-provider closure",
     "full B1-B12 GM-5 closure",
-    "GM-6 Baize publication",
+    "GM-6 final full-surface release after GM-3/4/5",
     "separate Hufu adapters"
   ],
   "formatting": "dotnet format solution --verify-no-changes --no-restore passed",
-  "baizeReleaseCandidate": "0.3.0-preview.7",
-  "releaseStatus": "prepared for commit/push; NuGet publication pending",
-  "releaseBuild": "0.3.0-preview.7: zero warnings/errors; all 12 package versions and exact neutral nuspec dependencies verified"
+  "releaseStatus": "all 12 packages published, indexed and restored from public NuGet",
+  "releaseBuild": "0.3.0-preview.7: zero warnings/errors; all 12 package versions and exact neutral nuspec dependencies verified",
+  "ciRun": "https://github.com/jenolaszlo-sketch/penghou-baize/actions/runs/37251898339",
+  "publishRun": "https://github.com/jenolaszlo-sketch/penghou-baize/actions/runs/37252562357",
+  "releaseRevision": "4a220ed7a76ca8a98bb59b63a47b709e2e16d76c",
+  "publishedBaizeVersion": "0.3.0-preview.7",
+  "publishedPackageConsumer": {
+    "frameworks": [
+      "net8.0",
+      "net10.0"
+    ],
+    "directBaizeReferences": 12,
+    "freshCache": true,
+    "sources": [
+      "https://api.nuget.org/v3/index.json"
+    ],
+    "noLocalFeed": true,
+    "hufuDependency": false,
+    "runtimeChecks": [
+      "core semantic denial before provider dispatch",
+      "core HTTP owned-body disposal"
+    ],
+    "doesNotClose": "batch/generation semantic or complete provider conformance"
+  }
 }

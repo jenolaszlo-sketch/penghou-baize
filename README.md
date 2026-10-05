@@ -89,10 +89,9 @@ The current source delivers the chat-first [governable transport milestone](docs
 using published neutral model and HTTP packages, while keeping Baize independent
 of Hufu. Chat admission and provider HTTP replacement are implemented;
 batch/generation semantic admission and full closure remain on the
-[implementation roadmap](docs/governable-model-http-plan.md). These source
-changes require a future Baize package release.
+[implementation roadmap](docs/governable-model-http-plan.md). This chat-first milestone is available in Baize 0.3.0-preview.7.
 
-The package version prepared in this source is `0.3.0-preview.7`; publication is pending. The provider, routing, batch,
+The published package line is `0.3.0-preview.7`. The provider, routing, batch,
 generation, diagnostics, and structured-output surfaces described here are
 implemented. `Penghou.Baize.Tools` consumes the stable Penghou.Nuwa 1.0 repair
 contract while keeping Nuwa behind Baize-owned normalization and diagnostics.
@@ -1189,8 +1188,8 @@ replaced through a semantic model transport, and built-in provider HTTP uses an
 injected transport. Defaults work without Hufu. See the
 [composition and supported profile guide](docs/governable-transports.md).
 Batch/generation semantic admission remains on the
-[implementation roadmap](docs/governable-model-http-plan.md); this source
-milestone requires a new Baize release before it is available in its packages.
+[implementation roadmap](docs/governable-model-http-plan.md). This chat-first
+milestone is published in Baize 0.3.0-preview.7.
 
 ## License
 

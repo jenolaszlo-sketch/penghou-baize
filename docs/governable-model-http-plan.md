@@ -2,10 +2,12 @@
 
 Updated 2026-10-05. GM-0/GM-1 and public delivery GM-1P are complete:
 `Penghou.Model.Abstractions` and `Penghou.Http.Abstractions` 0.1.0-preview.1
-are indexed on public NuGet. The GM-2 chat-first source milestone consumes them;
+are indexed on public NuGet. The GM-2 chat-first milestone is published as
+Baize 0.3.0-preview.7, with all 12 packages publicly restored on net8.0/net10.0;
 see [composition and supported profile](governable-transports.md).
 GM-3 batch/generation semantic admission, the remaining GM-4 executor closure,
-full GM-5 qualification, GM-6 Baize release and Hufu adapters remain open.
+full GM-5 qualification, a final full-surface GM-6 release and Hufu adapters
+remain open. Chat-first publication is complete; it does not close GM-3/4/5.
 This is the active queue for this refactor. Streaming integrity and generation
 roadmaps remain regression contracts for already implemented functionality.
 

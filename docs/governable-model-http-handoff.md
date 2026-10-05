@@ -10,7 +10,7 @@ Read the [canonical roadmap](governable-model-http-plan.md),
 [call inventory](governable-model-http-inventory.md). Existing streaming,
 generation, resource-boundary and experience roadmaps remain regression contracts.
 
-## Delivered source milestone
+## Delivered chat-first milestone
 
 GM-2 chat-first: semantic streaming/completion seams for built-in chat clients,
 actual endpoint identity, bounded immutable request snapshots, neutral context
@@ -30,14 +30,16 @@ GM-3. Opaque custom providers need explicit qualification.
 Inspect status before editing. The existing change to
 `docs/roadmap-experience-signals.md` belongs to prior work; preserve it and avoid
 bulk staging. Base revision is da6e6ceee1c67822fdd564442117c28ec57ce90c.
-This source milestone is prepared as Baize 0.3.0-preview.7 for commit/push.
-NuGet publication and remote CI results are pending; use the repository history
-and Actions results for delivery state.
+This milestone is published as Baize 0.3.0-preview.7 from
+4a220ed7a76ca8a98bb59b63a47b709e2e16d76c. All 12 package indexes include this
+version; CI and publication succeeded. The .NET 9 SDK omission in the initial
+macOS matrix was corrected before release qualification.
 Do not load `.env.local` or call paid providers for offline qualification.
 
-Qualification evidence is appended below after final checks. Remote CI matrix
-results are pending push. No local candidate feed is used for the two published
-neutral dependencies; package-only checks use a temporary local Baize candidate.
+Qualification evidence is recorded below. Development CI consumer checks pack
+a temporary Baize candidate with public neutral dependencies. Post-publication
+checks additionally restored the published Baize packages from public NuGet only,
+with fresh caches and no local feed.
 
 ## Next gate / resume prompt
 
@@ -67,17 +69,32 @@ neutral dependencies; package-only checks use a temporary local Baize candidate.
   and model-denial-before-dispatch checks.
 - Exact dependencies/no Hufu closure checks and PowerShell parser checks pass.
 - CI now includes focused adoption/consumer checks on Windows, Ubuntu and macOS;
-  remote results remain pending commit/push.
+  all remote jobs passed in CI run 37251898339.
 
 See [machine-readable evidence and open gates](governable-transports-qualification.json).
 `dotnet format Penghou.Baize.slnx --verify-no-changes --no-restore` also passes.
 
-## Release preparation
+## Published release checkpoint
 
-Baize **0.3.0-preview.7** is the chat-first transport release candidate.
+Baize **0.3.0-preview.7** is the published chat-first transport milestone.
 The existing manual **Publish to NuGet** workflow uses `main` and the version in
 `Directory.Build.props`, without version inputs. Tag-triggered publication remains
 available. Publication now includes all 12 packages, including Runway and Fal;
 normal package pushes disable implicit symbols, then push symbols separately.
 CI retains the packed packages as the `nuget-packages` artifact.
 This preview does not claim GM-3 or full B1-B12 completion.
+
+Publication succeeded in [run 37252562357](https://github.com/jenolaszlo-sketch/penghou-baize/actions/runs/37252562357).
+[CI run 37251898339](https://github.com/jenolaszlo-sketch/penghou-baize/actions/runs/37251898339)
+passed all regression, coverage and six OS/framework adoption jobs.
+All 12 packages and their symbols were pushed successfully and all package
+versions are now indexed. A fresh consumer referenced all 12 exact published
+Baize packages plus both exact neutral packages, restored solely from public
+NuGet, verified no Hufu dependency, and ran core denial-before-dispatch / HTTP
+body ownership checks on net8.0 and net10.0. No provider credentials or paid
+calls were used. This completes delivery verification for this chat-first
+release, not GM-3/4/5 or provider-by-provider batch/generation governance.
+
+The next coding milestone is GM-3: batch and generation semantic authorization,
+per-item context, handle binding, upload and asset retrieval. Hufu integration
+remains a separate follow-up through the neutral abstractions.
