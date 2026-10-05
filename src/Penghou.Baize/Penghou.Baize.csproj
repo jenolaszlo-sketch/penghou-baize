@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageReference Include="Penghou.Model.Abstractions" Version="[0.1.0-preview.1]" />
+    <PackageReference Include="Penghou.Http.Abstractions" Version="[0.1.0-preview.1]" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="all" />
   </ItemGroup>
 
@@ -36,6 +38,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Penghou.Baize.Tests" />
     <InternalsVisibleTo Include="Penghou.Baize.Ollama" />
+    <InternalsVisibleTo Include="Penghou.Baize.Router" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 
@@ -410,6 +410,7 @@ public class LlmRouter(
         var effective = timeoutCts?.Token ?? cancellationToken;
 
         var attempts = new List<LlmRouterAttempt>();
+        var physicalAttempt = 0;
         Exception? lastFailure = null;
         var incompatibleEndpoints = new HashSet<string>(StringComparer.Ordinal);
 
@@ -450,7 +451,7 @@ public class LlmRouter(
                 List<LlmStreamEvent>? pending = null;
 
                 await using var enumerator =
-                    client.StreamAsync(wireRequest, effective)
+                    client.StreamAsync(wireRequest with { TransportAttempt = ++physicalAttempt }, effective)
                         .GetAsyncEnumerator(effective);
 
                 while (true)
@@ -686,7 +687,8 @@ public class LlmRouter(
         new(RouterDiagnostics: new LlmRouterDiagnostics(attempts));
 
     private static bool IsAvailabilityFailure(Exception ex) =>
-        ex is HttpRequestException
+        ex is Penghou.Model.Abstractions.ModelUnavailableException
+            or HttpRequestException
             or TaskCanceledException
             or LlmClientException { CanFallback: true };
 

@@ -40,7 +40,8 @@ public static class ServiceCollectionExtensions
                 var capabilities = BuildCapabilities(options.Features, options.MaximumCandidates);
 
                 // Per-model timeout: wrap once so every call this client makes enforces it.
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClientFactory = BaizeHttp.CreateClientFactory(sp.GetService<Penghou.Http.Abstractions.IHttpTransport>()
+                    ?? new BaizeHttpTransport(sp.GetRequiredService<IHttpClientFactory>()));
                 if (options.RequestTimeout is { } requestTimeout)
                 {
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);
@@ -81,7 +82,8 @@ public static class ServiceCollectionExtensions
             (sp, options) =>
             {
                 var capabilities = BuildCapabilities(options.Features, options.MaximumCandidates);
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClientFactory = BaizeHttp.CreateClientFactory(sp.GetService<Penghou.Http.Abstractions.IHttpTransport>()
+                    ?? new BaizeHttpTransport(sp.GetRequiredService<IHttpClientFactory>()));
                 if (options.RequestTimeout is { } requestTimeout)
                 {
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);

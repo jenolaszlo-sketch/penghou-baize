@@ -1,4 +1,4 @@
-﻿namespace Penghou.Baize;
+namespace Penghou.Baize;
 
 /// <summary>Token usage reported for a completion.</summary>
 /// <param name="PromptTokens">Tokens consumed by the input prompt.</param>
@@ -13,4 +13,11 @@ public sealed record LlmUsage(
     int? TotalTokens,
     int? PromptCacheHitTokens = null,
     int? PromptCacheMissTokens = null,
-    int? ThinkingTokens = null);
+    int? ThinkingTokens = null)
+{
+    /// <summary>Actual provider-reported cost, when available.</summary>
+    public decimal? Cost { get; init; }
+
+    /// <summary>Currency associated with <see cref="Cost"/>, when available.</summary>
+    public string? Currency { get; init; }
+}

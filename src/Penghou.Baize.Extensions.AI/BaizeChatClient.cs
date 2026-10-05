@@ -8,6 +8,12 @@ namespace Penghou.Baize.Extensions.AI;
 /// <summary>Adapts a Baize client to the standard .NET <see cref="IChatClient"/>.</summary>
 public sealed class BaizeChatClient : IChatClient
 {
+    /// <summary>ChatOptions additional-property key for a neutral ModelExecutionContext.</summary>
+    public const string ExecutionContextKey = "baize.execution_context";
+
+    /// <summary>ChatOptions additional-property key for a neutral ModelUsageIntent.</summary>
+    public const string UsageIntentKey = "baize.usage_intent";
+
     private readonly ILlmClient _client;
     private readonly ChatClientMetadata _metadata;
     private readonly bool _ownsClient;
@@ -241,7 +247,19 @@ public sealed class BaizeChatClient : IChatClient
             options?.MaxOutputTokens,
             tools,
             responseFormat,
-            ToThinkingConfig(options?.Reasoning));
+            ToThinkingConfig(options?.Reasoning))
+        {
+            ExecutionContext = ReadTransportOption<Penghou.Model.Abstractions.ModelExecutionContext>(options, ExecutionContextKey),
+            UsageIntent = ReadTransportOption<Penghou.Model.Abstractions.ModelUsageIntent>(options, UsageIntentKey)
+        };
+    }
+
+    private static T? ReadTransportOption<T>(ChatOptions? options, string key) where T : class
+    {
+        if (options?.AdditionalProperties is null ||
+            !options.AdditionalProperties.TryGetValue(key, out var value) || value is null)
+            return null;
+        return value as T ?? throw new ArgumentException($"Chat option {key} must be {typeof(T).Name}.", nameof(options));
     }
 
     private LlmContentPart ToBaizeContent(

@@ -1,4 +1,4 @@
-﻿namespace Penghou.Baize;
+namespace Penghou.Baize;
 
 /// <summary>
 /// A single chat message in a conversation. The message's role identifies who
@@ -15,7 +15,7 @@ public sealed record LlmMessage
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(parts);
         Role = role;
-        Parts = parts.ToArray();
+        Parts = Array.AsReadOnly(parts.ToArray());
     }
 
     /// <summary>The message role.</summary>

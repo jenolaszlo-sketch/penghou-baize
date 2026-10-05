@@ -50,6 +50,7 @@ public sealed class OpenAiChatClient : LlmClientBase
         _dialect = dialect;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _chatCompletionsUri = new Uri($"{normalizedBaseUrl}/chat/completions");
+        ConfigureTransportEndpoint(_chatCompletionsUri);
     }
 
     /// <summary>Applies the OpenAI bearer scheme.</summary>

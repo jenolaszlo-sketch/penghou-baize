@@ -34,7 +34,7 @@ public abstract class BaizeBatchClientBase : IBaizeBatchClient
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(capabilities);
         _capabilities = capabilities.Batch;
-        _httpClientFactory = httpClientFactory;
+        _httpClientFactory = BaizeHttp.EnsureTransportFactory(httpClientFactory);
         _apiKey = apiKey;
         ProviderId = providerId;
         Model = model;

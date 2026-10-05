@@ -54,6 +54,7 @@ public sealed class OllamaChatClient : LlmClientBase
                 : $"{normalizedBaseUrl}/api/chat";
 
         _chatUri = new Uri(chatUrl);
+        ConfigureTransportEndpoint(_chatUri);
     }
 
     /// <inheritdoc />

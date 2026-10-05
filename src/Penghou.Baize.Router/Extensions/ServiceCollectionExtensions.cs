@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -125,7 +125,9 @@ public static class ServiceCollectionExtensions
         IServiceProvider sp,
         LlmRoutingOptions options)
     {
-        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+        var httpClientFactory = BaizeHttp.CreateClientFactory(sp.GetService<Penghou.Http.Abstractions.IHttpTransport>()
+            ?? new BaizeHttpTransport(sp.GetRequiredService<IHttpClientFactory>()));
+        var modelTransportFactory = sp.GetService<IBaizeModelTransportFactory>();
         var secrets = sp.GetRequiredService<ISecretProvider>();
         var providers = sp.GetService<ILlmClientProviderRegistry>()
             ?? new LlmClientProviderRegistry(
@@ -183,7 +185,8 @@ public static class ServiceCollectionExtensions
                         Uri.TryCreate(baseUrl, UriKind.Absolute, out var endpointUri)
                             ? endpointUri
                             : null,
-                        id));
+                        id),
+                    modelTransportFactory);
 
                 foreach (var decorator in decorators)
                 {

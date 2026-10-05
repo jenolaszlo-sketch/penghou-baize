@@ -1,3 +1,4 @@
+using Penghou.Model.Abstractions;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -142,32 +143,100 @@ internal sealed class DeferredEndpointClients(
     }
 }
 
-internal sealed class DeferredLlmClient(
-    DeferredEndpointClients endpoint,
-    LlmEndpointCapabilities capabilities,
-    LlmClientMetadata metadata) :
-    ILlmClient,
-    ILlmCompletionClient,
-    ILlmClientMetadataProvider
+internal sealed class DeferredLlmClient : ILlmClient, ILlmCompletionClient, ILlmClientMetadataProvider
 {
-    public LlmEndpointCapabilities Capabilities { get; } = capabilities;
+    private readonly ModelTarget _target;
+    private readonly IStreamingModelTransport<LlmRequest, LlmStreamEvent> _streams;
+    private readonly IModelTransport<LlmRequest, LlmResponse> _completions;
 
-    public LlmClientMetadata Metadata { get; } = metadata;
-
-    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
-        LlmRequest request,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public DeferredLlmClient(DeferredEndpointClients endpoint, LlmEndpointCapabilities capabilities,
+        LlmClientMetadata metadata, IBaizeModelTransportFactory? transportFactory = null)
     {
-        var client = await endpoint.GetChatClientAsync(cancellationToken);
-        await foreach (var item in client.StreamAsync(request, cancellationToken))
-            yield return item;
+        Capabilities = capabilities;
+        Metadata = metadata;
+        _target = new ModelTarget(metadata.Provider, metadata.Model,
+            metadata.EndpointId ?? throw new ArgumentException("A routed endpoint requires an identity.", nameof(metadata)));
+        var factory = transportFactory ?? PassThroughBaizeModelTransportFactory.Instance;
+        _streams = factory.WrapStreaming(_target, new ProviderStream(endpoint, _target))
+            ?? throw new InvalidOperationException("The model transport factory returned no stream transport.");
+        _completions = factory.Wrap(_target, new ProviderCompletion(endpoint, _target))
+            ?? throw new InvalidOperationException("The model transport factory returned no completion transport.");
     }
 
-    public async Task<LlmResponse> CompleteAsync(
-        LlmRequest request,
-        CancellationToken cancellationToken = default) =>
-        await (await endpoint.GetChatClientAsync(cancellationToken))
-            .CompleteAsync(request, cancellationToken);
+    public LlmEndpointCapabilities Capabilities { get; }
+    public LlmClientMetadata Metadata { get; }
+
+    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(LlmRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var payload = BaizeModelTransport.Snapshot(request);
+        var invocation = BaizeModelTransport.CreateInvocation(_target, ModelOperation.Stream, payload);
+        await foreach (var response in _streams.StreamAsync(new(invocation, payload), cancellationToken)
+                           .WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            BaizeModelTransport.VerifyResponseRequestId(invocation, response.RequestId);
+            yield return response.Payload with
+            {
+                Usage = BaizeModelTransport.ToLlmUsage(response.Usage) ?? response.Payload.Usage,
+                Diagnostics = BindDiagnostics(response.Payload.Diagnostics, response.ProviderRequestId)
+            };
+        }
+    }
+
+    public async Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var payload = BaizeModelTransport.Snapshot(request);
+        var invocation = BaizeModelTransport.CreateInvocation(_target, ModelOperation.Complete, payload);
+        var response = await _completions.InvokeAsync(new(invocation, payload), cancellationToken).ConfigureAwait(false);
+        BaizeModelTransport.VerifyResponseRequestId(invocation, response.RequestId);
+        return response.Payload with
+        {
+            Usage = BaizeModelTransport.ToLlmUsage(response.Usage) ?? response.Payload.Usage,
+            Diagnostics = BindDiagnostics(response.Payload.Diagnostics, response.ProviderRequestId)
+        };
+    }
+
+    private LlmProviderDiagnostics? BindDiagnostics(LlmProviderDiagnostics? value, string? requestId) =>
+        requestId is null ? value : (value ?? new LlmProviderDiagnostics(Metadata.Provider)) with { ResponseId = requestId };
+
+    private static void Validate(ModelTransportRequest<LlmRequest> request, ModelTarget target, ModelOperation operation)
+    {
+        if (request.Invocation.Target != target || request.Invocation.Operation != operation ||
+            request.Invocation.Context != request.Payload.ExecutionContext || request.Invocation.UsageIntent != request.Payload.UsageIntent ||
+            request.Invocation.Attempt != request.Payload.TransportAttempt)
+            throw new LlmClientException("The model request does not match its configured endpoint or context.", LlmClientFailureKind.InvalidRequest);
+    }
+
+    private sealed class ProviderStream(DeferredEndpointClients endpoint, ModelTarget target)
+        : IStreamingModelTransport<LlmRequest, LlmStreamEvent>
+    {
+        public async IAsyncEnumerable<ModelTransportResponse<LlmStreamEvent>> StreamAsync(
+            ModelTransportRequest<LlmRequest> request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            Validate(request, target, ModelOperation.Stream);
+            var payload = BaizeModelTransport.Snapshot(request.Payload);
+            var client = await endpoint.GetChatClientAsync(cancellationToken).ConfigureAwait(false);
+            await foreach (var item in client.StreamAsync(payload, cancellationToken)
+                               .WithCancellation(cancellationToken).ConfigureAwait(false))
+                yield return new(request.Invocation.RequestId, item, BaizeModelTransport.ToModelUsage(item.Usage), item.Diagnostics?.ResponseId);
+        }
+    }
+
+    private sealed class ProviderCompletion(DeferredEndpointClients endpoint, ModelTarget target)
+        : IModelTransport<LlmRequest, LlmResponse>
+    {
+        public async ValueTask<ModelTransportResponse<LlmResponse>> InvokeAsync(
+            ModelTransportRequest<LlmRequest> request, CancellationToken cancellationToken = default)
+        {
+            Validate(request, target, ModelOperation.Complete);
+            var payload = BaizeModelTransport.Snapshot(request.Payload);
+            var client = await endpoint.GetChatClientAsync(cancellationToken).ConfigureAwait(false);
+            var result = await client.CompleteAsync(payload, cancellationToken).ConfigureAwait(false);
+            return new(request.Invocation.RequestId, result, BaizeModelTransport.ToModelUsage(result.Usage), result.Diagnostics?.ResponseId);
+        }
+    }
 }
 
 internal sealed class DeferredBatchClient(

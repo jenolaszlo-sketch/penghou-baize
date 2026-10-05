@@ -23,3 +23,5 @@ Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.PollInterval.get -> Syste
 Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.PollInterval.init -> void
 Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Timeout.get -> System.TimeSpan?
 Penghou.Baize.Extensions.AI.BaizeImageGeneratorOptions.Timeout.init -> void
+const Penghou.Baize.Extensions.AI.BaizeChatClient.ExecutionContextKey = "baize.execution_context" -> string!
+const Penghou.Baize.Extensions.AI.BaizeChatClient.UsageIntentKey = "baize.usage_intent" -> string!

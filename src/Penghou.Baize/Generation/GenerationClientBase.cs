@@ -54,7 +54,7 @@ public abstract class GenerationClientBase : IGenerationClient
         _provider = provider;
         _endpointId = endpointId;
         _model = model;
-        _httpClientFactory = httpClientFactory;
+        _httpClientFactory = BaizeHttp.EnsureTransportFactory(httpClientFactory);
         _apiKey = apiKey;
         _capabilities = capabilities;
     }

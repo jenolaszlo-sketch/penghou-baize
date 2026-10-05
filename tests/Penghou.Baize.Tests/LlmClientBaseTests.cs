@@ -288,6 +288,32 @@ public sealed class LlmClientBaseTests
         handler.Calls.Should().Be(0);
     }
 
+    [Fact]
+    public async Task StreamAsync_ModelTransportCanDenyBeforeHttpDispatchAndReceivesBoundContext()
+    {
+        var handler = new CountingHandler();
+        var client = new ProbeClient(handler);
+        var context = new Penghou.Model.Abstractions.ModelExecutionContext(
+            workflowId: "workflow-1",
+            metadata: new Dictionary<string, string> { ["tenant"] = "test" });
+        var request = new LlmRequest([new LlmMessage("user", "hello")])
+        {
+            ExecutionContext = context
+        };
+        var factory = new DenyModelTransportFactory();
+        client.ModelTransportFactory = factory;
+
+        var action = () => CollectAsync(
+            client.StreamAsync(request),
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<Penghou.Model.Abstractions.ModelAccessDeniedException>();
+        factory.Target.Should().NotBeNull();
+        factory.Context.Should().BeSameAs(context);
+        factory.Operation.Should().Be(Penghou.Model.Abstractions.ModelOperation.Stream);
+        handler.Calls.Should().Be(0);
+    }
+
     private sealed class ProbeClient(HttpMessageHandler handler)
         : LlmClientBase(
             "probe",
@@ -370,6 +396,58 @@ public sealed class LlmClientBaseTests
         {
             Calls++;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    private sealed class DenyModelTransportFactory : IBaizeModelTransportFactory
+    {
+        public Penghou.Model.Abstractions.ModelTarget? Target { get; private set; }
+        public Penghou.Model.Abstractions.ModelExecutionContext? Context { get; private set; }
+        public Penghou.Model.Abstractions.ModelOperation? Operation { get; private set; }
+
+        public Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse> Wrap<TRequest, TResponse>(
+            Penghou.Model.Abstractions.ModelTarget target,
+            Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse> trustedDefault)
+            where TRequest : notnull
+            where TResponse : notnull => new DenyingTransport<TRequest, TResponse>();
+
+        public Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent> WrapStreaming<TRequest, TEvent>(
+            Penghou.Model.Abstractions.ModelTarget target,
+            Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent> trustedDefault)
+            where TRequest : notnull
+            where TEvent : notnull
+        {
+            Target = target;
+            return new DenyingStreamingTransport<TRequest, TEvent>(this);
+        }
+
+        private sealed class DenyingTransport<TRequest, TResponse>
+            : Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse>
+            where TRequest : notnull
+            where TResponse : notnull
+        {
+            public ValueTask<Penghou.Model.Abstractions.ModelTransportResponse<TResponse>> InvokeAsync(
+                Penghou.Model.Abstractions.ModelTransportRequest<TRequest> request,
+                CancellationToken cancellationToken = default) =>
+                throw new Penghou.Model.Abstractions.ModelAccessDeniedException(request.Invocation.RequestId);
+        }
+
+        private sealed class DenyingStreamingTransport<TRequest, TEvent>(DenyModelTransportFactory owner)
+            : Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent>
+            where TRequest : notnull
+            where TEvent : notnull
+        {
+            public async IAsyncEnumerable<Penghou.Model.Abstractions.ModelTransportResponse<TEvent>> StreamAsync(
+                Penghou.Model.Abstractions.ModelTransportRequest<TRequest> request,
+                [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                owner.Context = (request.Payload as LlmRequest)?.ExecutionContext;
+                owner.Operation = request.Invocation.Operation;
+                throw new Penghou.Model.Abstractions.ModelAccessDeniedException(request.Invocation.RequestId);
+#pragma warning disable CS0162
+                yield break;
+#pragma warning restore CS0162
+            }
         }
     }
 }

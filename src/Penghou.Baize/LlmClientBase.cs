@@ -10,7 +10,7 @@ namespace Penghou.Baize;
 /// Base class for provider clients. Handles the shared HTTP streaming flow and
 /// delegates provider-specific request shaping and event parsing to subclasses.
 /// </summary>
-public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
+public abstract partial class LlmClientBase : ILlmClient, ILlmClientMetadataProvider, ILlmCompletionClient
 {
     /// <summary>The provider model identifier used on the wire.</summary>
     protected string Model { get; }
@@ -41,7 +41,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
         string provider = "Unknown")
     {
         Model = model;
-        HttpClientFactory = httpClientFactory;
+        HttpClientFactory = BaizeHttp.EnsureTransportFactory(httpClientFactory);
         ApiKey = apiKey;
         Capabilities = capabilities;
         Metadata = new LlmClientMetadata(provider, model);
@@ -52,9 +52,11 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
     /// provider request and forwarding the parsed provider events.
     /// </summary>
     /// <param name="request">The request to send.</param>
+    /// <param name="requestId">The admitted semantic invocation identity.</param>
     /// <param name="cancellationToken">Propagates notification that streaming should be cancelled.</param>
-    public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+    internal async IAsyncEnumerable<LlmStreamEvent> StreamDirectAsync(
         LlmRequest request,
+        string requestId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -64,6 +66,7 @@ public abstract class LlmClientBase : ILlmClient, ILlmClientMetadataProvider
             "llm.stream",
             ActivityKind.Client);
         activity?.SetTag("gen_ai.operation.name", "chat");
+        activity?.SetTag("baize.model.request_id", requestId);
         activity?.SetTag("gen_ai.provider.name", Metadata.Provider);
         activity?.SetTag("gen_ai.request.model", Model);
         activity?.SetTag("gen_ai.request.tool_count", request.Tools.Count);

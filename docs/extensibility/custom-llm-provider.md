@@ -42,3 +42,13 @@ deterministic list of changes, including whether provider-side enforcement was
 weakened. Scope adaptations by `LlmSchemaAdaptationContext` (API version,
 model, and tool-input versus structured-response purpose) rather than changing
 the shared schema generator for one provider.
+
+## Governable transport profile
+
+For the current chat transport milestone, derive wire clients from
+`LlmClientBase`, call its protected `ConfigureTransportEndpoint` with the actual
+dispatch URI, and use the supplied HTTP factory. The router wraps custom clients
+at admission, but arbitrary custom implementations must also prove that their
+internal dispatch, retries and credentials use the selected boundaries before
+being advertised as governed. Trusted module loading does not qualify that
+coverage automatically. See [composition, limits and remaining operations](../governable-transports.md).

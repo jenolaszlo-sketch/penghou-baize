@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
+using Penghou.Http.Abstractions;
 
 namespace Penghou.Baize;
 
@@ -9,11 +11,7 @@ namespace Penghou.Baize;
 public static class BaizeServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the shared <c>llm</c> named <see cref="System.Net.Http.HttpClient"/>
-    /// transport owned by the core package: every provider, generation client,
-    /// and batch adapter consumes this named client. The registration applies a
-    /// conservative default request timeout (100 seconds); the optional
-    /// Diagnostics package layers traffic capture on top of it.
+    /// Registers the shared <c>llm</c> named HTTP client and the replaceable default neutral HTTP transport.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configure">Optional configuration of the named-client builder.</param>
@@ -24,17 +22,17 @@ public static class BaizeServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        if (!services.Any(descriptor =>
-                descriptor.ServiceType == typeof(BaizeTransportRegistrationMarker)))
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(BaizeTransportRegistrationMarker)))
         {
             services.AddSingleton<BaizeTransportRegistrationMarker>();
             var builder = services.AddHttpClient("llm")
-                .SetHandlerLifetime(TimeSpan.FromMinutes(5));
-            builder.ConfigureHttpClient(client =>
-                client.Timeout = TimeSpan.FromSeconds(100));
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+            builder.ConfigureHttpClient(client => client.Timeout = BaizeHttp.DefaultTimeout);
             configure?.Invoke(builder);
         }
 
+        services.TryAddSingleton<IHttpTransport, BaizeHttpTransport>();
         return services;
     }
 }

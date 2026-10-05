@@ -33,6 +33,12 @@ public sealed class LlmPromptBuilder : ILlmPromptBuilder
     public IReadOnlyDictionary<string, object?> Metadata { get; set; } =
         new Dictionary<string, object?>(StringComparer.Ordinal);
 
+    /// <summary>Neutral descriptive execution context forwarded to every model attempt.</summary>
+    public Penghou.Model.Abstractions.ModelExecutionContext? ExecutionContext { get; set; }
+
+    /// <summary>Estimated usage intent; it does not reserve a budget or grant authority.</summary>
+    public Penghou.Model.Abstractions.ModelUsageIntent? UsageIntent { get; set; }
+
     /// <summary>
     /// Builds a request for the given <paramref name="strategy"/>. The strategy
     /// is a routing hint only; endpoint capability validation decides which
@@ -49,6 +55,10 @@ public sealed class LlmPromptBuilder : ILlmPromptBuilder
             tools: Tools,
             ResponseFormat,
             ThinkingConfig,
-            Metadata);
+            Metadata)
+        {
+            ExecutionContext = ExecutionContext,
+            UsageIntent = UsageIntent
+        };
     }
 }

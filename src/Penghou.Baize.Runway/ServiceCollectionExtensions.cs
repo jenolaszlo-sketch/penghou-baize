@@ -32,7 +32,8 @@ public static class ServiceCollectionExtensions
             (sp, options) => ValidateEndpointOptions(endpointId, options),
             (sp, options) =>
             {
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClientFactory = BaizeHttp.CreateClientFactory(sp.GetService<Penghou.Http.Abstractions.IHttpTransport>()
+                    ?? new BaizeHttpTransport(sp.GetRequiredService<IHttpClientFactory>()));
                 if (options.RequestTimeout is { } requestTimeout)
                 {
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);

@@ -1617,3 +1617,35 @@ virtual Penghou.Baize.Generation.GenerationClientBase.ValidateRequest(Penghou.Ba
 virtual Penghou.Baize.LlmClientBase.ApplyAuth(System.Net.Http.HttpRequestMessage! httpRequest) -> void
 virtual Penghou.Baize.LlmClientBase.ContentTypeOf(Penghou.Baize.LlmContentPart! part) -> Penghou.Baize.LlmContentType?
 virtual Penghou.Baize.LlmClientBase.ValidateRequest(Penghou.Baize.LlmRequest! request) -> void
+Penghou.Baize.BaizeHttpTransport
+Penghou.Baize.BaizeHttpTransport.BaizeHttpTransport(System.Net.Http.IHttpClientFactory! clients) -> void
+Penghou.Baize.BaizeHttpTransport.SendAsync(Penghou.Http.Abstractions.HttpTransportRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Http.Abstractions.HttpTransportResponse!>
+Penghou.Baize.BaizeHttpTransportAdapter
+Penghou.Baize.IBaizeModelTransportFactory
+Penghou.Baize.IBaizeModelTransportFactory.Wrap<TRequest, TResponse>(Penghou.Model.Abstractions.ModelTarget! target, Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse>! trustedDefault) -> Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse>!
+Penghou.Baize.IBaizeModelTransportFactory.WrapStreaming<TRequest, TEvent>(Penghou.Model.Abstractions.ModelTarget! target, Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent>! trustedDefault) -> Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent>!
+Penghou.Baize.LlmPromptBuilder.ExecutionContext.get -> Penghou.Model.Abstractions.ModelExecutionContext?
+Penghou.Baize.LlmPromptBuilder.ExecutionContext.set -> void
+Penghou.Baize.LlmPromptBuilder.UsageIntent.get -> Penghou.Model.Abstractions.ModelUsageIntent?
+Penghou.Baize.LlmPromptBuilder.UsageIntent.set -> void
+Penghou.Baize.LlmRequest.ExecutionContext.get -> Penghou.Model.Abstractions.ModelExecutionContext?
+Penghou.Baize.LlmRequest.ExecutionContext.init -> void
+Penghou.Baize.LlmRequest.UsageIntent.get -> Penghou.Model.Abstractions.ModelUsageIntent?
+Penghou.Baize.LlmRequest.UsageIntent.init -> void
+Penghou.Baize.PassThroughBaizeModelTransportFactory
+Penghou.Baize.PassThroughBaizeModelTransportFactory.PassThroughBaizeModelTransportFactory() -> void
+Penghou.Baize.PassThroughBaizeModelTransportFactory.Wrap<TRequest, TResponse>(Penghou.Model.Abstractions.ModelTarget! target, Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse>! trustedDefault) -> Penghou.Model.Abstractions.IModelTransport<TRequest, TResponse>!
+Penghou.Baize.PassThroughBaizeModelTransportFactory.WrapStreaming<TRequest, TEvent>(Penghou.Model.Abstractions.ModelTarget! target, Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent>! trustedDefault) -> Penghou.Model.Abstractions.IStreamingModelTransport<TRequest, TEvent>!
+static Penghou.Baize.BaizeHttp.CreateClientFactory(Penghou.Http.Abstractions.IHttpTransport! transport) -> System.Net.Http.IHttpClientFactory!
+static Penghou.Baize.BaizeHttpTransportAdapter.SendAsync(Penghou.Http.Abstractions.IHttpTransport! transport, System.Net.Http.HttpRequestMessage! request, Penghou.Http.Abstractions.HttpTransportLimits! limits, Penghou.Http.Abstractions.HttpRequestContext? context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+static Penghou.Baize.PassThroughBaizeModelTransportFactory.Instance.get -> Penghou.Baize.PassThroughBaizeModelTransportFactory!
+static Penghou.Baize.BaizeHttpTransportAdapter.SendAsync(Penghou.Http.Abstractions.IHttpTransport! transport, System.Net.Http.HttpRequestMessage! request) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+static Penghou.Baize.BaizeHttpTransportAdapter.SendAsync(Penghou.Http.Abstractions.IHttpTransport! transport, System.Net.Http.HttpRequestMessage! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+Penghou.Baize.LlmClientBase.CompleteAsync(Penghou.Baize.LlmRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Baize.LlmResponse!>!
+Penghou.Baize.LlmClientBase.ConfigureTransportEndpoint(System.Uri! endpoint) -> void
+Penghou.Baize.LlmClientBase.ModelTransportFactory.get -> Penghou.Baize.IBaizeModelTransportFactory!
+Penghou.Baize.LlmClientBase.ModelTransportFactory.set -> void
+Penghou.Baize.LlmUsage.Cost.get -> decimal?
+Penghou.Baize.LlmUsage.Cost.init -> void
+Penghou.Baize.LlmUsage.Currency.get -> string?
+Penghou.Baize.LlmUsage.Currency.init -> void

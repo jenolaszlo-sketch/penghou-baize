@@ -39,7 +39,7 @@ public sealed record LlmInlineDataSource : LlmMediaSource
     }
 
     /// <summary>The immutable media bytes.</summary>
-    public ReadOnlyMemory<byte> Data => _data;
+    public ReadOnlyMemory<byte> Data => _data.ToArray();
 
     /// <inheritdoc />
     public override LlmContentTransport Transport => LlmContentTransport.InlineData;

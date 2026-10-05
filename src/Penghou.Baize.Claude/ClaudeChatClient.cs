@@ -49,6 +49,7 @@ public sealed class ClaudeChatClient : LlmClientBase
         _thinkingStyle = thinkingStyle;
         var normalizedBaseUrl = baseUrl.TrimEnd('/');
         _messagesUri = new Uri($"{normalizedBaseUrl}/v1/messages");
+        ConfigureTransportEndpoint(_messagesUri);
     }
 
     /// <inheritdoc />

@@ -1,4 +1,6 @@
-﻿namespace Penghou.Baize;
+using Penghou.Model.Abstractions;
+
+namespace Penghou.Baize;
 
 /// <summary>A canonical chat completion request.</summary>
 public sealed record LlmRequest
@@ -31,16 +33,17 @@ public sealed record LlmRequest
         IReadOnlyDictionary<string, object?>? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        _messages = messages.ToArray();
+        _messages = Array.AsReadOnly(messages.ToArray());
         _temperature = temperature;
         _maxTokens = maxTokens;
-        _tools = tools?.ToArray() ?? [];
+        _tools = Array.AsReadOnly(tools?.ToArray() ?? []);
         LlmToolDeclarations.Validate(_tools);
         _responseFormat = responseFormat;
         _thinkingConfig = thinkingConfig;
-        _metadata = metadata is null
-            ? new Dictionary<string, object?>(StringComparer.Ordinal)
-            : new Dictionary<string, object?>(metadata, StringComparer.Ordinal);
+        _metadata = new System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>(
+            metadata is null
+                ? new Dictionary<string, object?>(StringComparer.Ordinal)
+                : new Dictionary<string, object?>(metadata, StringComparer.Ordinal));
     }
 
     /// <summary>The conversation messages.</summary>
@@ -67,4 +70,12 @@ public sealed record LlmRequest
     /// must not contain secrets. Reusable libraries should namespace keys.
     /// </summary>
     public IReadOnlyDictionary<string, object?> Metadata => _metadata;
+
+    /// <summary>Neutral, descriptive correlation context carried to model transport policy.</summary>
+    public ModelExecutionContext? ExecutionContext { get; init; }
+
+    /// <summary>Estimated usage limits carried to model transport policy.</summary>
+    public ModelUsageIntent? UsageIntent { get; init; }
+
+    internal int TransportAttempt { get; init; } = 1;
 }

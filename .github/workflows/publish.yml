@@ -40,6 +40,8 @@ jobs:
             src/Penghou.Baize.Claude/Penghou.Baize.Claude.csproj \
             src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj \
             src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj \
+            src/Penghou.Baize.Runway/Penghou.Baize.Runway.csproj \
+            src/Penghou.Baize.Fal/Penghou.Baize.Fal.csproj \
             src/Penghou.Baize.Router/Penghou.Baize.Router.csproj \
             src/Penghou.Baize.Batch/Penghou.Baize.Batch.csproj \
             src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj \
@@ -60,6 +62,7 @@ jobs:
       - name: Push packages to NuGet
         run: >
           dotnet nuget push ./artifacts/*.nupkg
+          --no-symbols
           --source https://api.nuget.org/v3/index.json
           --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
           --skip-duplicate

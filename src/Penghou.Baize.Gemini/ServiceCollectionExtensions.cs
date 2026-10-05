@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
     /// <see cref="IGenerationClient"/>. Multiple generation endpoints can be
     /// registered under distinct <paramref name="endpointId"/> values. Endpoint
     /// options are validated and the client is registered with routing when
-    /// the <see cref="IGenerationClientRegistry"/> is resolved — not lazily on
+    /// the <see cref="IGenerationClientRegistry"/> is resolved â€” not lazily on
     /// first use.
     /// </summary>
     public static IServiceCollection AddBaizeGeminiGeneration(
@@ -45,7 +45,8 @@ public static class ServiceCollectionExtensions
                         LlmContentTransport.InlineData
                     }
                 };
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClientFactory = BaizeHttp.CreateClientFactory(sp.GetService<Penghou.Http.Abstractions.IHttpTransport>()
+                    ?? new BaizeHttpTransport(sp.GetRequiredService<IHttpClientFactory>()));
                 if (options.RequestTimeout is { } requestTimeout)
                 {
                     httpClientFactory = httpClientFactory.WithRequestTimeout(requestTimeout);

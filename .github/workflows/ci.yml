@@ -26,6 +26,10 @@ jobs:
       - name: Build
         run: dotnet build Penghou.Baize.slnx --configuration Release
 
+      - name: Verify exact transport packages and independent dependency closure
+        shell: pwsh
+        run: ./eng/verify-transport-dependencies.ps1
+
       - name: Verify formatting
         run: dotnet format Penghou.Baize.slnx --verify-no-changes --no-restore
 
@@ -177,6 +181,15 @@ jobs:
       - name: Validate packages
         run: dotnet pack Penghou.Baize.slnx --configuration Release --no-build --output artifacts
 
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          if-no-files-found: error
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v6
         with:
@@ -195,3 +208,33 @@ jobs:
             coverage-extensions-ai/
             coverage-diagnostics/
           if-no-files-found: error
+
+  transport-adoption:
+    name: Transport adoption (${{ matrix.os }}, ${{ matrix.framework }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-15]
+        framework: [net8.0, net10.0]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build package and adoption fixtures
+        run: dotnet build Penghou.Baize.slnx --configuration Release
+      - name: Verify published package dependency closure
+        shell: pwsh
+        run: ./eng/verify-transport-dependencies.ps1
+      - name: Model and HTTP adoption qualification
+        run: dotnet test tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj --configuration Release --framework ${{ matrix.framework }} --no-build --filter "FullyQualifiedName~ModelTransport|FullyQualifiedName~HttpTransportAdoption|FullyQualifiedName~HttpTransportLifecycle|FullyQualifiedName~HttpTransportFailure|FullyQualifiedName~ModelPayloadProfile"
+      - name: Admission, routing and credential ordering qualification
+        run: dotnet test tests/Penghou.Baize.Router.Tests/Penghou.Baize.Router.Tests.csproj --configuration Release --framework ${{ matrix.framework }} --no-build --filter FullyQualifiedName~RoutedModelTransport
+      - name: Extensions.AI context qualification
+        run: dotnet test tests/Penghou.Baize.Extensions.AI.Tests/Penghou.Baize.Extensions.AI.Tests.csproj --configuration Release --framework ${{ matrix.framework }} --no-build --filter FullyQualifiedName~TransportContext
+      - name: Fresh package-only transport consumer
+        shell: pwsh
+        run: ./eng/qualify-transport-consumer.ps1 -Framework ${{ matrix.framework }}

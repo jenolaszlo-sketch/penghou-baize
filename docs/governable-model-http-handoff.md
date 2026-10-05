@@ -1,56 +1,83 @@
 # Governable model and HTTP access: implementation handoff
 
-Updated 2026-10-04. Current gate: [shared transport release checkpoint](../../Penghou/docs/model-http-release-handoff.md).
-The new contract code is in Penghou; remote CI/publication and indexed-package
-verification precede Baize GM-2/3/4. No Baize migration or Hufu adapter is claimed.
+Updated 2026-10-05. GM-1P is verified: both neutral packages are indexed at
+**0.1.0-preview.1**, Penghou CI run 37240540643 and publication run 37243499710
+succeeded. Baize source now pins those exact versions without a Hufu dependency.
 
-Read [the canonical implementation roadmap](governable-model-http-plan.md) and
-[verbatim specification](proposals/2026-10-04-governable-model-http.txt) first.
-Then read [source inventory](governable-model-http-inventory.md),
-[scope](scope-and-boundaries.md), [streaming regression contract](roadmap-streaming-integrity.md),
-[generation roadmap](roadmap-generation-client.md),
-[resource boundary notes](roadmap-resource-boundaries.md),
-[shared contract queue](../../Penghou/ROADMAP.md) and
-[Hufu's separate follow-up queue](../../Penghou.Hufu/docs/roadmap.md).
+Read the [canonical roadmap](governable-model-http-plan.md),
+[composition/profile guide](governable-transports.md),
+[verbatim specification](proposals/2026-10-04-governable-model-http.txt) and
+[call inventory](governable-model-http-inventory.md). Existing streaming,
+generation, resource-boundary and experience roadmaps remain regression contracts.
 
-Inspect `git status` before editing. At planning time Baize already had changes
-to README and experience-signals documentation plus an untracked resource
-roadmap. Preserve those changes; they are not a clean baseline to overwrite or
-bulk-stage. Do not load `.env.local` or call real providers to review transport.
+## Delivered source milestone
 
-## Source review starting points
+GM-2 chat-first: semantic streaming/completion seams for built-in chat clients,
+actual endpoint identity, bounded immutable request snapshots, neutral context
+and usage preservation. Router admission precedes credential resolution;
+authority denial stops fallback and each availability attempt is checked again.
+Extensions.AI forwards typed context outside wire metadata. Built-in chat,
+batch and generation base HTTP paths use the injected neutral HTTP seam with
+owned response bodies and deadlines through body consumption.
 
-- `src/Penghou.Baize/LlmClientBase.cs` owns streaming HTTP dispatch and auth
-  application; an injected HttpClient factory is not a semantic model boundary.
-- `src/Penghou.Baize/ILlmClient.cs`, `ILlmCompletionClient.cs`,
-  `IBaizeBatchClient.cs` and `Generation/IGenerationClient.cs` define distinct
-  existing lifecycles. Inspect provider implementations as well as the base class.
-- `src/Penghou.Baize/LlmRequest.cs` already carries host-neutral metadata that
-  must not be serialized onto provider wire requests. Preserve that behavior.
-- `src/Penghou.Baize/BaizeHttp.cs` and DI registration own the named HTTP client
-  and timeout behavior; preserve diagnostics, handlers and provider test fixtures.
-- `src/Penghou.Baize.Router` owns retry/fallback selection; inspect generation
-  executors, native provider retries and schema-repair paths separately.
-- `src/Penghou.Baize/LlmClientFailureKind.cs` already distinguishes provider
-  authorization from availability. Add neutral host denial mapping deliberately
-  rather than treating every 403 or exception as the same decision.
-- `../Penghou/src/Penghou.IO.Abstractions/Contracts.cs` defines the existing
-  credential-free web reader. Inventory its type closure; do not replace it with
-  a general authenticated HTTP transport or break published IO contracts.
+Existing constructors remain; defaults work without Hufu. All 12 source project
+closures resolve public neutral packages. Batch/generation semantic authorization
+and large upload qualification remain open; HTTP bridging alone does not close
+GM-3. Opaque custom providers need explicit qualification.
 
-## Resume prompt
+## Working-tree precautions and evidence
 
-> Resume from Penghou docs/model-http-release-handoff.md. GM-0 decisions and
-> GM-1 contract source/local qualification are recorded there; complete pending
-> remote CI, publication and public-package verification gates
-> before Baize adoption. Do not reimplement the new contracts or restart the
-> completed sandbox-parent experiment. After indexed publication, pin Baize to
-> the exact Penghou.Model.Abstractions and Penghou.Http.Abstractions versions
-> and execute GM-2/3/4, B1-B12, then GM-5/6. Preserve all consumer lifecycles,
-> context/usage, default behavior, provider diagnostics and source compatibility.
-> Snapshot/validate supported typed payloads before policy and dispatch; move
-> governed credential resolution after semantic admission; no built-in upload,
-> result, retry or repair route may bypass the seam. Authority denial stops
-> fallback by default. Keep Baize independent of Hufu. Hufu adapters, vaulting,
-> budgets and network enforcement are separately owned follow-ups. Use Luna
-> for bounded subtasks where available and Terra if offered as a fallback.
+Inspect status before editing. The existing change to
+`docs/roadmap-experience-signals.md` belongs to prior work; preserve it and avoid
+bulk staging. Base revision is da6e6ceee1c67822fdd564442117c28ec57ce90c.
+This source milestone is prepared as Baize 0.3.0-preview.7 for commit/push.
+NuGet publication and remote CI results are pending; use the repository history
+and Actions results for delivery state.
+Do not load `.env.local` or call paid providers for offline qualification.
+
+Qualification evidence is appended below after final checks. Remote CI matrix
+results are pending push. No local candidate feed is used for the two published
+neutral dependencies; package-only checks use a temporary local Baize candidate.
+
+## Next gate / resume prompt
+
+> Continue GM-3 from the canonical roadmap and call inventory. Do not repeat
+> GM-0/1, package publication or the completed sandbox-parent experiment.
+> Keep the exact published neutral dependencies and Baize independent of Hufu.
+> Add typed semantic transport profiles for built-in batch/generation operations,
+> per-item context and status/result/cancel handles, then uploads and asset reads.
+> Preserve wire protocols, diagnostics, retries, cancellation and constructor
+> compatibility. Bind handles to target and authenticated context; a returned
+> handle is not permission. Every consequential operation and retry needs a fresh
+> check, with credentials resolved after admission. Qualify large upload memory
+> and ownership before widening the supported finite-buffer profile. Complete
+> remaining GM-4 executor/custom-provider closure and B1-B12 before claiming
+> full Baize governance or releasing adapters. Hufu policy/budgets and physical
+> isolation remain separately owned. Use Luna for bounded subtasks where available.
+
+## Local qualification (2026-10-05)
+
+- Full solution Release build: zero warnings/errors; additive public API baselines pass.
+- All 12 test projects: 871 passed and 14 pre-existing skips per net8.0/net10.0;
+  Tools additionally passes 71 tests on net9.0. No paid/live-provider calls.
+- All 12 existing line/branch coverage gates pass without lowering thresholds.
+  Core coverage is 87.46% line / 82.19% branch against the 80% gate.
+- All 12 Baize packages pack successfully. Both fresh core package consumers
+  restore neutral dependencies from public NuGet and pass default HTTP ownership
+  and model-denial-before-dispatch checks.
+- Exact dependencies/no Hufu closure checks and PowerShell parser checks pass.
+- CI now includes focused adoption/consumer checks on Windows, Ubuntu and macOS;
+  remote results remain pending commit/push.
+
+See [machine-readable evidence and open gates](governable-transports-qualification.json).
+`dotnet format Penghou.Baize.slnx --verify-no-changes --no-restore` also passes.
+
+## Release preparation
+
+Baize **0.3.0-preview.7** is the chat-first transport release candidate.
+The existing manual **Publish to NuGet** workflow uses `main` and the version in
+`Directory.Build.props`, without version inputs. Tag-triggered publication remains
+available. Publication now includes all 12 packages, including Runway and Fal;
+normal package pushes disable implicit symbols, then push symbols separately.
+CI retains the packed packages as the `nuget-packages` artifact.
+This preview does not claim GM-3 or full B1-B12 completion.

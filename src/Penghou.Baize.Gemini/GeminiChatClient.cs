@@ -63,6 +63,7 @@ public sealed class GeminiChatClient : LlmClientBase
             $"{normalizedBaseUrl}" +
             $"{(includeVersionSegment ? "/v1beta" : string.Empty)}" +
             $"/models/{model}:streamGenerateContent?alt=sse");
+        ConfigureTransportEndpoint(_chatUri);
     }
 
     /// <summary>Applies the Gemini API-key header scheme.</summary>
