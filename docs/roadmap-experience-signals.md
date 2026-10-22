@@ -5,6 +5,11 @@
 Planned. This roadmap aligns Baize with the Penghou memory and experience
 architecture without making Baize an execution-history or learning system.
 
+The proposed [model qualification design](model-qualification-plan.md) supplies
+dated compatibility evidence and a separately reviewed capability-profile
+promotion path. It does not implement this roadmap's contextual evidence port
+or automatically change routing configuration.
+
 ## Boundary
 
 Baize owns provider/model execution, normalized capabilities, request mapping,

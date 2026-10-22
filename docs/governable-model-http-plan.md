@@ -11,6 +11,10 @@ remain open. Chat-first publication is complete; it does not close GM-3/4/5.
 This is the active queue for this refactor. Streaming integrity and generation
 roadmaps remain regression contracts for already implemented functionality.
 
+The proposed [model qualification roadmap](model-qualification-plan.md) reuses
+the chat-first seams for bounded compatibility evidence. It does not close
+GM-3, the remaining GM-4 work or full GM-5 qualification.
+
 Source: [the user's latest specification](proposals/2026-10-04-governable-model-http.txt),
 preserved verbatim. The earlier sandbox-resident-parent experiment was completed
 by Muse Spark and is outside this queue. Baize's refactor has no dependency on

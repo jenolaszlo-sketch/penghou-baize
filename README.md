@@ -70,6 +70,7 @@ code change is required when upgrading the application's target framework.
 - [Coverage policy and package baselines](docs/coverage.md)
 - [Live provider compatibility matrix](docs/live-provider-compatibility.md)
 - [Live provider verification log](docs/live-provider-verification-log.md)
+- [Model qualification architecture and roadmap (proposed)](docs/model-qualification-plan.md)
 - Provider guides: [DeepSeek](docs/providers/deepseek.md) and
   [Gemini](docs/providers/gemini.md)
 - [Generation client design and roadmap](docs/roadmap-generation-client.md)

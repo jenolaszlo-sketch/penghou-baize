@@ -3,6 +3,10 @@
 Status: implemented. This document is retained as the design and regression
 contract for Baize streaming providers.
 
+The proposed [model qualification design](model-qualification-plan.md) reuses
+these deterministic integrity contracts alongside scoped live observations;
+it does not infer native non-streaming parity from independent model responses.
+
 ## Goal
 
 Harden Penghou.Baize against silent corruption introduced by provider
