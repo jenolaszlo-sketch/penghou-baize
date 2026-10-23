@@ -15,7 +15,8 @@ internal static class LiveClientFactory
         LlmContentType? inlineMediaType = null,
         bool parallelTools = false,
         bool nativeStructuredOutput = false,
-        bool thinking = false)
+        bool thinking = false,
+        bool singleDispatch = false)
     {
         var values = new Dictionary<string, string?>
         {
@@ -28,6 +29,8 @@ internal static class LiveClientFactory
             ["LlmRouting:Models:0:Endpoints:0:BaseUrl"] = settings.BaseUrl,
             ["LlmRouting:Models:0:Endpoints:0:Dialect"] = settings.Dialect
         };
+        if (singleDispatch)
+            values["LlmRouting:Retry:MaximumAttempts"] = "1";
         if (tools)
         {
             values["LlmRouting:Models:0:Endpoints:0:Capabilities:NativeToolCalling"] =

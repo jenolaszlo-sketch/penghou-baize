@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Penghou.Baize.Qualification.Contracts\Penghou.Baize.Qualification.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize\Penghou.Baize.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Batch\Penghou.Baize.Batch.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Baize.Router\Penghou.Baize.Router.csproj" />

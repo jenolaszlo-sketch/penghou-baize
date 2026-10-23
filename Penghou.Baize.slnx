@@ -18,6 +18,8 @@
     <Project Path="samples/Penghou.Baize.BestOfN/Penghou.Baize.BestOfN.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Baize.Qualification.Contracts/Penghou.Baize.Qualification.Contracts.csproj" />
+    <Project Path="tests/Penghou.Baize.Qualification.Tests/Penghou.Baize.Qualification.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Benchmarks/Penghou.Baize.Benchmarks.csproj" />
     <Project Path="tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj" />
     <Project Path="tests/Penghou.Baize.Client.Claude.Tests/Penghou.Baize.Client.Claude.Tests.csproj" />

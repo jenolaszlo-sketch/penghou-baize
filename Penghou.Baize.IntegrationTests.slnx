@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Baize.Qualification.Contracts/Penghou.Baize.Qualification.Contracts.csproj" />
     <Project Path="tests/Penghou.Baize.IntegrationTests/Penghou.Baize.IntegrationTests.csproj" />
   </Folder>
 </Solution>

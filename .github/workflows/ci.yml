@@ -33,6 +33,9 @@ jobs:
       - name: Verify formatting
         run: dotnet format Penghou.Baize.slnx --verify-no-changes --no-restore
 
+      - name: Test qualification contracts (offline)
+        run: dotnet test tests/Penghou.Baize.Qualification.Tests/Penghou.Baize.Qualification.Tests.csproj --configuration Release --no-build
+
       - name: Test and coverage (core)
         run: >
           dotnet test tests/Penghou.Baize.Tests/Penghou.Baize.Tests.csproj

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="1.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0-pre.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <ProjectReference Include="../Penghou.Baize.Qualification.Contracts/Penghou.Baize.Qualification.Contracts.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.OpenAi/Penghou.Baize.OpenAi.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.Router/Penghou.Baize.Router.csproj" />
+  </ItemGroup>
+</Project>
