@@ -22,8 +22,8 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
         validation.Succeeded.Should().BeTrue(
             string.Join(Environment.NewLine, validation.Endpoints.Select(result => result.Error)));
 
-        var result = await QualificationScenarios.RunBaselineAsync(
-            new QualificationContext(
+        var result = await QualificationScenariosV3.RunBaselineAsync(
+            new QualificationContextV3(
                 (request, token) => router.StreamAsync("live", request, token),
                 RequireRouterDiagnostics: true),
             TestContext.Current.CancellationToken);
@@ -82,16 +82,24 @@ public sealed class LiveProviderTests(ITestOutputHelper output)
         await using var provider = LiveClientFactory.Create(settings, tools: true, singleDispatch: true);
         var router = provider.GetRequiredService<ILlmRouter>();
         var client = provider.GetRequiredService<ILlmModelLookup>().GetClient("live");
-        var result = await QualificationScenarios.RunSingleToolAsync(
-            new QualificationContext(
+        var result = await QualificationScenariosV3.RunSingleToolAsync(
+            new QualificationContextV3(
                 (request, token) => router.StreamAsync("live", request, token),
                 NativeToolCalling: client.Capabilities.NativeToolCalling,
-                RequireRouterDiagnostics: true),
+                RequireRouterDiagnostics: true,
+                IdentityProtocol: settings.Provider.ToUpperInvariant() switch
+                {
+                    "OPENAI" => ToolIdentityProtocol.OpenAiChatCompletions,
+                    "CLAUDE" => ToolIdentityProtocol.AnthropicMessages,
+                    "OLLAMA" => ToolIdentityProtocol.OllamaChat,
+                    "GEMINI" => ToolIdentityProtocol.GeminiGenerateContent,
+                    _ => ToolIdentityProtocol.Unspecified
+                }),
             TestContext.Current.CancellationToken);
         AssertQualification(result);
     }
 
-    private void AssertQualification(QualificationResult result)
+    private void AssertQualification(QualificationResultV3 result)
     {
         output.WriteLine(JsonSerializer.Serialize(result));
         result.Succeeded.Should().BeTrue(string.Join(", ", result.Contracts.SelectMany(contract =>
