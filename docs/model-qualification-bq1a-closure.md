@@ -150,11 +150,40 @@ removed. The BQ-1a branch is clean; main's sole working-file change is that
 preserved user edit. This documentation-only follow-up records the outcome;
 the accepted implementation/evidence bindings above remain unchanged.
 
-Remote integration is **not performed**: the attempted atomic push of main and
-`implementation/baize-bq1a` was rejected before execution by automatic approval
-review. Its stated reason was that local merge authorization did not explicitly
-authorize mutation of both remote branches. No bypass or alternate remote
-mutation was attempted. `origin/main` remains at the checked base; updating
-remote refs requires explicit owner approval. No publication workflow was
-triggered, no tags were pushed, no packages were published and no live
-qualification was run.
+### Source publication status — completed 2026-10-25
+
+The earlier atomic push was rejected before execution by automatic approval
+review because remote mutation of both branches had not been explicitly
+authorized. No bypass was attempted. The owner subsequently explicitly approved
+pushing both `main` and `implementation/baize-bq1a` without force or overwriting
+remote changes.
+
+After a fresh `git fetch origin`, both remote tips were verified as ancestors of
+their local tips with `git merge-base --is-ancestor`. An atomic push used exact
+branch refspecs with no force options. `git ls-remote --heads` then independently
+verified both published tips:
+
+| Remote branch | Fetched tip before push | Verified source-publication tip |
+| --- | --- | --- |
+| `main` | `b8f86893851726eb3b40a556435f9202b2460673` | `7ea5cb4b0b7de34276de243a5e5f6cc5afa1a703` |
+| `implementation/baize-bq1a` | `dab7c8f7efe3274e7285fc97bbc4f1d407633857` | `7ea5cb4b0b7de34276de243a5e5f6cc5afa1a703` |
+
+This documentation-only publication receipt follows that source tip. Publishing
+the receipt uses the same fresh-fetch, ancestry-check, atomic non-force push and
+remote-hash verification procedure; branch history identifies its own commit.
+No accepted implementation, probe evidence, contract or BQ-1b plan semantics
+change with this receipt. BQ-1a remains **ACCEPT WITH FOLLOW-UP**, and F1 remains
+separately tracked. BQ-1b implementation remains unauthorized pending examination
+of its plan and architectural decisions.
+
+Worktree checks: the BQ-1a and design worktrees are clean. Main retains only the
+pre-existing 41-line addition to `docs/roadmap-experience-signals.md`, left
+uncommitted and excluded from the push. Its file SHA-256 before publication is
+`7daae1f705af43a868551195dc6347bbd661709002ee9695f03b04a32d687236`;
+verify it remains unchanged afterward. Thus the repository does not have three
+entirely clean worktrees: this known user edit is the sole exception and is not
+discarded or committed to manufacture a clean status. Publication introduces
+no new uncommitted work.
+
+The NuGet publication workflow is tag/manual-only; no tags or manual workflows
+were dispatched. No packages were published and no live qualification was run.
