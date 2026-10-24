@@ -139,7 +139,22 @@ single-node command above passed. These are local mechanical results, not a
 new coverage-floor, cross-platform CI or online vulnerability audit. No live
 provider requests, raw credential reads or package publication occurred.
 
-The authorized integration is a fast-forward of main after committing this
-closure and the BQ-1b plan and rechecking branch cleanliness/current upstream.
-Git refs/history and the completion report record the actual integration tip;
-the immutable accepted implementation/evidence bindings above do not change.
+## Integration outcome
+
+Local main was fast-forwarded from
+`b8f86893851726eb3b40a556435f9202b2460673` to closure/plan commit
+`17cd440c293975a501784bd9903ed5b53818c52d`. The pre-existing roadmap addition
+was temporarily stashed, restored, compared exactly with new HEAD plus the
+original addition, and left uncommitted. The verified temporary stash was
+removed. The BQ-1a branch is clean; main's sole working-file change is that
+preserved user edit. This documentation-only follow-up records the outcome;
+the accepted implementation/evidence bindings above remain unchanged.
+
+Remote integration is **not performed**: the attempted atomic push of main and
+`implementation/baize-bq1a` was rejected before execution by automatic approval
+review. Its stated reason was that local merge authorization did not explicitly
+authorize mutation of both remote branches. No bypass or alternate remote
+mutation was attempted. `origin/main` remains at the checked base; updating
+remote refs requires explicit owner approval. No publication workflow was
+triggered, no tags were pushed, no packages were published and no live
+qualification was run.
