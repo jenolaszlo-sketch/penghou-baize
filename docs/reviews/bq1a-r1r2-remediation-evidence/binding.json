@@ -1,0 +1,23 @@
+{
+  "capturedDate": "2026-10-24",
+  "timeZone": "Asia/Manila",
+  "repository": "jenolaszlo-sketch/penghou-baize",
+  "branch": "implementation/baize-bq1a",
+  "reviewedImplementation": "68cd12a8ca1a019f7b863db87a1f62e6c10eebdd",
+  "reviewPreservation": "2a5ab3efc9155fad30a88511acde7a4d6fbfa61a",
+  "correctedImplementation": "123dd86249eba57be700d5e32b486a7527e06474",
+  "probeSource": "docs/reviews/bq1a-remediation-rereview-probes/Program.cs",
+  "probeSourceBlob": "f166ec44a668b2eb00a0ed5293904babf4f861ae",
+  "resultsFile": "docs/reviews/bq1a-r1r2-remediation-evidence/challenge-results.jsonl",
+  "recordCount": 33,
+  "expectedChangedRecords": 5,
+  "unchangedRecords": 28,
+  "qualificationPassed": 183,
+  "focusedR1R2Passed": 46,
+  "historicalProbeMatches": 16,
+  "integrationSkipped": 2,
+  "liveProviderCalls": 0,
+  "disposition": "R1/R2 REMEDIATION COMPLETE - INDEPENDENT VERIFICATION REQUIRED",
+  "resultsSha256LfUtf8": "44024ba5b72b3482cb6817c7511d3a0d4daec9f06e594aa9a75a4c50d092aba2",
+  "resultsGitBlob": "2f4538154dd9cec21fde1b234148901d504eb7af"
+}
