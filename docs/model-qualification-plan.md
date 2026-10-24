@@ -1,6 +1,9 @@
 # Model qualification: architecture and implementation roadmap
 
-Status: **Proposed — ready for design review, not approved or implemented.**
+Original design status: Proposed. Current delivery status (2026-10-25):
+**BQ-1a ACCEPT WITH FOLLOW-UP**; see the [closure and immutable bindings](model-qualification-bq1a-closure.md).
+The [BQ-1b staged implementation plan](model-qualification-bq1b-implementation-plan.md)
+is for examination only; implementation and live execution are not authorized.
 Design owner: Astra. Implementation handoff: Sol. Inspected 2026-10-22.
 
 ## Repository binding and document map

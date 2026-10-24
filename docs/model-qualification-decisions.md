@@ -5,6 +5,11 @@ Status: Proposed, 2026-10-22. Approval is outstanding. Applies to the
 The repository uses focused design/plan documents rather than a numbered ADR
 directory; this is the equivalent decision record.
 
+Current stage disposition (2026-10-25): [BQ-1a is accepted with follow-up](model-qualification-bq1a-closure.md).
+The original architecture choices below remain the basis of the
+[BQ-1b implementation plan for examination](model-qualification-bq1b-implementation-plan.md).
+This does not activate the later execution, funding, automation or promotion gates.
+
 ## Decisions and credible alternatives
 
 | Question | Selected approach | Alternatives and tradeoff |
