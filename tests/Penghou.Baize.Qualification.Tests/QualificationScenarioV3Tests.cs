@@ -184,7 +184,7 @@ public sealed class QualificationScenarioV3Tests
         Assert.Equal(AssertionStatus.NotObserved, result.Identity.ProviderIdentityStatus);
         if (canCorrelate) Assert.Equal(CanonicalIdentityOrigin.CollectorAssigned, result.Identity.CanonicalOrigin);
         else Check(result, "tools.single@3", "tool.identity", AssertionStatus.Failed);
-        Assert.Equal(protocol == ToolIdentityProtocol.OllamaChat ? IdentityApplicability.NotApplicable : IdentityApplicability.Applicable,
+        Assert.Equal(protocol == ToolIdentityProtocol.OllamaChat ? IdentityApplicability.Undetermined : IdentityApplicability.Applicable,
             result.Identity.ProviderIdentityApplicability);
     }
 

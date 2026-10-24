@@ -1,6 +1,7 @@
 # BQ-1a remediation decisions
 
-Date: 2026-10-23. Scope: qualification contracts and their offline fixtures only.
+Date: 2026-10-23; R1/R2 correction updated 2026-10-24. Scope: qualification
+contracts and their offline fixtures only.
 Status: implemented decisions awaiting independent re-review; not BQ-1a acceptance.
 This supplements the [original design](model-qualification-plan.md) and responds to
 the [independent review](reviews/bq1a-focused-independent-review.md). It does not
@@ -12,6 +13,15 @@ The reviewed source is implementation `7b7b3b57365b1075b46cdffd65f0e48dd4350b02`
 with handoff baseline `dab7c8f7efe3274e7285fc97bbc4f1d407633857`. Commit
 `b169d6ab66a211b611183d1d44e97f0419a20b06` preserves the original review,
 executable probes and their 16 recorded outputs before remediation.
+
+The subsequent [technical re-review](reviews/bq1a-remediation-independent-rereview.md)
+and its 33 challenge outputs are preserved at
+`2a5ab3efc9155fad30a88511acde7a4d6fbfa61a`, reviewing implementation
+`68cd12a8ca1a019f7b863db87a1f62e6c10eebdd`. That implementation and this record's
+prior contents remain reproducible at that exact commit. This working record
+now corrects R1/R2 only; the reviews, handoffs and recorded probe results are
+unchanged. The [focused handoff](model-qualification-bq1a-r1r2-handoff.md) binds
+the corrected implementation and a separate replay of the same challenge source.
 
 `QualificationContracts.cs`, `QualificationScenarios.cs`, their fixtures, the
 original 47 tests and the probe sources/results remain unchanged. Their
@@ -26,6 +36,36 @@ their request bytes, prompts, temperature 0 and 512-token cap did not change.
 The two existing live-wrapper method names and traits are preserved, and the
 wrappers explicitly move to the new contracts. This is a documented semantics
 migration, not a reinterpretation of old evidence or a newly qualified model.
+
+**R1/R2 version decision:** retain these unaccepted V3 identifiers. The available
+repository records contain only deterministic fixtures and review evidence for
+V3, explicitly awaiting acceptance; no accepted/published model qualification
+claims were found. Locally known refs/tags place `68cd12a` only on this working
+branch, with no containing remote-tracking branch or release tag. This is not a
+complete audit of external consumers. Offline review artifacts already exist
+and retain their exact build binding; they must never be reinterpreted as the
+corrected results. A V3 identifier alone does not distinguish these builds.
+If external V3 qualification usage is found, isolate that cohort and evaluate a
+new contract version before publishing or consuming corrected qualification
+evidence. No live qualification, evidence projection or claim migration occurs
+in this correction.
+
+## R1: nullable provider completion observations
+
+Provider completion state starts unknown (`null`). A non-null `Done` observation
+replaces the last explicit value: false means incomplete and true means complete.
+A null field is missing information and never clears either value. Thus
+false/null remains incomplete, true/null remains complete, false/true completes
+normally, and true/false becomes incomplete until a later explicit true.
+Metadata-only trailers do not invent a completion transition.
+
+Unknown remains distinct from incomplete: the existing contracts allow missing
+provider completion flags when other required finish/completion observations
+hold, without asserting that the provider reported `Done=true`. The absence of
+provider completion evidence does not by itself prove incomplete behavior.
+Successful router diagnostics/activity telemetry cannot override a known final
+false flag. Baseline, native-tool and routed regression fixtures enforce these
+rules, including the independent counterexamples and positive controls.
 
 ## F2: response shape
 
@@ -87,8 +127,10 @@ fault, prove unsupported features or replace the future projector's attribution.
 3. **Provider identity provenance:** a separate typed assessment of applicability
    and observation, never inferred from the spelling/existence of a normalized
    ID. At this public event boundary provenance is always NotObserved. For a
-   protocol without wire call IDs, applicability is NotApplicable. For optional
-   or required wire IDs it is Applicable but still NotObserved here.
+   proven, revision-bound protocol without wire call IDs, applicability could
+   be NotApplicable. For optional or required wire IDs it is Applicable but
+   still NotObserved here. An unbound Ollama revision is Undetermined, not
+   evidence that wire IDs are absent.
 
 `QualificationResultV3.Succeeded` covers only its two named scenario/integrity
 contracts. It does not turn the separate provenance assessment into a pass. A
@@ -106,7 +148,7 @@ documented protocol. A custom adapter/alternate API needs its own reviewed bindi
 | --- | --- | --- | --- |
 | OpenAI Chat Completions | Required nonempty emitted ID; missing ID fails | Collector fallback cannot satisfy required identity | Applicable, NotObserved |
 | Anthropic Messages | Required nonempty emitted ID; missing ID fails | Collector fallback cannot satisfy required identity | Applicable, NotObserved |
-| Ollama native `/api/chat` | Correlate using tool index; no wire-ID requirement | CollectorAssigned, explicitly labeled | NotApplicable, NotObserved |
+| Ollama native `/api/chat`, revision unbound | Correlate using tool index; no normalized-ID requirement when absent | CollectorAssigned, explicitly labeled | Undetermined (`protocol-revision-unbound`), NotObserved |
 | Gemini generateContent | Optional wire ID; require consistent normalized identity if present | CollectorAssigned if absent at the public seam; current adapter usually supplies an ID | Applicable, NotObserved |
 
 Protocol rationale, checked 2026-10-23:
@@ -118,9 +160,8 @@ Protocol rationale, checked 2026-10-23:
 - [Anthropic's tool lifecycle](https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls)
   binds tool results through a tool-use ID. This is a protocol rule, not a model
   family exception. Missing normalized IDs cannot qualify this composition.
-- [Ollama's tool example](https://docs.ollama.com/capabilities/tool-calling)
-  identifies the call by index/function and returns results through `tool_name`.
-  The reviewed Ollama adapter explicitly emits `Id: null`.
+- Ollama revision evidence is described below. A no-ID example or an adapter's
+  `Id:null` output does not establish protocol-wide inapplicability.
 - [Gemini's FunctionCall schema](https://ai.google.dev/api/generate-content#FunctionCall)
   marks its call ID optional. The reviewed adapter substitutes `call_N` when
   absent. The new evidence never represents that substitution as a provider ID.
@@ -130,6 +171,34 @@ fallback. It can validate native arguments and canonical correlation without
 pretending to establish that provenance. Ollama's current collector-generated
 GUID is also not provider provenance. No IDs are synthesized by these scenarios.
 No globally permissive missing-ID exception or model-name conditional was added.
+
+### R2: version-scoped Ollama evidence and boundary limits
+
+The historical [Ollama v0.12.0 API types](https://raw.githubusercontent.com/ollama/ollama/v0.12.0/api/types.go)
+define `ToolCall` with only `Function`. This supports a statement about that
+tag's wire type; it does not bind any running server or all Ollama revisions.
+The [main API types](https://raw.githubusercontent.com/ollama/ollama/main/api/types.go),
+rechecked 2026-10-24, define an optional `ToolCall.ID` (`id,omitempty`) and a
+message tool-call correlation field. Main is mutable and is not an immutable
+release/revision binding for a qualification run. These sources differ; neither
+authorizes an unversioned claim that Ollama universally lacks IDs.
+
+The current qualification context has no established Ollama protocol revision.
+It therefore reports applicability **Undetermined**, code
+`protocol-revision-unbound`, and provider identity status **NotObserved**. This
+is the same classification for ID-present and ID-absent offline wire fixtures.
+There is no new version-binding port or guessed model/server-version exception.
+
+The unchanged production `OllamaToolCall` wire model has no ID property, and
+`OllamaChatClient` emits `Id:null` even if the input fixture supplies a wire ID.
+The collector then assigns canonical correlation identity. Both native validity
+and turn-local correlation can pass; neither proves the provider emitted the
+canonical ID or that wire identity is inapplicable. Real-adapter tests exercise
+both wire shapes without persisting their fake IDs in evidence. Forwarding IDs
+and verifying their wire provenance remain separately authorized adapter/BQ-3
+work. BQ-1b must bind the actual subject/configuration/protocol revision before
+making a revision-scoped applicability claim. Required normalized IDs for
+OpenAI and Anthropic and optional-ID Gemini behavior are unchanged.
 
 ## Additional review decisions
 

@@ -257,13 +257,15 @@ internal static class QualificationScenariosV3
 
         public ToolIdentityEvidence Identity(QualificationContextV3 context, LlmResponse? response)
         {
-            var applicability = context.IdentityProtocol == ToolIdentityProtocol.OllamaChat ? IdentityApplicability.NotApplicable
+            // OllamaChat does not bind a protocol revision. Adapter omission of
+            // an ID cannot establish that wire identity is inapplicable.
+            var applicability = context.IdentityProtocol == ToolIdentityProtocol.OllamaChat ? IdentityApplicability.Undetermined
                 : QualificationContractsV3.KnownProtocol(context.IdentityProtocol) ? IdentityApplicability.Applicable : IdentityApplicability.Undetermined;
             var correlation = Tools.Count == 0 || response is null ? AssertionStatus.NotObserved : Correlation(context, response) ? AssertionStatus.Passed : AssertionStatus.Failed;
             var origin = correlation != AssertionStatus.Passed ? CanonicalIdentityOrigin.NotObserved
                 : Tools.Values.Any(t => t.Id is null) ? CanonicalIdentityOrigin.CollectorAssigned : CanonicalIdentityOrigin.NormalizedStream;
             return new(context.IdentityProtocol, correlation, origin, applicability, AssertionStatus.NotObserved,
-                applicability == IdentityApplicability.NotApplicable ? "protocol-has-no-wire-call-id" : "wire-provenance-not-observed");
+                context.IdentityProtocol == ToolIdentityProtocol.OllamaChat ? "protocol-revision-unbound" : "wire-provenance-not-observed");
         }
 
         public async IAsyncEnumerable<LlmStreamEvent> ObserveAsync(IAsyncEnumerable<LlmStreamEvent> stream, [EnumeratorCancellation] CancellationToken token)
@@ -298,7 +300,13 @@ internal static class QualificationScenariosV3
                     RouterFailed = router.Attempts.Count(a => a.Outcome == LlmRouterAttemptOutcome.Failed);
                     _routerSnapshots.Add(new(RouterAttempts.Value, RouterSucceeded.Value, RouterFailed.Value, TerminalCount == 1));
                 }
-                if (evt.Diagnostics is not null) { HasProviderDiagnostics = true; ProviderDone = evt.Diagnostics.Done; }
+                if (evt.Diagnostics is { } diagnostics)
+                {
+                    HasProviderDiagnostics = true;
+                    // Missing completion metadata does not retract an explicit
+                    // observation. Later explicit true/false values may replace it.
+                    ProviderDone = diagnostics.Done ?? ProviderDone;
+                }
                 // Native qualification requires bypassing the repair path entirely.
                 // This reports path evidence, not a claim that repair changed bytes.
                 RepairPathObserved |= evt.ContentWasRepaired || evt.ContentRepairAttempts is { Count: > 0 } || evt.ContentRepairDiagnostics is not null;

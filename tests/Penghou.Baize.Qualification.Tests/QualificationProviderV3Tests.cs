@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -21,20 +22,84 @@ public sealed class QualificationProviderV3Tests
         """;
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    [Fact]
-    public async Task D1_OllamaValidNativeCallUsesIndexCorrelationWithoutProviderIdClaim()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task R2_OllamaUnboundRevisionCannotEstablishIdentityApplicability(bool suppliedId)
     {
-        using var factory = new FakeHttpFactory(Ollama);
+        var body = suppliedId ? Ollama.Replace("\"function\":", "\"id\":\"provider_call_17\",\"function\":", StringComparison.Ordinal) : Ollama;
+        using var factory = new FakeHttpFactory(body);
         var client = new OllamaChatClient("fixture", factory, "", "https://fixture.invalid", new() { NativeToolCalling = true });
         var result = await QualificationScenariosV3.RunSingleToolAsync(new(client.StreamAsync, true,
             IdentityProtocol: ToolIdentityProtocol.OllamaChat), Token);
         Assert.True(result.Succeeded, JsonSerializer.Serialize(result));
         Assert.Equal(CanonicalIdentityOrigin.CollectorAssigned, result.Identity.CanonicalOrigin);
         Assert.Equal(AssertionStatus.Passed, result.Identity.CanonicalCorrelation);
-        Assert.Equal(IdentityApplicability.NotApplicable, result.Identity.ProviderIdentityApplicability);
+        Assert.Equal(IdentityApplicability.Undetermined, result.Identity.ProviderIdentityApplicability);
         Assert.Equal(AssertionStatus.NotObserved, result.Identity.ProviderIdentityStatus);
-        Assert.Equal("protocol-has-no-wire-call-id", result.Identity.ProviderIdentityCode);
+        Assert.Equal("protocol-revision-unbound", result.Identity.ProviderIdentityCode);
+        QualificationScenarioV3Tests.Check(result, "tools.single@3", "tool.identity", AssertionStatus.Passed);
+        QualificationScenarioV3Tests.Check(result, "tools.single@3", "tool.schema", AssertionStatus.Passed);
+        QualificationScenarioV3Tests.Check(result, "tools.single@3", "tool.value", AssertionStatus.Passed);
+        Assert.DoesNotContain("provider_call_17", JsonSerializer.Serialize(result));
         Assert.Equal(1, factory.Calls);
+    }
+
+    [Theory]
+    [InlineData(false, 0, false)]
+    [InlineData(true, 0, false)]
+    [InlineData(false, 1, true)]
+    [InlineData(true, 1, true)]
+    [InlineData(false, 2, true)]
+    [InlineData(true, 2, true)]
+    [InlineData(false, 3, false)]
+    [InlineData(true, 3, false)]
+    public async Task R1_RealRouterCannotReplaceProviderCompletionEvidence(bool tools, int shape, bool expected)
+    {
+        const string baseline = "data: {\"choices\":[{\"delta\":{\"content\":\"BAIZE_OK\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
+        using var factory = new FakeHttpFactory(tools ? ToolChunk("{\"value\":\"baize-live\"}", true, false) + Finish() : baseline);
+        await using var services = Routed(factory);
+        var router = services.GetRequiredService<ILlmRouter>();
+        var context = new QualificationContextV3((request, token) => WithCompletionObservations(router.StreamAsync("fixture", request, token), shape, token),
+            tools, RequireRouterDiagnostics: true, IdentityProtocol: ToolIdentityProtocol.OpenAiChatCompletions);
+        var result = tools
+            ? await QualificationScenariosV3.RunSingleToolAsync(context, Token)
+            : await QualificationScenariosV3.RunBaselineAsync(context, Token);
+        Assert.Equal(expected, result.Succeeded);
+        QualificationScenarioV3Tests.Check(result, tools ? "tools.single@3" : "chat.baseline@3", "execution.completed", expected ? AssertionStatus.Passed : AssertionStatus.Failed);
+        QualificationScenarioV3Tests.Check(result, "chat.streaming-integrity@2", "stream.terminal", expected ? AssertionStatus.Passed : AssertionStatus.Failed);
+        QualificationScenarioV3Tests.Check(result, tools ? "tools.single@3" : "chat.baseline@3", "diagnostics.router", AssertionStatus.Passed);
+        Assert.Single(result.Router.Snapshots);
+        Assert.Equal(1, result.Router.SuccessfulAttempts);
+        Assert.Equal(0, result.Router.FailedAttempts);
+        Assert.True(result.Router.TerminalOrderValid);
+        Assert.Equal(1, factory.Calls);
+    }
+
+    private static async IAsyncEnumerable<LlmStreamEvent> WithCompletionObservations(IAsyncEnumerable<LlmStreamEvent> stream,
+        int shape, [EnumeratorCancellation] CancellationToken token)
+    {
+        // Inject explicit public diagnostic observations around the real routed
+        // adapter stream. No claim that OpenAI emits these fixture diagnostics.
+        if (shape == 1) yield return new(Diagnostics: new("fixture", Done: false));
+        await foreach (var evt in stream.WithCancellation(token))
+        {
+            // Insert after the adapter's own final Done=true observation and
+            // before the router snapshot. An explicit true after the injected
+            // false would correctly supersede it and invalidate the oracle.
+            if (evt.RouterDiagnostics is not null)
+            {
+                bool?[] observations = shape switch
+                {
+                    0 => [false, null],
+                    1 => [true],
+                    2 => [true, null],
+                    _ => [true, false, null]
+                };
+                foreach (var done in observations) yield return new(Diagnostics: new("fixture", Done: done));
+            }
+            yield return evt;
+        }
     }
 
     [Theory]
