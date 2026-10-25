@@ -1,7 +1,8 @@
 # BQ-1b controlled execution: staged implementation plan
 
-Date: 2026-10-25. Status: **STAGE 0 READY WITH RESTRICTIONS;
-STAGES 1–7 IMPLEMENTATION NOT AUTHORIZED.**
+Date: 2026-10-25 (revised at Stage 2 authorization). Status: **STAGE 0 AND
+STAGE 1 COMPLETE; STAGE 2 IMPLEMENTATION AUTHORIZED (SIMING/ZHINU
+ARCHITECTURE). STAGES 3+ NOT AUTHORIZED.**
 Repository: `jenolaszlo-sketch/penghou-baize`.
 
 This refines the existing [architecture and roadmap](model-qualification-plan.md),
@@ -67,11 +68,56 @@ Deliver the non-packable net10.0 CLI already proposed at
 `eng/Penghou.Baize.Qualification/`, deterministic tests in the existing
 `tests/Penghou.Baize.Qualification.Tests/`, and reviewed synthetic examples in
 `eng/qualification/`. Ordinary output belongs in ignored
-`artifacts/qualification/`. Use `System.Text.Json` and existing Baize packages;
-no database, provider SDK, second router, host authority service or workflow
-engine. No production API/package/dependency change is assumed by this plan.
-If the seam audit proves one necessary, stop that stage and propose the smallest
+`artifacts/qualification/`. Use `System.Text.Json` and existing Baize packages.
+
+The execution architecture reuses the Penghou components that already exist
+instead of building duplicates of them:
+
+- **Penghou.Zhinu** (pinned published `0.2.0-preview.4`) owns the durable
+  workflow lifecycle: step boundaries, committed step-result reuse, retries,
+  leases, cancellation, restart recovery and inspection. Baize must not build
+  a second workflow state machine.
+- **Penghou.Siming** (pinned published stable `1.0.0`,
+  `Penghou.Siming.Sqlite`) owns the append-only, hash-chained, verifiable
+  evidence ledger, its idempotent append semantics, checkpoints and
+  verification. Baize must not build a second JSONL journal or hash chain.
+- **Baize** owns what only it can: model configuration resolution, the routed
+  adapter stream, qualification contracts/fixtures, budget policy and the
+  qualification evidence records.
+
+This replaces the custom durable store, sequenced JSONL journal, exclusive
+OS lock writer, torn-tail recovery and workflow state machine that earlier
+revisions of this plan assigned to Baize-owned Stages 2–6. Requirements whose
+only purpose was implementing that custom machinery are removed; the safety
+boundaries they protected (immutable plans, durable reservation before
+dispatch, conservative accounting, preserved failures, restart without
+replenishment, fail-closed eligibility) remain unchanged and are now carried
+by the pinned components plus the integration logic below.
+
+Zhinu and Siming require no distributed transaction. A workflow failure does
+not roll back historical evidence: failures are observations worth
+preserving. Zhinu's at-least-once execution is accepted; interrupted external
+operations may be repeated under the applicable execution policy, provided
+each actual attempt is separately identified, reserved and recorded. If
+Zhinu commits a step but the following Siming append fails, reconciliation
+re-appends with Siming's idempotent keys; this is not turned into a
+distributed transaction protocol.
+
+No production API/package/dependency change is assumed by this plan except
+the two pinned tool-side package references. If the seam audit proves a
+production change necessary, stop that stage and propose the smallest
 separate change with its own tests rather than bypassing admission.
+
+Component pinning (recorded in every run manifest and the Stage 2 handoff):
+
+| Component | Pinned published package | Purpose in BQ-1b |
+| --- | --- | --- |
+| Penghou.Zhinu | `Penghou.Zhinu` + `Penghou.Zhinu.Sqlite` `0.2.0-preview.4` | Durable per-case workflow, stable run identity, step lifecycle, cancellation, restart/inspection |
+| Penghou.Siming | `Penghou.Siming` + `Penghou.Siming.Sqlite` `1.0.0` | Append-only verifiable qualification evidence ledger, idempotent appends, checkpoints, budget CAS |
+
+These packages are tool-only dependencies of the `eng/` CLI; the production
+dependency closures remain exactly the previously verified 12 packages.
+
 
 | Existing component, inspected at BQ-1a tip | Reuse / qualification responsibility |
 | --- | --- |
@@ -201,7 +247,8 @@ successful cleanup. Retain unknown liability and record unfinished cleanup.
 Cooperative in-process cancellation cannot force arbitrary code or remote compute
 to stop; an external host may terminate a stuck process after deadline+grace.
 Whether a local worker process is needed must be examined before promising a
-hard process-lifetime bound. No new workflow engine belongs in this stage.
+hard process-lifetime bound. No workflow engine is built here: the pinned
+Zhinu engine owns workflow state; Baize owns only the qualification steps.
 
 Keep infrastructure status, raw contract assertions and attribution distinct.
 Host/budget denial, I/O corruption, timeout, cancellation, credentials/access,
@@ -228,26 +275,31 @@ after authorization, each stage produces a bounded diff and offline evidence.
 | Stage | Deliverable / dependency | Concrete acceptance criteria |
 | --- | --- | --- |
 | 0 — Execution boundary feasibility (complete) | Audit exact starting main; standalone fake-HTTP probes; decisions D1–D5; no production or runner implementation. | READY WITH RESTRICTIONS: 26 probe invariants plus existing boundary/qualification tests; Stage 1 metadata planning feasible, actual wire coverage/economics unknowns explicitly deny live eligibility. See linked audit and S0-G1–G7 ownership. |
-| 1 — Registry and offline planner | Non-packable CLI shell; typed inventory/policy/resolved-plan; current descriptor registry and explicit Contracts friend assembly. | Two synthetic models resolve independently; unknown/empty selectors and all-excluded plans cannot yield a qualification success. Changed defaults/settings/build/fixtures change identity. Unknown authoritative values fail closed. `inventory validate` and `plan` perform zero secret reads, provider constructions and network calls. |
-| 2 — Durable store and budget state | Minimum manifest, plan, append-only sequenced/hash-linked JSONL, exclusive OS lock, reservation/intent/result/settlement transitions and partial report. Depends on stage 1. | Create-new atomic files/flush-to-disk before consequential work. Inject failure immediately before/after each durability boundary. One final-slot reservation wins under contention. Corrupt committed prefix/duplicate conflict refuses resume; torn tail bytes are preserved and recovery appends a new segment. A second writer is denied. Unknown liabilities survive replay; no duplicate completed sends. |
-| 3 — Existing semantic composition | One endpoint, isolated DI, no fallback/retry, wrapped model factory, deferred named secrets and a test execution adapter for V3. Depends on stages 1–2. | Denial causes zero secret reads/provider constructions; payload/context/target/attempt substitution rejects. Two fake subjects cannot share configuration or budget leases accidentally. Count exactly one semantic admission per intended call, not both the routed and inner seam; retain deliberate nested-call violations. Contracts/fixtures remain unchanged. |
-| 4 — HTTP path audit and admission | Reviewed path manifest, injected HTTP guard and audited existing backend/handler composition; byte/concurrency/spacing limits. Depends on stages 2–3. | Final physical slot race admits one send. Hidden retries above the innermost guard are counted and denied at cap; retries below the observable boundary disable live eligibility. Destination/method substitution, redirects, unauthorized extra POST, oversized request/header/body/read and read-after-dispose reject. Lease lasts until disposal; denied requests cannot reach a recording terminal transport. No second router/HTTP executor. |
-| 5 — Time, cancellation and usage settlement | Injectable clock, total/idle timers, bounded cleanup, complete/partial/unknown usage and fail-closed economics. Depends on stages 2–4. | Fake time proves header stalls, body stalls, metadata-only traffic, caller/deadline races and late callbacks cannot reopen admission. Include cancellation during secret lookup/serialization/send/read/disposal, absent/partial usage, over-bound usage and settlement replay. Null cost stays unknown; exhausted/expired/unbounded economics admits zero paid requests. |
-| 6 — Local run/resume/report integration | Wire existing `run`, `resume`, `report` semantics and documented exit precedence to the accepted registry and durable store. Depends on stages 1–5. | Two fake models complete a frozen matrix; integrity shares each scenario's request. Crash-after-intent never auto-resends; completed failures stay completed. Changed build/config/contract fails resume before secrets. Broken stdout does not destroy durable results. Mixed/empty/partial runs cannot be green; every raw assertion and infrastructure cause survives reporting. Sentinel secrets/private payloads never appear in default files/progress/errors. |
-| 7 — BQ-1b offline milestone handoff | Exact source/plan/store/test bindings, dispatch audit, residual risks, fake bundle and ordinary deterministic/API/dependency checks. | Repeatable offline fault suite and safe partial reports pass. Review the boundary audit independently before any later live use. No package publication, model catalogue approval, production routing mutation, scheduler or live demonstration is implied. |
+| 1 — Registry and offline planner (complete) | Non-packable CLI shell; typed inventory/policy/resolved-plan; current descriptor registry and explicit Contracts friend assembly. | Two synthetic models resolve independently; unknown/empty selectors and all-excluded plans cannot yield a qualification success. Changed defaults/settings/build/fixtures change identity. Unknown authoritative values fail closed. `inventory validate` and `plan` perform zero secret reads, provider constructions and network calls. |
+| 2 — Durable qualification execution slice (this stage) | Frozen-plan verification and binding; Zhinu workflow per selected case/trial with stable identities; deterministic synthetic fake transport behind the real Baize routed adapter; BQ-1a V3 scenario execution; Siming evidence ledger with idempotent appends; conservative budget accounting; reconciliation; offline JSON/Markdown report; `run`/`resume`/`report` commands. Depends on stage 1 plus pinned Zhinu/Siming. | Frozen plan → Zhinu workflow → Baize synthetic invocation → BQ-1a assertions → Siming evidence → qualification report works end to end with persisted state. Deterministic fault/restart suite covers success, contract failure with preserved negatives, cancellation, restart after a committed step, failure between workflow completion and Siming append, repeated append identity, crash-after-intent re-execution as a distinct attempt, evidence-storage failure producing no green report, budget exhaustion/unknown usage, and multi-case isolation. No real network, credential or paid execution. |
+| 3 — Real-transport admission and lifecycle audit | HTTP path audit and admission guard at the last application boundary; secret ordering; byte/concurrency/spacing limits; usage settlement; cleanup grace. Depends on stage 2. Real profiles become eligible only where wire-attempt/resource/economics bounds are demonstrated. | Final physical slot race admits one send; hidden retries above the guard are counted and denied at cap; retries below the observable boundary keep live eligibility blocked. Secret reads and provider constructions happen only after durable reservation. Full conservative liability for unknown usage; five-second cooperative cleanup. No new router/HTTP stack. |
+| 4 — Controlled real qualification | One reviewed real API/provider/model combination per run through the actual Baize adapters; predeclared dated allowances; attribution of quirks and adapter defects. Depends on stage 3. | Actionable compatibility findings with exact configuration, contract, attempt and evidence identity; F1-style adapter defects stay separately attributed; provider failures never become model capability failures. Real runs are explicitly authorized per plan and per operator switch. |
+| 5 — BQ-1b qualification milestone handoff | Exact source/plan/store/test bindings, dispatch audit, residual risks, fake bundle, real-bundle (if authorized), ordinary deterministic/API/dependency checks. | Repeatable offline fault suite and safe partial reports pass. Review the boundary audit independently before any broader live use. No package publication, model catalogue approval, production routing mutation, scheduler or unattended promotion is implied. |
 
 ### Fault injection matrix
 
-Use recording fake semantic transports, existing real adapters over fake HTTP,
-scripted response bodies, a virtual clock, faulting storage and sentinel secrets.
-No paid/live failures are required. Every safety test observes both the guard's
-result and downstream sends/secret reads/disposals; testing counters alone is
-insufficient. Cover success, denial, two racing admissions, unexpected nested
-calls/retries, connection loss before/after headers, partial body, malformed
-terminal events, read/dispose hangs, missing/mismatched request IDs, reservation
-and evidence I/O failures, torn journal writes and duplicate resume writers.
-Retain original BQ-1a suites and both probe sources unchanged; a runner cannot
-repair inputs, retry until green or reinterpret historical contract IDs.
+Stage 2 uses the real pinned Zhinu/Sime stores over local files (never mocks
+of the two components), a recording fake terminal HTTP transport behind the
+real Baize routed adapter, scripted deterministic SSE responses, faulting
+evidence seams and sentinel secrets. No paid/live failures are required.
+Every safety test observes both the guard's result and downstream sends/
+secret reads/disposals; testing counters alone is insufficient.
+
+Required deterministic scenarios: success; contract failure with preserved
+negative assertions; cancellation and incomplete observation; process restart
+after a committed Zhinu step; failure between workflow completion and the
+Siming append; repeated Siming append with the same event identity; a
+legitimate re-execution represented as a distinct actual attempt; evidence
+storage failure that cannot produce a successful qualification report; budget
+exhaustion and unknown usage; multiple selected synthetic cases without
+identity or budget contamination. Retain original BQ-1a suites and both probe
+sources unchanged; a runner cannot repair inputs, retry until green or
+reinterpret historical contract IDs.
 
 ## Stage 0 decisions and deferred boundaries
 
@@ -256,18 +308,20 @@ choices resolve feasibility without authorizing implementation or any live run.
 
 | Decision applied by the affected stage | Selected initial choice / consequence |
 | --- | --- |
-| D1/D5 — physical-send definition and allowed paths (stages 1/4) | Distinct semantic/neutral/backend/wire quantities; wire attempts unknown without evidence. Fake backend milestone supported, real profiles blocked when hard coverage/bounds are missing. Any required lower seam is a separate scoped decision. |
-| D2 — input/reasoning bounds and economics sources (stage 5 / later live gate) | Fake profiles use known ceilings. Missing bounds/rates/currency/allowance block paid admission; partial/derived usage retains full reservation. Exact live cohort/account/rates remain separately authorized. |
-| D3 — cleanup/process lifetime (stage 5) | Five-second cooperative cleanup with explicit incomplete state, lease revocation and retained unknown liabilities. Hard worker/process lifetime is a separate later decision, not a prerequisite to offline Stage 1. |
-| D4 — minimum evidence compatibility (stages 1–2) | Existing v1 minimum envelope with reservation/intent before consequential calls, exact boundary kind, unknown spend, exclusive writer and crash-safe replay. BQ-2 later formalizes schemas/projection without silently redefining BQ-1b records. |
+| D1/D5 — physical-send definition and allowed paths (stages 1/3) | Distinct semantic/neutral/backend/wire quantities; wire attempts unknown without evidence. Fake backend milestone supported, real profiles blocked when hard coverage/bounds are missing. Any required lower seam is a separate scoped decision. |
+| D2 — input/reasoning bounds and economics sources (stage 3 / later live gate) | Fake profiles use known ceilings. Missing bounds/rates/currency/allowance block paid admission; partial/derived usage retains full reservation. Exact live cohort/account/rates remain separately authorized. |
+| D3 — cleanup/process lifetime (stage 3) | Five-second cooperative cleanup with explicit incomplete state, lease revocation and retained unknown liabilities. Hard worker/process lifetime is a separate later decision, not a prerequisite to offline Stage 1. |
+| D4 — minimum evidence compatibility (stage 2) | v1 minimum evidence envelope carried by the pinned Siming ledger: reservation before consequential calls, exact boundary kind, idempotent append identities, unknown spend, verifiable hash chain and crash-safe replay. BQ-2 later formalizes schemas/projection without silently redefining BQ-1b records. The workflow lifecycle is carried by Zhinu, not a Baize-owned state machine. |
 | Policy defaults (plan examination) | Retain documented concurrency 1, retries 0, 10-minute run / 120-second attempt / 30-second idle / 5-second cleanup and the documented byte ceilings, tightened by actual component limits. Numeric request/token/cost allowances remain explicit per plan; no zero-as-unlimited. |
 
 BQ-2 owns formal schemas, immutable projection/corrections, legacy imports,
 cohort aggregation and approval/catalogue state. BQ-1b must still implement the
-minimum durable envelope/recovery; it cannot defer crash safety to BQ-2.
+minimum durable envelope/recovery through the pinned Siming/Zhinu components;
+it cannot defer crash safety to BQ-2.
 BQ-3 owns versioned quirks and separately reviewed adapter fixes, including F1
 and Ollama wire-ID forwarding. BQ-4 owns additional shared scenarios, complete
 parts/continuation/parallel replay, repair-aware profiles, repetitions and drift.
-BQ-5 owns shard exchange/workflow integration. GM-3/remaining GM-4/full GM-5
-are not certified by this runner. No operational model capability claim, live
-qualification, package publication or BQ-1b implementation starts with this plan.
+BQ-5 owns shard exchange/integration on top of the Zhinu runs. GM-3/remaining
+GM-4/full GM-5 are not certified by this runner. No operational model capability
+claim, live qualification, package publication or BQ-1b implementation starts
+with this plan.

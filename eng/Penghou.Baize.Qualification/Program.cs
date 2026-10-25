@@ -1,12 +1,49 @@
 using System.Text;
 using System.Text.Json;
+using Penghou.Baize.Qualification.Execution;
 using Penghou.Baize.Qualification.Planning;
 
-return QualificationCli.Execute(args, Console.Out, Console.Error, new OfflineBoundary());
+return await QualificationCli.ExecuteAsync(args, Console.Out, Console.Error, ExecutionFaults.None,
+    new OfflineBoundary(), CancellationToken.None);
 
 internal static class QualificationCli
 {
+    // Stage 1 synchronous offline entry point, preserved for the existing
+    // acceptance suite. Execution commands use ExecuteAsync.
     public static int Execute(string[] args, TextWriter output, TextWriter error, OfflineBoundary boundary)
+    {
+        try
+        {
+            return ExecuteOffline(args, output, error, boundary);
+        }
+        catch (SimulatedProcessCrashException)
+        {
+            throw;
+        }
+    }
+
+    public static async Task<int> ExecuteAsync(string[] args, TextWriter output, TextWriter error,
+        ExecutionFaults faults, OfflineBoundary boundary, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (args.Length > 0 && args[0] == "run")
+                return await RunCommand.RunAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
+            if (args.Length > 0 && args[0] == "resume")
+                return await RunCommand.ResumeAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
+            if (args.Length > 0 && args[0] == "report")
+                return await ReportCommand.ExecuteAsync(args[1..], output, error, cancellationToken).ConfigureAwait(false);
+            return ExecuteOffline(args, output, error, boundary);
+        }
+        catch (SimulatedProcessCrashException)
+        {
+            // Simulated process death: nothing may be reported as a completed
+            // qualification. The durable stores retain the partial history.
+            throw;
+        }
+    }
+
+    private static int ExecuteOffline(string[] args, TextWriter output, TextWriter error, OfflineBoundary boundary)
     {
         try
         {

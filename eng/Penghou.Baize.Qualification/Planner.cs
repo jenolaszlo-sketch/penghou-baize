@@ -99,15 +99,18 @@ internal sealed class Planner(OfflineBoundary boundary)
                 if (exclusion is not null) ValidateExpiry(exclusion, policy);
                 if (observationExclusion is not null) ValidateExpiry(observationExclusion, policy);
                 var observed = selectedContracts.Where(c => c.Id == scenario.Id || c.Mode == "SharedObservation" && observationExclusion is null).ToArray();
-                var blockers = new SortedSet<string>(StringComparer.Ordinal)
-                {
-                    "stage2-durable-admission-not-implemented", "stage3-semantic-admission-not-implemented",
-                    "stage4-http-admission-not-implemented", "stage5-lifecycle-and-settlement-not-implemented"
-                };
+                var blockers = new SortedSet<string>(StringComparer.Ordinal);
                 if (entry.TransportProfile != "SyntheticFake")
                 {
+                    // Durable admission now exists (Zhinu/Siming); what remains
+                    // unimplemented is the real-network admission/audit path.
+                    blockers.Add("real-network-execution-not-implemented");
                     blockers.Add("wire-attempt-bound-unproven");
                     blockers.Add("wire-and-preallocation-byte-bounds-unproven");
+                }
+                else if (!SyntheticTransports.Implemented(provider.Key.Value))
+                {
+                    blockers.Add("synthetic-transport-not-implemented");
                 }
                 if (entry.ApiVersion is null) blockers.Add("protocol-revision-unknown");
                 else blockers.Add("protocol-revision-evidence-unverified");
@@ -243,3 +246,11 @@ internal sealed record CasePlan(string Id, string SubjectId, string ModelId, str
     string Applicability, Exclusion? Exclusion, Exclusion? StreamingExclusion, TrialSlot[] Trials,
     int MaximumSemanticInvocationsPerSlot, int MaximumNeutralHttpCallsPerSlot, int? MaximumPhysicalWireAttemptsPerSlot,
     TokenEnvelope? RequestedReservation, string LiveEligibility, string[] LiveEligibilityBlockers);
+
+internal static class SyntheticTransports
+{
+    // Only the OpenAI chat-completions synthetic terminal transport exists in
+    // this stage; other synthetic protocols stay explicitly blocked rather
+    // than silently exercising a parallel execution path.
+    public static bool Implemented(string providerKey) => providerKey is "OpenAi";
+}
