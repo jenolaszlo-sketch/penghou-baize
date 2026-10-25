@@ -1,6 +1,7 @@
 # BQ-1b controlled execution: staged implementation plan
 
-Date: 2026-10-25. Status: **PLAN FOR EXAMINATION; IMPLEMENTATION NOT AUTHORIZED.**
+Date: 2026-10-25. Status: **STAGE 0 READY WITH RESTRICTIONS;
+STAGES 1–7 IMPLEMENTATION NOT AUTHORIZED.**
 Repository: `jenolaszlo-sketch/penghou-baize`.
 
 This refines the existing [architecture and roadmap](model-qualification-plan.md),
@@ -20,6 +21,45 @@ commit at BQ-1b kickoff; do not assume a branch name is an immutable build.
 The current contracts are `chat.baseline@3`, `tools.single@3` and
 `chat.streaming-integrity@2`, with their unchanged version-1 request fixtures.
 Earlier V2/streaming-1 evidence is historical and remains reproducible.
+
+## Stage 0 feasibility result
+
+Starting main: `3986dde792f6af49f4f3a51e27db1a6d721d691f`.
+The [bounded Stage 0 audit](model-qualification-bq1b-stage0-audit.md) and
+[five execution decisions](model-qualification-bq1b-stage0-decisions.md) establish
+the implementation basis. Twenty-six deterministic probes demonstrate existing
+ports and counterexamples without production edits or real network requests.
+
+**Stage 1 is technically ready after explicit implementation authorization.**
+No production API change is needed for offline Stages 1–3. The initial milestone
+is offline/two-fake-model execution; real network profiles remain ineligible
+where required wire-attempt, resource or economic bounds are unproven. No new
+BQ-1a review or broader GM milestone implementation is required.
+
+Carry these constraints into the stages below:
+
+- Use metadata resolution for planning, never runtime endpoint validation,
+  which resolves secrets/constructs clients outside semantic admission.
+- Freeze an existing injectable fixed options monitor and all subject/protocol
+  data; default routing reloads configuration. Use one endpoint and one semantic
+  guard at the deferred boundary, without fallback or duplicate inner guards.
+- Count neutral calls and terminal application/backend sends separately; neither
+  establishes a wire-attempt count. Handler retries and destination substitution
+  require a last application guard, and runtime-internal retries remain a live
+  eligibility gap. No universal four-attempt reservation multiplier is approved.
+- Treat partial/derived totals and absent reasoning/cost fields as insufficient
+  settlement evidence; observe full semantic usage without changing V3 contracts.
+- Adopt cooperative cleanup with five-second grace. Secret resolution may
+  outlive a cancelled waiter and DisposeAsync may block synchronously; revoke
+  leases, recheck late secret results and schedule cleanup off the coordinator.
+- Separate decoded/delivered byte limits from wire/preallocation claims and
+  keep profiles ineligible for stronger guarantees the existing path cannot meet.
+
+The audit's **S0-G1–S0-G7** table names the smallest correction, affected
+components, required tests and owning stage for every gap. These are runner
+composition/eligibility/minimum-evidence requirements, not blanket approval for
+production changes. If a genuine lower wire gate is later demanded, propose a
+narrow existing-seam change separately; do not create another HTTP stack.
 
 ## Scope and reuse
 
@@ -187,6 +227,7 @@ after authorization, each stage produces a bounded diff and offline evidence.
 
 | Stage | Deliverable / dependency | Concrete acceptance criteria |
 | --- | --- | --- |
+| 0 — Execution boundary feasibility (complete) | Audit exact starting main; standalone fake-HTTP probes; decisions D1–D5; no production or runner implementation. | READY WITH RESTRICTIONS: 26 probe invariants plus existing boundary/qualification tests; Stage 1 metadata planning feasible, actual wire coverage/economics unknowns explicitly deny live eligibility. See linked audit and S0-G1–G7 ownership. |
 | 1 — Registry and offline planner | Non-packable CLI shell; typed inventory/policy/resolved-plan; current descriptor registry and explicit Contracts friend assembly. | Two synthetic models resolve independently; unknown/empty selectors and all-excluded plans cannot yield a qualification success. Changed defaults/settings/build/fixtures change identity. Unknown authoritative values fail closed. `inventory validate` and `plan` perform zero secret reads, provider constructions and network calls. |
 | 2 — Durable store and budget state | Minimum manifest, plan, append-only sequenced/hash-linked JSONL, exclusive OS lock, reservation/intent/result/settlement transitions and partial report. Depends on stage 1. | Create-new atomic files/flush-to-disk before consequential work. Inject failure immediately before/after each durability boundary. One final-slot reservation wins under contention. Corrupt committed prefix/duplicate conflict refuses resume; torn tail bytes are preserved and recovery appends a new segment. A second writer is denied. Unknown liabilities survive replay; no duplicate completed sends. |
 | 3 — Existing semantic composition | One endpoint, isolated DI, no fallback/retry, wrapped model factory, deferred named secrets and a test execution adapter for V3. Depends on stages 1–2. | Denial causes zero secret reads/provider constructions; payload/context/target/attempt substitution rejects. Two fake subjects cannot share configuration or budget leases accidentally. Count exactly one semantic admission per intended call, not both the routed and inner seam; retain deliberate nested-call violations. Contracts/fixtures remain unchanged. |
@@ -208,14 +249,17 @@ and evidence I/O failures, torn journal writes and duplicate resume writers.
 Retain original BQ-1a suites and both probe sources unchanged; a runner cannot
 repair inputs, retry until green or reinterpret historical contract IDs.
 
-## Examination decisions and deferred boundaries
+## Stage 0 decisions and deferred boundaries
 
-| Decision to settle before the affected stage | Proposed bounded choice / consequence |
+The linked Stage 0 decisions select the bounded initial claims below. These
+choices resolve feasibility without authorizing implementation or any live run.
+
+| Decision applied by the affected stage | Selected initial choice / consequence |
 | --- | --- |
-| Audited physical-send definition and allowed backend/adapter paths (stage 4) | Separate neutral calls, backend sends and wire attempts. Admit a real profile only when every billable attempt is conservatively bounded; otherwise ship offline-only eligibility. Examine any required existing-seam enhancement separately. |
-| Input/reasoning bounds and economics sources (stage 5 / later live gate) | Fake profiles use known ceilings. Real paid profiles stay blocked without independently defensible bounds and a dedicated allowance; do not invent a tokenizer or cost estimate. Exact live cohort/account/rates remain separately authorized. |
-| Hard cleanup/process lifetime (stage 5) | Five-second cooperative cleanup plus explicit incomplete state is the in-process claim. Examine a host termination/worker boundary if stronger guarantees are required; do not imply managed disposal can be forcibly cancelled. |
-| Minimum evidence compatibility (stages 1–2) | Implement the existing v1 minimum record family/canonical writer and deterministic fixtures now. BQ-2 later formalizes schemas/projection without silently redefining BQ-1b records. |
+| D1/D5 — physical-send definition and allowed paths (stages 1/4) | Distinct semantic/neutral/backend/wire quantities; wire attempts unknown without evidence. Fake backend milestone supported, real profiles blocked when hard coverage/bounds are missing. Any required lower seam is a separate scoped decision. |
+| D2 — input/reasoning bounds and economics sources (stage 5 / later live gate) | Fake profiles use known ceilings. Missing bounds/rates/currency/allowance block paid admission; partial/derived usage retains full reservation. Exact live cohort/account/rates remain separately authorized. |
+| D3 — cleanup/process lifetime (stage 5) | Five-second cooperative cleanup with explicit incomplete state, lease revocation and retained unknown liabilities. Hard worker/process lifetime is a separate later decision, not a prerequisite to offline Stage 1. |
+| D4 — minimum evidence compatibility (stages 1–2) | Existing v1 minimum envelope with reservation/intent before consequential calls, exact boundary kind, unknown spend, exclusive writer and crash-safe replay. BQ-2 later formalizes schemas/projection without silently redefining BQ-1b records. |
 | Policy defaults (plan examination) | Retain documented concurrency 1, retries 0, 10-minute run / 120-second attempt / 30-second idle / 5-second cleanup and the documented byte ceilings, tightened by actual component limits. Numeric request/token/cost allowances remain explicit per plan; no zero-as-unlimited. |
 
 BQ-2 owns formal schemas, immutable projection/corrections, legacy imports,

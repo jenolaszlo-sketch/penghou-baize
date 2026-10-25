@@ -4,6 +4,13 @@ Status: Proposed v1; commands below are requirements, not runnable features.
 See [plan](model-qualification-plan.md) for projects and phased delivery and
 [evidence](model-qualification-evidence.md) for authoritative records.
 
+[Stage 0 feasibility](model-qualification-bq1b-stage0-audit.md) distinguishes
+observable neutral/backend sends from unproven runtime-internal wire attempts.
+Its [D1–D5 decisions](model-qualification-bq1b-stage0-decisions.md) restrict real
+eligibility where bounds are unavailable and adopt five-second cooperative
+cleanup, not a hard worker-lifetime guarantee. Requirements below remain future
+implementation requirements; no enforcement is implied merely by this document.
+
 ## CLI and configuration
 
 Proposed invocation: `dotnet run --project eng/Penghou.Baize.Qualification -- <command>`.

@@ -1,0 +1,26 @@
+{
+  "kind": "bq1b-stage0-audit-binding",
+  "date": "2026-10-25",
+  "timeZone": "Asia/Manila",
+  "branch": "investigation/baize-bq1b-stage0",
+  "auditedBase": "3986dde792f6af49f4f3a51e27db1a6d721d691f",
+  "acceptedQualificationImplementation": "123dd86249eba57be700d5e32b486a7527e06474",
+  "sdk": "10.0.401",
+  "runtime": "10.0.12",
+  "targetFramework": "net10.0",
+  "configuration": "Debug",
+  "sourceSha256LfUtf8": {
+    "BoundaryProbes.csproj": "5c96a446a1a3d2cf007fbd541064fbe94ffb4f4bf0952ab758811df8bdf503b1",
+    "NuGet.Config": "9508cae5f76364f56e80eb97cb16493977243cf38e5cca6284e3d74f83b20a2c",
+    "Program.cs": "052a71f4d2aea7e553c585f15c5bb3a929c346daa6c11138bc8e6232dc2dc877",
+    "Fixtures.cs": "c2693ba249d911d93ea50a53d4e3130eb3bf6a439b7cd8e1c5c90b33c1658c62",
+    "Verify-Probes.ps1": "e3d96d2f7d8643165052ed7d77a21f0114cb4c8735d821e59364356a2ee9f18b"
+  },
+  "resultsSha256LfUtf8": "057de94d0f9d61f01b1f04f141b9272195b805377e2b3faae5cf4684f6e80f04",
+  "probeCount": 26,
+  "existingCoreBoundaryTestsPassed": 25,
+  "existingRouterBoundaryTestsPassed": 7,
+  "acceptedQualificationTestsPassed": 183,
+  "realProviderCalls": 0,
+  "disposition": "READY WITH RESTRICTIONS"
+}

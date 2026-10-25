@@ -10,6 +10,11 @@ The original architecture choices below remain the basis of the
 [BQ-1b implementation plan for examination](model-qualification-bq1b-implementation-plan.md).
 This does not activate the later execution, funding, automation or promotion gates.
 
+The [BQ-1b Stage 0 execution decisions](model-qualification-bq1b-stage0-decisions.md)
+resolve the initial counting, economics, cooperative cleanup, durability and
+offline-eligibility choices against audited base `3986dde`. Disposition is
+READY WITH RESTRICTIONS; implementation/live execution remains unauthorized.
+
 ## Decisions and credible alternatives
 
 | Question | Selected approach | Alternatives and tradeoff |
