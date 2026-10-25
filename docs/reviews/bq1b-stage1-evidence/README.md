@@ -34,7 +34,7 @@ summaries and `plan.json` bytes were byte-identical across runs (deterministic
 conformance observation, checked by the generating script and asserted
 continuously by `Stage1CanonicalizationTests`).
 
-## Artifacts and SHA-256 (UTF-8 bytes)
+## Artifacts and SHA-256 (UTF-8 without BOM, CRLF normalized to LF, including the final newline, so Git checkout line endings do not change the values)
 
 | File | SHA-256 |
 | --- | --- |
@@ -42,7 +42,7 @@ continuously by `Stage1CanonicalizationTests`).
 | `summary.json` | `e4b30bb54702c55d8b78c095d745bb5b6b314520a66d2e727b71e72d3cc55190` |
 | `plan.json` | `8c636da9d9f7e60df88edcb9082ee7bed789a29562b94c787289a539d81fba8d` |
 | `identity.json` | `e4e64d13039ca38cdf6931d43fe85e245c419a005f6b9e525cb924771d4421d0` |
-| `rejections.jsonl` | `3dddb9335ab4dad74581b52211df47116f50dc4a54277df440775376b67f69bb` |
+| `rejections.jsonl` | `28ec310234a65c05a35442887f749641008325acdd43a0d9fa16744408bc8214` |
 | `eng/qualification/stage1/inventory.json` (input) | `8a445f2a18993f79e0ef25a590316d4efc9ba9beee00f587b75a6e360611df90` |
 | `eng/qualification/stage1/policy.json` (input) | `34f566c5781080473b9bdc03de66e452207145a33146c880d36bc3ff71896ed2` |
 | `eng/qualification/stage1/canonical-vectors.json` (input) | `34c4d56683e15292d304699e66c0cd825dea89e4d8e7135bc158cb9ee4120778` |
