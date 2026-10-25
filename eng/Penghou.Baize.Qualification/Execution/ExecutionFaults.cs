@@ -23,6 +23,13 @@ internal sealed class ExecutionFaults
     public Action<string>? BeforeTrialFinishedAppend { get; init; }
     public Action<string>? AfterTrialFinishedAppend { get; init; }
 
+    // HTTP admission boundary hooks (dispatch id / attempt id).
+    public Action<string>? BeforeHttpAdmission { get; init; }
+    public Func<string, bool>? DenyHttpAdmission { get; init; }
+    public Action<string>? AfterHttpAdmission { get; init; }
+    public Action<string>? BeforeHttpResultRecord { get; init; }
+    public Action<string>? AfterHttpResultRecord { get; init; }
+
     // Simulates process death inside a running workflow: cancelling this token
     // stops the current Zhinu worker attempt (lease released, run remains
     // Running, nothing committed). The runner converts it into a crash.

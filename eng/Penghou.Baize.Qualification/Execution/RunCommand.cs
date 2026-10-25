@@ -13,6 +13,12 @@ internal sealed record CaseOutcome(string CaseId, string TrialId, int TrialSlot,
     AttemptOutcome Outcome, string[] FailedAssertionIds, string? FailureCategory, string? Attribution, bool Complete,
     string Status);
 
+internal sealed class LiveEligibilityException(string[] criticalReasons, string[] limitations) : Exception("Live execution is not eligible for the selected cases.")
+{
+    public string[] CriticalReasons { get; } = criticalReasons;
+    public string[] Limitations { get; } = limitations;
+}
+
 internal sealed class RunCommand
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, ExecutionFaults faults,
@@ -44,9 +50,21 @@ internal sealed class RunCommand
     {
         try
         {
-            var options = ParseOptions(args, new[] { "--plan", "--out", "--models", "--contracts" }, optional: "--trial");
+            var options = ParseOptions(args, new[] { "--plan", "--out", "--models", "--contracts" }, optional: "--trial",
+                bareFlags: ["--allow-live"]);
+            var allowLive = options.ContainsKey("--allow-live");
             var plan = FrozenRunPlan.Load(options["--plan"]);
             var selection = SelectCases(plan, options);
+            foreach (var selected in selection)
+            {
+                var transportProfile = selected.SubjectElement.GetProperty("binding").GetProperty("requested")
+                    .GetProperty("transportProfile").GetString();
+                if (transportProfile == "SyntheticFake") continue;
+                if (!allowLive) throw new ExecutionException("real-network-not-authorized");
+                var assessment = LiveEligibility.Assess(plan, selected, Guid.Empty.ToString("N"));
+                if (assessment.State != LiveEligibility.StateEligible)
+                    throw new LiveEligibilityException(assessment.CriticalReasons, assessment.Limitations);
+            }
             var runDirectory = Path.GetFullPath(options["--out"]);
             if (Directory.Exists(runDirectory) || File.Exists(runDirectory))
                 throw new ExecutionException("run-output-already-exists");
@@ -63,6 +81,7 @@ internal sealed class RunCommand
             return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, cancellationToken,
                 resume: false).ConfigureAwait(false);
         }
+        catch (LiveEligibilityException exception) { return FailEligibility(exception); }
         catch (PlanningException exception) { return Fail(exception.Code, 2); }
         catch (ExecutionException exception) { return Fail(exception.Code, 2); }
         catch (SimulatedProcessCrashException) { throw; }
@@ -110,15 +129,23 @@ internal sealed class RunCommand
         }
     }
 
-    private Dictionary<string, string> ParseOptions(string[] args, string[] required, string? optional)
+    private Dictionary<string, string> ParseOptions(string[] args, string[] required, string? optional,
+        string[]? bareFlags = null)
     {
-        var allowed = required.Concat(optional is null ? [] : new[] { optional }).ToArray();
+        var allowed = required.Concat(optional is null ? [] : new[] { optional })
+            .Concat(bareFlags ?? []).ToArray();
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
-        for (var i = 0; i < args.Length; i += 2)
+        for (var i = 0; i < args.Length; i++)
         {
+            if (bareFlags is not null && bareFlags.Contains(args[i], StringComparer.Ordinal))
+            {
+                if (!options.TryAdd(args[i], "true")) throw new ExecutionException("invalid-options");
+                continue;
+            }
             if (i + 1 >= args.Length || !allowed.Contains(args[i], StringComparer.Ordinal)
                 || string.IsNullOrWhiteSpace(args[i + 1]) || !options.TryAdd(args[i], args[i + 1]))
                 throw new ExecutionException("invalid-options");
+            i++;
         }
         foreach (var requiredOption in required)
             if (!options.ContainsKey(requiredOption)) throw new ExecutionException("missing-options");
@@ -148,8 +175,6 @@ internal sealed class RunCommand
                     throw new ExecutionException("excluded-case-cannot-execute");
                 var subjectId = caseElement.GetProperty("subjectId").GetString()!;
                 var subject = plan.Subjects.Single(s => s.GetProperty("id").GetString() == subjectId);
-                var transportProfile = subject.GetProperty("binding").GetProperty("requested").GetProperty("transportProfile").GetString();
-                if (transportProfile != "SyntheticFake") throw new ExecutionException("real-network-not-authorized");
                 var trials = caseElement.GetProperty("trials").EnumerateArray().ToArray();
                 if (trial < 1 || trial > trials.Length) throw new ExecutionException("trial-out-of-range");
                 var trialElement = trials[trial - 1];
@@ -175,7 +200,7 @@ internal sealed class RunCommand
     {
         var planInventory = plan.Inventory;
         var environment = await ExecutionEnvironment.CreateAsync(runDirectory, _faults,
-            DeserializeInventory(planInventory), cancellationToken).ConfigureAwait(false);
+            DeserializeInventory(planInventory), BuildBudget(plan), cancellationToken).ConfigureAwait(false);
         await using (environment)
         {
             var outcomes = new List<CaseOutcome>();
@@ -195,6 +220,16 @@ internal sealed class RunCommand
                         manifest.CreatedUtc, selectionSummary),
                     idempotencyKey: "run-started", cancellationToken: cancellationToken).ConfigureAwait(false);
                 _faults.AfterRunStartedAppend?.Invoke();
+                // The eligibility assessment is evidence, never authorization.
+                foreach (var selected in selection)
+                {
+                    var assessment = LiveEligibility.Assess(plan, selected, manifest.RunId);
+                    await environment.Ledger.AppendAsync(
+                        EvidenceLedger.TrialStream(selected.CaseId, selected.TrialSlot),
+                        EvidenceLedger.EligibilityAssessed, assessment,
+                        idempotencyKey: "eligibility-" + manifest.RunId + "-" + selected.CaseId + "-" + selected.TrialSlot,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
                 using var executionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken, _faults.Interrupt?.Token ?? CancellationToken.None);
                 foreach (var selected in selection)
@@ -432,7 +467,8 @@ internal sealed class RunCommand
             scenario.GetProperty("maximumDispatches").GetInt32(),
             reservation.ValueKind == JsonValueKind.Object
                 ? new TokenReservationEvidence(NullableLong(reservation, "inputTokens"), NullableLong(reservation, "outputTokens"),
-                    NullableLong(reservation, "reasoningTokens"), NullableLong(reservation, "totalTokens"))
+                    NullableLong(reservation, "reasoningTokens"), NullableLong(reservation, "totalTokens"),
+                    NullableString(reservation, "maximumCost"), NullableString(reservation, "currency"))
                 : null,
             new SubjectBindingEvidence(requested.GetProperty("service").GetString()!,
                 requested.GetProperty("accountScopeRef").GetString()!, requested.GetProperty("endpointProfile").GetString()!,
@@ -446,7 +482,10 @@ internal sealed class RunCommand
                 endpoint.GetProperty("apiKeySecretName").GetString()!),
             BuildBudget(plan),
             new DeadlinesEvidence(policy.GetProperty("attemptTimeout").GetString()!,
-                policy.GetProperty("maximumDuration").GetString()!, policy.GetProperty("streamIdleTimeout").GetString()!));
+                policy.GetProperty("maximumDuration").GetString()!, policy.GetProperty("streamIdleTimeout").GetString()!),
+            new LimitsEvidence(policy.GetProperty("maximumRequestBytes").GetInt64(),
+                policy.GetProperty("maximumResponseBytes").GetInt64(),
+                policy.GetProperty("maximumEventBytes").GetInt64()));
     }
 
     private static string[] ObservedContracts(JsonElement caseElement) =>
@@ -513,5 +552,23 @@ internal sealed class RunCommand
             executionAuthorized = false
         })));
         return exitCode;
+    }
+
+    private int FailEligibility(LiveEligibilityException exception)
+    {
+        _error.WriteLine("live-execution-not-eligible");
+        _output.WriteLine(Encoding.UTF8.GetString(CanonicalJson.Write(new
+        {
+            kind = "run-refused",
+            schemaVersion = "1.0",
+            code = "live-execution-not-eligible",
+            exitCode = 2,
+            commandCompleted = false,
+            qualificationPerformed = false,
+            executionAuthorized = false,
+            criticalReasons = exception.CriticalReasons,
+            limitations = exception.Limitations
+        })));
+        return 2;
     }
 }

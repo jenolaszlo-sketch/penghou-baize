@@ -102,9 +102,10 @@ internal sealed class Planner(OfflineBoundary boundary)
                 var blockers = new SortedSet<string>(StringComparer.Ordinal);
                 if (entry.TransportProfile != "SyntheticFake")
                 {
-                    // Durable admission now exists (Zhinu/Siming); what remains
-                    // unimplemented is the real-network admission/audit path.
-                    blockers.Add("real-network-execution-not-implemented");
+                    // Durable admission and the guarded transport exist; what
+                    // remains is explicit operator authorization plus the
+                    // unproven runtime-internal wire bounds (S0-G1/G6).
+                    blockers.Add("live-execution-requires-explicit-operator-authorization");
                     blockers.Add("wire-attempt-bound-unproven");
                     blockers.Add("wire-and-preallocation-byte-bounds-unproven");
                 }

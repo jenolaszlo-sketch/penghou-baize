@@ -15,6 +15,10 @@ internal sealed record ReportAttempt(
     string? DenialCode,
     string? FailureCategory,
     string? Attribution,
+    string? FailureStage,
+    string? SuggestedAttributionClass,
+    int HttpDispatches,
+    int? LastHttpStatus,
     string? UsageCompleteness,
     string? Settlement,
     bool Interrupted,
@@ -34,6 +38,7 @@ internal sealed record ReportCase(
     int TrialSlot,
     string TrialId,
     string SubjectId,
+    string HostingProvider,
     string Provider,
     string ProviderModel,
     string EndpointId,
@@ -44,8 +49,13 @@ internal sealed record ReportCase(
     bool NativeToolCalling,
     string? Outcome,
     string? WorkflowStatus,
+    string? EligibilityState,
+    string[] EligibilityCriticalReasons,
+    string[] EligibilityLimitations,
     string[] FailedAssertionIds,
     string? FailureCategory,
+    string? FailureStage,
+    string? SuggestedAttributionClass,
     string? Attribution,
     bool Complete,
     string[] Limitations,
@@ -152,17 +162,28 @@ internal static class ReportWriter
                 limitations.Add(limitation.GetString()!);
             if (outcome.Attribution is null && outcome.Outcome != AttemptOutcome.Passed)
                 limitations.Add("Attribution remains unrefined; infrastructure and capability causes are not conflated.");
+            var eligibility = snapshot.Eligibility.TryGetValue(TrialKey(selected), out var eligibilityPayload)
+                ? eligibilityPayload : (JsonElement?)null;
+            var eligibilityState = eligibility is { } e ? e.GetProperty("state").GetString() : null;
+            var eligibilityCritical = eligibility is { } criticalElement ? criticalElement.GetProperty("criticalReasons")
+                .EnumerateArray().Select(r => r.GetString()!).ToArray() : [];
+            var eligibilityLimitations = eligibility is { } limitationElement ? limitationElement.GetProperty("limitations")
+                .EnumerateArray().Select(r => r.GetString()!).ToArray() : [];
+            var failureStage = attempts.Select(a => a.FailureStage).FirstOrDefault(s => s is not null);
+            var suggestedClass = attempts.Select(a => a.SuggestedAttributionClass).FirstOrDefault(s => s is not null);
             return new ReportCase(selected.CaseId, selected.ModelId, selected.ScenarioId,
                 selected.CaseElement.GetProperty("observations").EnumerateArray().Select(o => o.GetProperty("id").GetString()!).ToArray(),
                 scenario.GetProperty("fixtureId").GetString()!, scenario.GetProperty("fixtureHash").GetString()!,
                 selected.TrialSlot, selected.TrialId, selected.SubjectId,
+                requested.GetProperty("service").GetString()!,
                 resolved.GetProperty("provider").GetString()!, resolved.GetProperty("providerModel").GetString()!,
                 resolved.GetProperty("endpointId").GetString()!, requested.GetProperty("protocol").GetString()!,
                 NullableString(requested, "apiVersion"), requested.GetProperty("transportProfile").GetString()!,
                 resolved.GetProperty("settings").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString() ?? "", StringComparer.Ordinal),
                 resolved.GetProperty("capabilities").GetProperty("nativeToolCalling").GetBoolean(),
                 outcome.Outcome.ToString(),
-                outcome.Status, outcome.FailedAssertionIds, outcome.FailureCategory, outcome.Attribution,
+                outcome.Status, eligibilityState, eligibilityCritical, eligibilityLimitations,
+                outcome.FailedAssertionIds, outcome.FailureCategory, failureStage, suggestedClass, outcome.Attribution,
                 outcome.Complete, limitations.ToArray(), attempts);
         }).ToArray();
         var summary = Summarize(outcomes);
@@ -208,11 +229,16 @@ internal static class ReportWriter
         _ = trialFinalized;
         var usageCompleteness = settle.ValueKind == JsonValueKind.Object && settle.TryGetProperty("usage", out var usage)
             && usage.ValueKind == JsonValueKind.Object ? NullableString(usage, "completeness") : null;
+        var dispatches = snapshot.DispatchResults.TryGetValue(attemptId, out var dispatchList) ? dispatchList : [];
+        var lastStatus = dispatches.LastOrDefault()?.StatusCode;
         return new ReportAttempt(attemptId, outcome,
             finished.ValueKind == JsonValueKind.Object && finished.GetProperty("modelInvoked").GetBoolean(),
             denied.ValueKind == JsonValueKind.Object ? denied.GetProperty("reasonCode").GetString() : null,
             finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "failureCategory") : null,
             finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "attribution") : null,
+            finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "failureStage") : null,
+            finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "suggestedAttributionClass") : null,
+            dispatches.Count, lastStatus,
             usageCompleteness,
             settle.ValueKind == JsonValueKind.Object ? settle.GetProperty("settlement").GetString() : null,
             snapshot.Interrupted.ContainsKey(attemptId), snapshot.Released.ContainsKey(attemptId), failed, references);
@@ -263,6 +289,27 @@ internal static class ReportWriter
                 snapshot.Interrupted[interrupted.GetProperty("attemptId").GetString()!] = interrupted;
             else if (entry.EventType == EvidenceLedger.TrialFinished && TryPayload(entry, out var trial))
                 snapshot.Trials[$"{trial.GetProperty("caseId").GetString()}:{trial.GetProperty("trialSlot").GetInt32()}"] = trial;
+            else if (entry.EventType == EvidenceLedger.HttpDispatchResult && TryPayload(entry, out var dispatchResult))
+            {
+                var attemptId = dispatchResult.GetProperty("attemptId").GetString()!;
+                if (!snapshot.DispatchResults.TryGetValue(attemptId, out var list))
+                    snapshot.DispatchResults[attemptId] = list = [];
+                list.Add(new DispatchResultRecord(
+                    dispatchResult.GetProperty("dispatchId").GetString()!,
+                    NullableInt(dispatchResult, "statusCode"),
+                    dispatchResult.GetProperty("phase").GetString()!,
+                    dispatchResult.GetProperty("bytesRead").GetInt64(),
+                    dispatchResult.GetProperty("completed").GetBoolean()));
+            }
+            else if (entry.EventType == EvidenceLedger.HttpDispatchDenied && TryPayload(entry, out var dispatchDenied))
+            {
+                var attemptId = dispatchDenied.GetProperty("attemptId").GetString()!;
+                if (!snapshot.DispatchDenied.TryGetValue(attemptId, out var deniedList))
+                    snapshot.DispatchDenied[attemptId] = deniedList = [];
+                deniedList.Add(dispatchDenied.GetProperty("reasonCode").GetString()!);
+            }
+            else if (entry.EventType == EvidenceLedger.EligibilityAssessed && TryPayload(entry, out var eligibility))
+                snapshot.Eligibility[$"{eligibility.GetProperty("caseId").GetString()}:{eligibility.GetProperty("trialSlot").GetInt32()}"] = eligibility;
             else if (entry.EventType == EvidenceLedger.RunFinished && TryPayload(entry, out var runFinished))
                 snapshot.RunFinished = runFinished;
             else if (entry.EventType == EvidenceLedger.RunStarted && TryPayload(entry, out var runStarted))
@@ -271,6 +318,7 @@ internal static class ReportWriter
         snapshot.Attempts.UnionWith(snapshot.Reservations.Keys);
         snapshot.Attempts.UnionWith(snapshot.Intents.Keys);
         snapshot.Attempts.UnionWith(snapshot.Denied.Keys);
+        snapshot.Attempts.UnionWith(snapshot.DispatchResults.Keys);
     }
 
     private static bool TryPayload(LedgerEntry entry, out JsonElement payload)
@@ -284,7 +332,9 @@ internal static class ReportWriter
     {
         if (entry.EventType is EvidenceLedger.AttemptReserved or EvidenceLedger.DispatchIntent
             or EvidenceLedger.AttemptFinished or EvidenceLedger.UsageSettled or EvidenceLedger.BudgetDenied
-            or EvidenceLedger.AttemptReleased or EvidenceLedger.AttemptInterrupted)
+            or EvidenceLedger.AttemptReleased or EvidenceLedger.AttemptInterrupted
+            or EvidenceLedger.HttpDispatchAdmitted or EvidenceLedger.HttpDispatchResult
+            or EvidenceLedger.HttpDispatchDenied)
         {
             using var document = JsonDocument.Parse(entry.Payload);
             return document.RootElement.TryGetProperty("attemptId", out var id) ? id.GetString() : null;
@@ -305,7 +355,12 @@ internal static class ReportWriter
     private static long? NullableLong(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetInt64() : null;
 
+    private static int? NullableInt(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetInt32() : null;
+
     internal sealed record AttemptEvent(long Sequence, string EventType, string Hash, string? AttemptId);
+
+    internal sealed record DispatchResultRecord(string DispatchId, int? StatusCode, string Phase, long BytesRead, bool Completed);
 
     internal sealed class EvidenceSnapshot
     {
@@ -318,6 +373,9 @@ internal static class ReportWriter
         public Dictionary<string, JsonElement> Released { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, JsonElement> Interrupted { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, JsonElement> Trials { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, List<DispatchResultRecord>> DispatchResults { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, List<string>> DispatchDenied { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, JsonElement> Eligibility { get; } = new(StringComparer.Ordinal);
         public HashSet<string> Attempts { get; } = new(StringComparer.Ordinal);
         public JsonElement? RunFinished { get; set; }
         public JsonElement? RunStarted { get; set; }

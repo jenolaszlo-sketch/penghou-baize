@@ -5,13 +5,17 @@ using Penghou.Zhinu.Sqlite;
 namespace Penghou.Baize.Qualification.Execution;
 
 // Owns the durable components of one run directory: the Zhinu store/engine
-// (workflow lifecycle) and the Siming ledger (evidence). Executors are pooled
-// per subject so distinct subjects can never share configuration or counters.
+// (workflow lifecycle), the Siming ledger (evidence) and the HTTP admission
+// gate (budget authority at the last application boundary). Executors are
+// pooled per subject so distinct subjects can never share configuration,
+// counters or budget leases.
 internal sealed class ExecutionEnvironment : IAsyncDisposable
 {
     private readonly Inventory _inventory;
+    private readonly BudgetEnvelopeEvidence _envelope;
     private readonly Dictionary<string, CaseExecutor> _executors = new(StringComparer.Ordinal);
     private readonly InvokerSlot _invoker;
+    private readonly AdmissionGate _gate;
 
     public EvidenceLedger Ledger { get; }
     public WorkflowEngine Engine { get; }
@@ -19,18 +23,21 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
     public TimeProvider Time { get; }
 
     private ExecutionEnvironment(EvidenceLedger ledger, WorkflowEngine engine, ExecutionFaults faults,
-        TimeProvider time, Inventory inventory, InvokerSlot invoker)
+        TimeProvider time, Inventory inventory, BudgetEnvelopeEvidence envelope, InvokerSlot invoker,
+        AdmissionGate gate)
     {
         Ledger = ledger;
         Engine = engine;
         Faults = faults;
         Time = time;
         _inventory = inventory;
+        _envelope = envelope;
         _invoker = invoker;
+        _gate = gate;
     }
 
     public static async Task<ExecutionEnvironment> CreateAsync(string runDirectory, ExecutionFaults faults,
-        Inventory inventory, CancellationToken cancellationToken)
+        Inventory inventory, BudgetEnvelopeEvidence envelope, CancellationToken cancellationToken)
     {
         var time = TimeProvider.System;
         var ledger = new EvidenceLedger(Path.Combine(runDirectory, "evidence.db"), faults);
@@ -40,6 +47,7 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
             TimeProvider = time
         });
         await store.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        var gate = new AdmissionGate(ledger, envelope, faults);
         var invoker = new InvokerSlot();
         var workflow = new QualificationWorkflow(new WorkflowServices(ledger, invoker, faults, time));
         var registry = new WorkflowRegistry().Register<CaseExecutionRequest, TrialOutcomeRecord>(
@@ -51,14 +59,18 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
             LeaseDuration = TimeSpan.FromSeconds(30),
             LeaseRenewalInterval = TimeSpan.FromSeconds(10)
         }, timeProvider: time);
-        var environment = new ExecutionEnvironment(ledger, engine, faults, time, inventory, invoker);
+        var environment = new ExecutionEnvironment(ledger, engine, faults, time, inventory, envelope, invoker, gate);
         invoker.Inner = new PooledInvoker(environment);
         workflow.Probe = (runId, token) => engine.GetRunAsync(runId, token);
         return environment;
     }
 
+    public IHttpAdmissionGate Gate => _gate;
+
     public CaseExecutor ExecutorFor(string modelId, ModelEntry entry) =>
-        _executors.TryGetValue(modelId, out var executor) ? executor : _executors[modelId] = CaseExecutor.Create(modelId, entry, _inventory);
+        _executors.TryGetValue(modelId, out var executor)
+            ? executor
+            : _executors[modelId] = CaseExecutor.Create(modelId, entry, _inventory, _gate, Faults);
 
     public async ValueTask DisposeAsync()
     {
@@ -71,18 +83,28 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
     private sealed class InvokerSlot : ICaseInvoker
     {
         public ICaseInvoker? Inner { get; set; }
-        public Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, CancellationToken cancellationToken,
-            CancellationToken deadlineToken) =>
-            Inner is null ? throw new ExecutionException("invoker-not-wired") : Inner.InvokeAsync(request, cancellationToken, deadlineToken);
+        public Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, string attemptId,
+            CancellationToken cancellationToken, CancellationToken deadlineToken) =>
+            Inner is null ? throw new ExecutionException("invoker-not-wired")
+                : Inner.InvokeAsync(request, attemptId, cancellationToken, deadlineToken);
     }
 
     private sealed class PooledInvoker(ExecutionEnvironment environment) : ICaseInvoker
     {
-        public Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, CancellationToken cancellationToken,
-            CancellationToken deadlineToken)
+        public async Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, string attemptId,
+            CancellationToken cancellationToken, CancellationToken deadlineToken)
         {
             var entry = environment._inventory.Entries.Single(e => e.Id == request.ModelId);
             var executor = environment.ExecutorFor(request.ModelId, entry);
+            var attemptTimeout = TimeSpan.Parse(request.Deadlines.AttemptTimeout,
+                System.Globalization.CultureInfo.InvariantCulture);
+            var lease = new AttemptLease(attemptId, request.RunId, request.CaseId, request.TrialId, request.TrialSlot,
+                request.ModelId, "POST", executor.DestinationOrigin, executor.DestinationBasePath,
+                request.Subject.SecretSlotReference, cancellationToken, deadlineToken,
+                environment.Time.GetUtcNow() + attemptTimeout,
+                TimeSpan.Parse(request.Deadlines.StreamIdleTimeout, System.Globalization.CultureInfo.InvariantCulture),
+                request.Limits.MaximumRequestBytes, request.Limits.MaximumResponseBytes);
+            using var scope = AttemptLeaseScope.Enter(lease);
             var context = new QualificationContextV3(
                 (streamRequest, token) => executor.Stream(streamRequest, token),
                 NativeToolCalling: request.Subject.NativeToolCalling,
@@ -91,8 +113,72 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
                 IdentityProtocol: IdentityProtocols.Parse(request.Subject.IdentityProtocol),
                 Deadline: deadlineToken);
             return request.RequiresNativeTools
-                ? QualificationScenariosV3.RunSingleToolAsync(context, cancellationToken)
-                : QualificationScenariosV3.RunBaselineAsync(context, cancellationToken);
+                ? await QualificationScenariosV3.RunSingleToolAsync(context, cancellationToken).ConfigureAwait(false)
+                : await QualificationScenariosV3.RunBaselineAsync(context, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    // The environment is the local accounting authority for HTTP dispatch
+    // admission: remaining allowance comes from the Siming budget stream and
+    // every admitted or denied dispatch is recorded as evidence.
+    private sealed class AdmissionGate(EvidenceLedger ledger, BudgetEnvelopeEvidence envelope, ExecutionFaults faults)
+        : IHttpAdmissionGate
+    {
+        private int _failedResultRecords;
+        public int FailedResultRecords => Volatile.Read(ref _failedResultRecords);
+
+        public async Task<HttpAdmissionDecision> AdmitAsync(HttpDispatchRecord dispatch, CancellationToken cancellationToken)
+        {
+            faults.BeforeHttpAdmission?.Invoke(dispatch.DispatchId);
+            if (faults.DenyHttpAdmission?.Invoke(dispatch.DispatchId) == true)
+            {
+                await RecordDeniedAsync(dispatch, "admission-fault-denied", cancellationToken).ConfigureAwait(false);
+                return new HttpAdmissionDecision(false, "admission-fault-denied", dispatch.DispatchId);
+            }
+            var state = await BudgetLedger.ComputeAsync(ledger, envelope, cancellationToken).ConfigureAwait(false);
+            if (state.RemainingHttpDispatches <= 0 || state.RemainingHttpRequests <= 0)
+            {
+                await RecordDeniedAsync(dispatch, "budget-http-requests-exhausted", cancellationToken).ConfigureAwait(false);
+                return new HttpAdmissionDecision(false, "budget-http-requests-exhausted", dispatch.DispatchId);
+            }
+            await ledger.AppendAsync(EvidenceLedger.BudgetStream, EvidenceLedger.HttpDispatchAdmitted,
+                new HttpDispatchAdmittedEvidence("1.0", dispatch.AttemptId, dispatch.DispatchId, dispatch.RunId,
+                    dispatch.CaseId, dispatch.TrialId, dispatch.TrialSlot, dispatch.ModelId,
+                    dispatch.Destination, dispatch.BoundaryKind),
+                idempotencyKey: "http-admitted-" + dispatch.DispatchId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            faults.AfterHttpAdmission?.Invoke(dispatch.DispatchId);
+            return new HttpAdmissionDecision(true, null, dispatch.DispatchId);
+        }
+
+        public async Task RecordResultAsync(HttpDispatchRecord dispatch, int? statusCode, string phase, long bytesRead,
+            bool completed, CancellationToken cancellationToken)
+        {
+            faults.BeforeHttpResultRecord?.Invoke(dispatch.DispatchId);
+            try
+            {
+                await ledger.AppendAsync(EvidenceLedger.AttemptStream(dispatch.AttemptId), EvidenceLedger.HttpDispatchResult,
+                    new HttpDispatchResultEvidence("1.0", dispatch.AttemptId, dispatch.DispatchId, dispatch.RunId,
+                        dispatch.CaseId, dispatch.TrialId, dispatch.TrialSlot, dispatch.ModelId,
+                        statusCode, phase, bytesRead, completed),
+                    idempotencyKey: "http-result-" + dispatch.DispatchId + "-" + phase,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (EvidenceIoException)
+            {
+                Interlocked.Increment(ref _failedResultRecords);
+                throw;
+            }
+            faults.AfterHttpResultRecord?.Invoke(dispatch.DispatchId);
+        }
+
+        private async Task RecordDeniedAsync(HttpDispatchRecord dispatch, string reason, CancellationToken cancellationToken)
+        {
+            await ledger.AppendAsync(EvidenceLedger.AttemptStream(dispatch.AttemptId), EvidenceLedger.HttpDispatchDenied,
+                new HttpDispatchDeniedEvidence("1.0", dispatch.AttemptId, dispatch.DispatchId, dispatch.RunId,
+                    dispatch.CaseId, dispatch.TrialId, dispatch.TrialSlot, dispatch.ModelId, reason),
+                idempotencyKey: "http-denied-" + dispatch.DispatchId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }

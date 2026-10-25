@@ -6,8 +6,8 @@ namespace Penghou.Baize.Qualification.Execution;
 // Invokes one qualification attempt through the routed Baize composition.
 internal interface ICaseInvoker
 {
-    Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, CancellationToken cancellationToken,
-        CancellationToken deadlineToken);
+    Task<QualificationResultV3> InvokeAsync(CaseExecutionRequest request, string attemptId,
+        CancellationToken cancellationToken, CancellationToken deadlineToken);
 }
 
 internal sealed record WorkflowServices(
@@ -87,6 +87,8 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
                 idempotencyKey: DeniedKey(attemptId), cancellationToken: cancellationToken).ConfigureAwait(false);
             return new AttemptRecord(attemptId, BudgetDenied: true, reservation.DenialCode, ModelInvoked: false,
                 AttemptOutcome.Blocked, "Complete", "budget-denied", "host-authority-denied", "local-budget-ledger",
+                CompatibilityAttribution.FailureStage(AttemptOutcome.Blocked, "budget-denied", null),
+                CompatibilityAttribution.ClassConfigurationRequirement,
                 [], [], null, null, null, reservation.DenialCode, Settled: true);
         }
         _services.Faults.AfterReservationAppend?.Invoke(attemptId);
@@ -106,7 +108,7 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
             using var deadline = new CancellationTokenSource(
                 TimeSpan.Parse(request.Deadlines.AttemptTimeout, System.Globalization.CultureInfo.InvariantCulture),
                 _services.Time);
-            result = await _services.Invoker.InvokeAsync(request, cancellationToken, deadline.Token).ConfigureAwait(false);
+            result = await _services.Invoker.InvokeAsync(request, attemptId, cancellationToken, deadline.Token).ConfigureAwait(false);
             // A worker interruption (ExecuteAsync token cancelled without a
             // durable Cancelled status) must not commit this attempt: the run
             // stays resumable and the intent remains the only evidence until
@@ -144,19 +146,24 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
 
         var assertions = EvidenceMapping.Assertions(result, request);
         var outcome = EvidenceMapping.Outcome(result);
+        var knownDefect = CompatibilityAttribution.KnownF1DefectFixture(result, request);
+        var failureCategory = EvidenceMapping.FailureCategory(result);
+        var suggestedClass = CompatibilityAttribution.SuggestedClass(outcome, failureCategory, null, knownDefect);
+        var attributionBasis = CompatibilityAttribution.Basis(knownDefect);
+        var failureStage = CompatibilityAttribution.FailureStage(outcome, failureCategory, null);
         var finished = new AttemptFinishedEvidence("1.0", attemptId, request.RunId, request.CaseId, request.TrialId,
             request.TrialSlot, request.ModelId, request.ScenarioId, outcome.ToString(),
-            EvidenceMapping.Completeness(assertions), EvidenceMapping.FailureCategory(result),
-            EvidenceMapping.Attribution(outcome, result), EvidenceMapping.AttributionBasis(result), ModelInvoked: true,
-            request.AssertionIds, assertions, EvidenceMapping.Diagnostics(result), EvidenceMapping.Router(result),
-            EvidenceMapping.Usage(result), null);
+            EvidenceMapping.Completeness(assertions), failureCategory,
+            EvidenceMapping.Attribution(outcome, result), attributionBasis, failureStage, suggestedClass,
+            ModelInvoked: true, request.AssertionIds, assertions, EvidenceMapping.Diagnostics(result),
+            EvidenceMapping.Router(result), EvidenceMapping.Usage(result), null);
         _services.Faults.BeforeFinishedAppend?.Invoke(attemptId);
         await _services.Ledger.AppendAsync(EvidenceLedger.AttemptStream(attemptId), EvidenceLedger.AttemptFinished,
             finished, idempotencyKey: FinishedKey(attemptId), cancellationToken: cancellationToken).ConfigureAwait(false);
         _services.Faults.AfterFinishedAppend?.Invoke(attemptId);
         return new AttemptRecord(attemptId, BudgetDenied: false, null, ModelInvoked: true, outcome,
-            EvidenceMapping.Completeness(assertions), EvidenceMapping.FailureCategory(result),
-            EvidenceMapping.Attribution(outcome, result), EvidenceMapping.AttributionBasis(result),
+            EvidenceMapping.Completeness(assertions), failureCategory,
+            EvidenceMapping.Attribution(outcome, result), attributionBasis, failureStage, suggestedClass,
             EvidenceMapping.FailedAssertions(assertions), assertions, finished.Diagnostics, finished.Router,
             finished.Usage, null, Settled: false);
     }
@@ -166,7 +173,9 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
     {
         var finished = new AttemptFinishedEvidence("1.0", attemptId, request.RunId, request.CaseId, request.TrialId,
             request.TrialSlot, request.ModelId, request.ScenarioId, outcome.ToString(), "Incomplete", category,
-            "not-attributed-infrastructure-or-incomplete", "incomplete", ModelInvoked: true,
+            "not-attributed-infrastructure-or-incomplete", "incomplete",
+            CompatibilityAttribution.FailureStage(outcome, category, null),
+            CompatibilityAttribution.ClassInfrastructureFailure, ModelInvoked: true,
             request.AssertionIds, request.AssertionIds.Select(id => new AssertionEvidence(id, "NotObserved", "execution-incomplete")).ToArray(),
             null, null, null, category);
         var settle = new UsageSettledEvidence("1.0", attemptId, request.RunId, request.CaseId, request.TrialId,

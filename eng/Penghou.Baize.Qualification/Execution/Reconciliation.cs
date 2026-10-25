@@ -62,10 +62,19 @@ internal static class Reconciliation
             cancellationToken.ThrowIfCancellationRequested();
             if (reservations.TryGetValue(attemptId, out var reservation))
             {
+                var units = new BudgetUnitsEvidence(
+                    reservation.GetProperty("units").GetProperty("modelCalls").GetInt64(),
+                    reservation.GetProperty("units").GetProperty("httpRequests").GetInt64(),
+                    NullableLong(reservation.GetProperty("units"), "inputTokens"),
+                    NullableLong(reservation.GetProperty("units"), "outputTokens"),
+                    NullableLong(reservation.GetProperty("units"), "reasoningTokens"),
+                    NullableLong(reservation.GetProperty("units"), "totalTokens"),
+                    NullableString(reservation.GetProperty("units"), "maximumCost"),
+                    NullableString(reservation.GetProperty("units"), "currency"));
                 var releasedEvidence = new ReservationReleasedEvidence("1.0", attemptId,
                     reservation.GetProperty("runId").GetString()!, reservation.GetProperty("caseId").GetString()!,
                     reservation.GetProperty("trialId").GetString()!, reservation.GetProperty("trialSlot").GetInt32(),
-                    "reserved-without-intent");
+                    "reserved-without-intent", units);
                 if (!intents.Contains(attemptId) && !released.Contains(attemptId))
                 {
                     await ledger.AppendAsync(EvidenceLedger.BudgetStream, EvidenceLedger.AttemptReleased,
@@ -135,4 +144,9 @@ internal static class Reconciliation
 
     private static long? ReadNullableLong(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetInt64() : null;
+
+    private static long? NullableLong(JsonElement element, string property) => ReadNullableLong(element, property);
+
+    private static string? NullableString(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

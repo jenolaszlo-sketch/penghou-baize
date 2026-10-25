@@ -135,7 +135,8 @@ public sealed class Stage2AdmissionTests
                 new Dictionary<string, string> { ["Dialect"] = "Standard" }, "00:02:00", "00:02:00", true,
                 "openai-chat-completions", "SYNTHETIC_UNUSED_KEY_SLOT"),
             new BudgetEnvelopeEvidence(12, 12, null, null, null, null, null, null),
-            new DeadlinesEvidence("00:02:00", "00:10:00", "00:00:30"));
+            new DeadlinesEvidence("00:02:00", "00:10:00", "00:00:30"),
+            new LimitsEvidence(1 << 20, 4 << 20, 64 << 10));
         var exception = Assert.Throws<ExecutionException>(() =>
             BindingCheck.Run(new BindingInput(request, Guid.NewGuid()), CancellationToken.None));
         Assert.Equal("observed-contract-unknown", exception.Code);

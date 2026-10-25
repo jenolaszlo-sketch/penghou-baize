@@ -7,6 +7,7 @@
   <ItemGroup>
     <EmbeddedResource Include="../../eng/qualification/stage1/*.json" Link="Stage1Fixtures/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../eng/qualification/stage2/*.json" Link="Stage2Fixtures/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../eng/qualification/stage3/*.json" Link="Stage3Fixtures/%(Filename)%(Extension)" />
     <PackageReference Include="xunit.v3" Version="1.1.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0-pre.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

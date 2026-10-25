@@ -16,7 +16,9 @@ internal sealed record UsageEvidence(
     long? ThinkingTokens,
     long? TotalTokens,
     string Completeness,
-    string Source);
+    string Source,
+    string? ObservedCost = null,
+    string? CostCompleteness = null);
 
 internal sealed record StreamDiagnosticsEvidence(
     int InvocationCount,
@@ -67,7 +69,9 @@ internal sealed record BudgetUnitsEvidence(
     long? InputTokens,
     long? OutputTokens,
     long? ReasoningTokens,
-    long? TotalTokens);
+    long? TotalTokens,
+    string? MaximumCost = null,
+    string? Currency = null);
 
 internal sealed record ReservationEvidence(
     string SchemaVersion,
@@ -98,7 +102,8 @@ internal sealed record ReservationReleasedEvidence(
     string CaseId,
     string TrialId,
     int TrialSlot,
-    string ReasonCode);
+    string ReasonCode,
+    BudgetUnitsEvidence Units);
 
 internal sealed record DispatchIntentEvidence(
     string SchemaVersion,
@@ -128,6 +133,8 @@ internal sealed record AttemptFinishedEvidence(
     string? FailureCategory,
     string? Attribution,
     string? AttributionBasis,
+    string? FailureStage,
+    string? SuggestedAttributionClass,
     bool ModelInvoked,
     string[] AssertionIds,
     AssertionEvidence[] Assertions,
@@ -191,6 +198,60 @@ internal sealed record ReconciliationEvidence(
     int InterruptedAttempts,
     int ReleasedReservations);
 
+internal sealed record HttpDispatchAdmittedEvidence(
+    string SchemaVersion,
+    string AttemptId,
+    string DispatchId,
+    string RunId,
+    string CaseId,
+    string TrialId,
+    int TrialSlot,
+    string ModelId,
+    string Destination,
+    string BoundaryKind);
+
+internal sealed record HttpDispatchResultEvidence(
+    string SchemaVersion,
+    string AttemptId,
+    string DispatchId,
+    string RunId,
+    string CaseId,
+    string TrialId,
+    int TrialSlot,
+    string ModelId,
+    int? StatusCode,
+    string Phase,
+    long BytesRead,
+    bool Completed);
+
+internal sealed record HttpDispatchDeniedEvidence(
+    string SchemaVersion,
+    string AttemptId,
+    string DispatchId,
+    string RunId,
+    string CaseId,
+    string TrialId,
+    int TrialSlot,
+    string ModelId,
+    string ReasonCode);
+
+internal sealed record EligibilityAssessmentEvidence(
+    string SchemaVersion,
+    string RunId,
+    string CaseId,
+    string TrialId,
+    int TrialSlot,
+    string ModelId,
+    string ScenarioId,
+    string State,
+    string[] CriticalReasons,
+    string[] Limitations,
+    string TransportChain,
+    string WireAttemptBound,
+    string? AllowanceRef,
+    string? TokenBoundSource,
+    string? CostBoundStatus);
+
 // Workflow request: the immutable case binding Zhinu persists and replays.
 internal sealed record SubjectBindingEvidence(
     string Service,
@@ -228,11 +289,18 @@ internal sealed record DeadlinesEvidence(
     string MaximumDuration,
     string StreamIdleTimeout);
 
+internal sealed record LimitsEvidence(
+    long MaximumRequestBytes,
+    long MaximumResponseBytes,
+    long MaximumEventBytes);
+
 internal sealed record TokenReservationEvidence(
     long? InputTokens,
     long? OutputTokens,
     long? ReasoningTokens,
-    long? TotalTokens);
+    long? TotalTokens,
+    string? MaximumCost = null,
+    string? Currency = null);
 
 internal sealed record CaseExecutionRequest(
     string RunId,
@@ -253,7 +321,8 @@ internal sealed record CaseExecutionRequest(
     TokenReservationEvidence? PlanCaseTokenReservation,
     SubjectBindingEvidence Subject,
     BudgetEnvelopeEvidence Budget,
-    DeadlinesEvidence Deadlines);
+    DeadlinesEvidence Deadlines,
+    LimitsEvidence Limits);
 
 // Durable step results inside the workflow.
 internal sealed record AttemptRecord(
@@ -266,6 +335,8 @@ internal sealed record AttemptRecord(
     string? FailureCategory,
     string? Attribution,
     string? AttributionBasis,
+    string? FailureStage,
+    string? SuggestedAttributionClass,
     string[] FailedAssertionIds,
     AssertionEvidence[] Assertions,
     StreamDiagnosticsEvidence? Diagnostics,

@@ -134,10 +134,12 @@ internal sealed class Stage2CommandResult
 
 internal static class Stage2Evidence
 {
-    public static IReadOnlyList<LedgerEntry> ReadAll(Stage2Workspace workspace)
+    public static IReadOnlyList<LedgerEntry> ReadAll(Stage2Workspace workspace) => ReadAllDirectory(workspace.RunDir);
+
+    public static IReadOnlyList<LedgerEntry> ReadAllDirectory(string runDirectory)
     {
         var entries = new List<LedgerEntry>();
-        var ledger = new EvidenceLedger(Path.Combine(workspace.RunDir, "evidence.db"), ExecutionFaults.None);
+        var ledger = new EvidenceLedger(Path.Combine(runDirectory, "evidence.db"), ExecutionFaults.None);
         foreach (var entry in Enumerate(ledger).GetAwaiter().GetResult()) entries.Add(entry);
         ledger.DisposeAsync().GetAwaiter().GetResult();
         return entries;
@@ -169,17 +171,22 @@ internal static class Stage2Evidence
     public static int Count(IReadOnlyList<LedgerEntry> entries, string eventType) =>
         entries.Count(e => e.EventType == eventType);
 
-    public static void AssertLedgerVerified(Stage2Workspace workspace)
+    public static void AssertLedgerVerified(Stage2Workspace workspace) =>
+        AssertLedgerVerifiedDirectory(workspace.RunDir);
+
+    public static void AssertLedgerVerifiedDirectory(string runDirectory)
     {
-        var ledger = new EvidenceLedger(Path.Combine(workspace.RunDir, "evidence.db"), ExecutionFaults.None);
+        var ledger = new EvidenceLedger(Path.Combine(runDirectory, "evidence.db"), ExecutionFaults.None);
         var verification = ledger.VerifyAsync(null).GetAwaiter().GetResult();
         ledger.DisposeAsync().GetAwaiter().GetResult();
         Assert.True(verification.IsValid, verification.Detail);
     }
 
-    public static JsonElement Report(Stage2Workspace workspace)
+    public static JsonElement Report(Stage2Workspace workspace) => ReportDirectory(workspace.RunDir);
+
+    public static JsonElement ReportDirectory(string runDirectory)
     {
-        var path = Path.Combine(workspace.RunDir, "reports", "summary.json");
+        var path = Path.Combine(runDirectory, "reports", "summary.json");
         Assert.True(File.Exists(path), "report summary missing");
         using var document = JsonDocument.Parse(File.ReadAllBytes(path));
         return document.RootElement.Clone();

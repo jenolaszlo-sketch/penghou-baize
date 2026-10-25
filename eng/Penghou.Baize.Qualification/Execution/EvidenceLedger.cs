@@ -25,6 +25,10 @@ internal sealed class EvidenceLedger : IAsyncDisposable
     public const string UsageSettled = "QualificationUsageSettled";
     public const string AttemptInterrupted = "QualificationAttemptInterrupted";
     public const string TrialFinished = "QualificationTrialFinished";
+    public const string HttpDispatchAdmitted = "QualificationHttpDispatchAdmitted";
+    public const string HttpDispatchResult = "QualificationHttpDispatchResult";
+    public const string HttpDispatchDenied = "QualificationHttpDispatchDenied";
+    public const string EligibilityAssessed = "QualificationEligibilityAssessed";
 
     private static readonly JsonSerializerOptions Options = CreateOptions();
 

@@ -160,12 +160,22 @@ internal static class ReportMarkdown
         {
             builder.Append($"## {reportCase.ModelId} — {reportCase.ScenarioId} (trial {reportCase.TrialSlot})\n\n");
             builder.Append($"Outcome: **{reportCase.Outcome ?? "NotRun"}**; complete: {(reportCase.Complete ? "yes" : "no")}\n\n");
-            builder.Append($"Provider `{reportCase.Provider}`, provider model `{reportCase.ProviderModel}`, endpoint `{reportCase.EndpointId}`, protocol `{reportCase.Protocol}`, transport `{reportCase.TransportProfile}`, native tools `{(reportCase.NativeToolCalling ? "enabled" : "disabled")}`\n\n");
+            builder.Append($"Hosting provider `{reportCase.HostingProvider}`, adapter `{reportCase.Provider}`, provider model `{reportCase.ProviderModel}`, endpoint `{reportCase.EndpointId}`, protocol `{reportCase.Protocol}` (`{reportCase.ApiVersion ?? "unversioned"}`), transport `{reportCase.TransportProfile}`, native tools `{(reportCase.NativeToolCalling ? "enabled" : "disabled")}`\n\n");
             builder.Append($"Contract `{reportCase.ScenarioId}`; observed `{string.Join(", ", reportCase.ObservedContractIds)}`; fixture `{reportCase.FixtureId}` (`{reportCase.FixtureHash}`)\n\n");
+            if (reportCase.EligibilityState is not null)
+            {
+                builder.Append($"Live eligibility: **{reportCase.EligibilityState}**\n");
+                foreach (var reason in reportCase.EligibilityCriticalReasons)
+                    builder.Append($"- Critical: {reason}\n");
+                foreach (var limitation in reportCase.EligibilityLimitations)
+                    builder.Append($"- Eligibility limitation: {limitation}\n");
+                builder.Append('\n');
+            }
             if (reportCase.FailedAssertionIds.Length > 0)
                 builder.Append($"Failed assertions: {string.Join(", ", reportCase.FailedAssertionIds)}\n\n");
-            if (reportCase.FailureCategory is not null)
-                builder.Append($"Failure category: `{reportCase.FailureCategory}`; attribution: `{reportCase.Attribution}`\n\n");
+            if (reportCase.FailureCategory is not null || reportCase.FailureStage is not null
+                || reportCase.SuggestedAttributionClass is not null)
+                builder.Append($"Failure category: `{reportCase.FailureCategory ?? "none"}`; stage: `{reportCase.FailureStage ?? "unknown"}`; suggested attribution: `{reportCase.SuggestedAttributionClass ?? "unverified"}`; recorded attribution: `{reportCase.Attribution}`\n\n");
             foreach (var limitation in reportCase.Limitations)
                 builder.Append($"- Limitation: {limitation}\n");
             builder.Append('\n');
@@ -175,6 +185,7 @@ internal static class ReportMarkdown
                 if (!attempt.ModelInvoked && attempt.DenialCode is not null) builder.Append($" (denied: {attempt.DenialCode})");
                 if (attempt.Interrupted) builder.Append(" (interrupted)");
                 if (attempt.Released) builder.Append(" (released, not dispatched)");
+                builder.Append($"; HTTP dispatches {attempt.HttpDispatches}, last status {attempt.LastHttpStatus?.ToString() ?? "none"}");
                 builder.Append($"; usage {attempt.UsageCompleteness ?? "none"}, settlement {attempt.Settlement ?? "none"}\n");
                 foreach (var reference in attempt.Evidence)
                     builder.Append($"  - `{reference.EventType}` sequence {reference.Sequence} hash {reference.Hash}\n");

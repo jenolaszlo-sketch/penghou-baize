@@ -9,24 +9,28 @@ using Penghou.Baize.Router.Extensions;
 
 namespace Penghou.Baize.Qualification.Execution;
 
-// Executes one qualification scenario through the real Baize routed adapter
-// with a deterministic synthetic terminal transport. The adapter, router,
-// stream parser and telemetry are the actual production path; nothing here
-// bypasses the qualification seam. The eventual real-model stage swaps only
-// the terminal transport and secret source behind the same composition.
+// Executes one qualification scenario through the real Baize routed adapter.
+// The terminal transport is selected by the frozen subject's transport
+// profile: a recording fake backend for SyntheticFake, or the pinned real
+// sockets handler for LoopbackDevelopment/ReviewedNetwork. In every case the
+// request crosses the qualification admission guard immediately before the
+// terminal, so all offline verification exercises the exact production
+// composition a later live run would use.
 internal sealed class CaseExecutor : IDisposable
 {
     private readonly ServiceProvider _services;
     private readonly ILlmRouter _router;
     private readonly string _modelId;
-    private readonly SyntheticTransportHandler _handler;
-    private readonly SyntheticSecretProvider _secrets;
+    private readonly RecordingTerminalHandler? _recordingTerminal;
+    private readonly ISecretProbe _secrets;
 
-    public int TerminalSends => _handler.Sends;
+    public int TerminalSends => _recordingTerminal?.Sends ?? 0;
     public int SecretReads => _secrets.SecretReads;
-    public string? LastRequestJson => _handler.LastRequestJson;
+    public int SecretLeaseDenials => _secrets.LeaseDenials;
 
-    private CaseExecutor(string modelId, ModelEntry entry, Inventory inventory)
+    private CaseExecutor(string modelId, ModelEntry entry, Inventory inventory, IHttpAdmissionGate gate,
+        ExecutionFaults faults, HttpMessageHandler? injectedTerminal,
+        Func<HttpMessageHandler, HttpMessageHandler>? chainWrapper)
     {
         _modelId = modelId;
         var options = new LlmRoutingOptions
@@ -35,25 +39,85 @@ internal sealed class CaseExecutor : IDisposable
             Profiles = inventory.Profiles,
             MaxPendingRequests = 1,
             Retry = new LlmRouterRetryOptions { MaximumAttempts = 1 },
-            ProviderModules = [new LlmProviderModuleOptions { Assembly = "Penghou.Baize.OpenAi" }]
+            ProviderModules = [new LlmProviderModuleOptions { Assembly = ProviderAssembly(entry.Endpoint.Provider ?? throw new ExecutionException("endpoint-without-provider")) }]
         };
-        _services = Compose(options, entry.Endpoint.ApiKeySecretName);
+        var destination = entry.Endpoint.BaseUrl ?? throw new ExecutionException("endpoint-without-base-url");
+        var uri = new Uri(destination);
+        var boundaryKind = entry.TransportProfile switch
+        {
+            "SyntheticFake" => "synthetic-terminal-transport",
+            "LoopbackDevelopment" => "loopback-terminal",
+            _ => "network-terminal"
+        };
+        var terminal = injectedTerminal ?? CreateTerminal(entry.TransportProfile, out _recordingTerminal);
+        if (injectedTerminal is RecordingTerminalHandler injectedRecording) _recordingTerminal = injectedRecording;
+        var guard = new QualificationAdmissionHandler(terminal, gate, boundaryKind);
+        var chain = chainWrapper is null ? guard : chainWrapper(guard);
+        var chainFactory = new GuardedHttpClientFactory(chain, disposeHandler: true);
+        _services = Compose(options, entry, chainFactory, out _secrets);
         _router = _services.GetRequiredService<ILlmRouter>();
-        _handler = (SyntheticTransportHandler)_services.GetRequiredService<SyntheticTransportHandler>();
-        _secrets = (SyntheticSecretProvider)_services.GetRequiredService<ISecretProvider>();
+        _destinationOrigin = uri.GetLeftPart(UriPartial.Authority);
+        _destinationBasePath = uri.AbsolutePath.TrimEnd('/');
     }
 
-    public static CaseExecutor Create(string modelId, ModelEntry entry, Inventory inventory) =>
-        new(modelId, entry, inventory);
+    private readonly string _destinationOrigin;
+    private readonly string _destinationBasePath;
+    public string DestinationOrigin => _destinationOrigin;
+    public string DestinationBasePath => _destinationBasePath;
 
-    private static ServiceProvider Compose(LlmRoutingOptions options, string? secretSlot)
+    public static CaseExecutor Create(string modelId, ModelEntry entry, Inventory inventory,
+        IHttpAdmissionGate gate, ExecutionFaults faults) =>
+        new(modelId, entry, inventory, gate, faults, null, null);
+
+    // Offline verification of real-shaped profiles: the terminal is replaced
+    // by a controlled handler while everything above the guard stays real.
+    internal static CaseExecutor CreateWithTerminal(string modelId, ModelEntry entry, Inventory inventory,
+        IHttpAdmissionGate gate, ExecutionFaults faults, HttpMessageHandler terminal) =>
+        new(modelId, entry, inventory, gate, faults, terminal, null);
+
+    // Wraps the guard chain (for example with a retry handler above the
+    // admission boundary) to prove hidden retries are counted and capped.
+    internal static CaseExecutor CreateWithChainWrapper(string modelId, ModelEntry entry, Inventory inventory,
+        IHttpAdmissionGate gate, ExecutionFaults faults, HttpMessageHandler terminal,
+        Func<HttpMessageHandler, HttpMessageHandler> chainWrapper) =>
+        new(modelId, entry, inventory, gate, faults, terminal, chainWrapper);
+
+    private static HttpMessageHandler CreateTerminal(string transportProfile, out RecordingTerminalHandler? recording)
     {
-        var handler = new SyntheticTransportHandler();
-        var secrets = new SyntheticSecretProvider(secretSlot ?? "");
+        if (transportProfile == "SyntheticFake")
+        {
+            recording = new RecordingTerminalHandler();
+            return recording;
+        }
+        recording = null;
+        return PinnedTerminalHandlers.CreateRealNetworkTerminal();
+    }
+
+    private static string ProviderAssembly(string provider) => provider switch
+    {
+        "OpenAi" => "Penghou.Baize.OpenAi",
+        "Claude" => "Penghou.Baize.Claude",
+        "Ollama" => "Penghou.Baize.Ollama",
+        "Gemini" => "Penghou.Baize.Gemini",
+        _ => throw new ExecutionException("unsupported-provider")
+    };
+
+    private static ServiceProvider Compose(LlmRoutingOptions options, ModelEntry entry,
+        GuardedHttpClientFactory chainFactory, out ISecretProbe secrets)
+    {
+        ISecretProbe probe;
+        if (entry.TransportProfile == "SyntheticFake")
+        {
+            probe = new SyntheticSecretProvider(entry.Endpoint.ApiKeySecretName ?? "");
+        }
+        else
+        {
+            probe = new LeaseAwareSecretProvider(new EnvironmentSecretProvider());
+        }
+        secrets = probe;
         var services = new ServiceCollection();
-        services.AddSingleton<SyntheticTransportHandler>(handler);
-        services.AddSingleton<ISecretProvider>(secrets);
-        services.AddSingleton<IHttpClientFactory>(new SyntheticHttpClientFactory(handler));
+        services.AddSingleton<ISecretProvider>(probe);
+        services.AddSingleton<IHttpClientFactory>(chainFactory);
         services.AddSingleton<IOptionsMonitor<LlmRoutingOptions>>(new FixedOptions(options));
         using var json = new MemoryStream(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
         {
@@ -74,88 +138,5 @@ internal sealed class CaseExecutor : IDisposable
         public LlmRoutingOptions CurrentValue => options;
         public LlmRoutingOptions Get(string? name) => options;
         public IDisposable? OnChange(Action<LlmRoutingOptions, string?> listener) => null;
-    }
-}
-
-// Maps the contract's content-free result into evidence records. It never
-// touches raw response text: only assertion ids/statuses/codes, counts and
-// bounded diagnostics leave this mapping.
-internal static class EvidenceMapping
-{
-    public static AssertionEvidence[] Assertions(QualificationResultV3 result, CaseExecutionRequest request)
-    {
-        // Assertion facts come from the accepted contract; the request's
-        // assertion list was verified against the registry at binding time.
-        var observed = new Dictionary<string, AssertionEvidence>(StringComparer.Ordinal);
-        foreach (var contract in result.Contracts)
-        {
-            foreach (var assertion in contract.Assertions)
-            {
-                if (request.AssertionIds.Contains(assertion.Id, StringComparer.Ordinal)
-                    && request.ObservedContractIds.Contains(contract.ContractId, StringComparer.Ordinal))
-                    observed[assertion.Id] = new AssertionEvidence(assertion.Id, assertion.Status.ToString(), assertion.Code);
-            }
-        }
-        return request.AssertionIds.Select(id => observed.TryGetValue(id, out var evidence)
-            ? evidence : new AssertionEvidence(id, "NotObserved", "execution-incomplete")).ToArray();
-    }
-
-    public static AttemptOutcome Outcome(QualificationResultV3 result) => result.Succeeded ? AttemptOutcome.Passed
-        : result.Contracts.Any(c => c.Disposition == ContractDisposition.Failed) ? AttemptOutcome.Failed
-        : result.Contracts.Any(c => c.Disposition == ContractDisposition.Cancelled) ? AttemptOutcome.Cancelled
-        : result.Contracts.Any(c => c.Disposition == ContractDisposition.Blocked) ? AttemptOutcome.Blocked
-        : AttemptOutcome.Inconclusive;
-
-    public static string? FailureCategory(QualificationResultV3 result)
-    {
-        var diagnostics = result.Diagnostics;
-        return diagnostics.FailureCode switch
-        {
-            "provider-unavailable" => "provider-unavailable",
-            "rate-limited" => "rate-limited",
-            "authentication" => "authentication",
-            "authorization" => "authorization",
-            "timeout" => "timeout",
-            "caller-cancelled" or "ambiguous-cancellation" => "timeout-or-cancellation",
-            "request-validation" or "invalid-request" or "protocol-error" or "content-rejected" => "baize-protocol",
-            "execution-error" => "inconclusive",
-            _ => null
-        };
-    }
-
-    public static string? Attribution(AttemptOutcome outcome, QualificationResultV3 result) => outcome switch
-    {
-        AttemptOutcome.Passed => null,
-        AttemptOutcome.Failed => "contract-assertion-failure",
-        AttemptOutcome.Blocked or AttemptOutcome.Cancelled or AttemptOutcome.Inconclusive => "not-attributed-infrastructure-or-incomplete",
-        _ => null
-    };
-
-    public static string AttributionBasis(QualificationResultV3 result) =>
-        "observed-normalized-output";
-
-    public static string[] FailedAssertions(AssertionEvidence[] assertions) =>
-        assertions.Where(a => a.Status == "Failed").Select(a => a.Id).ToArray();
-
-    public static string Completeness(AssertionEvidence[] assertions) =>
-        assertions.Any(a => a.Status == "NotObserved") ? "Incomplete" : "Complete";
-
-    public static StreamDiagnosticsEvidence Diagnostics(QualificationResultV3 result) =>
-        new(result.Diagnostics.InvocationCount, result.Diagnostics.EventCount, result.Diagnostics.ContentCharacters,
-            result.Diagnostics.ReasoningCharacters, result.Diagnostics.ToolArgumentCharacters,
-            result.Diagnostics.TerminalCount, result.Diagnostics.FinishReason.ToString(),
-            result.Diagnostics.RouterAttemptCount, result.Diagnostics.ProviderDiagnosticsObserved,
-            result.Diagnostics.FailureCode, result.Diagnostics.HttpStatusCode, result.Diagnostics.Integrity.Count);
-
-    public static RouterEvidenceRecord Router(QualificationResultV3 result) =>
-        new(result.Router.SnapshotCount, result.Router.AttemptCount, result.Router.SuccessfulAttempts,
-            result.Router.FailedAttempts, result.Router.TerminalOrderValid);
-
-    public static UsageEvidence Usage(QualificationResultV3 result)
-    {
-        var diagnostics = result.Diagnostics;
-        var known = diagnostics.PromptTokens is not null && diagnostics.CompletionTokens is not null;
-        return new UsageEvidence(diagnostics.PromptTokens, diagnostics.CompletionTokens, diagnostics.ThinkingTokens,
-            null, known ? "Complete" : "Unknown", known ? "synthetic-terminal-transport" : "unavailable");
     }
 }

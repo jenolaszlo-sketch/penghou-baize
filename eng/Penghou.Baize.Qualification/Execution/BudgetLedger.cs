@@ -16,8 +16,11 @@ internal sealed class BudgetState
     public required long? RemainingOutputTokens { get; init; }
     public required long? RemainingReasoningTokens { get; init; }
     public required long? RemainingTotalTokens { get; init; }
+    public required string? RemainingCost { get; init; }
     public long ConsumedModelCalls { get; init; }
     public long ConsumedHttpRequests { get; init; }
+    public required long DispatchedHttpRequests { get; init; }
+    public required long RemainingHttpDispatches { get; init; }
 }
 
 internal sealed record ReservationOutcome(string? DenialCode, ReservationEvidence? Reserved);
@@ -33,6 +36,8 @@ internal static class BudgetLedger
         var consumedOutput = 0L;
         var consumedReasoning = 0L;
         var consumedTotal = 0L;
+        var consumedCost = 0m;
+        var dispatchedHttpRequests = 0L;
         await foreach (var entry in ledger.ReadAllAsync(EvidenceLedger.BudgetStream, cancellationToken))
         {
             using var document = JsonDocument.Parse(entry.Payload);
@@ -46,6 +51,7 @@ internal static class BudgetLedger
                     consumedOutput += Nullable(payload.GetProperty("units").GetProperty("outputTokens"));
                     consumedReasoning += Nullable(payload.GetProperty("units").GetProperty("reasoningTokens"));
                     consumedTotal += Nullable(payload.GetProperty("units").GetProperty("totalTokens"));
+                    consumedCost += Money(payload.GetProperty("units"));
                     break;
                 case EvidenceLedger.AttemptReleased:
                     consumedModelCalls -= 1;
@@ -54,9 +60,16 @@ internal static class BudgetLedger
                     consumedOutput -= Nullable(payload.GetProperty("units").GetProperty("outputTokens"));
                     consumedReasoning -= Nullable(payload.GetProperty("units").GetProperty("reasoningTokens"));
                     consumedTotal -= Nullable(payload.GetProperty("units").GetProperty("totalTokens"));
+                    consumedCost -= Money(payload.GetProperty("units"));
+                    break;
+                case EvidenceLedger.HttpDispatchAdmitted:
+                    dispatchedHttpRequests++;
                     break;
             }
         }
+        var remainingCost = envelope.MaximumCost is null ? null
+            : (decimal.Parse(envelope.MaximumCost, System.Globalization.CultureInfo.InvariantCulture) - consumedCost)
+                .ToString("0.#############################", System.Globalization.CultureInfo.InvariantCulture);
         return new BudgetState
         {
             RemainingModelCalls = envelope.ModelCalls - consumedModelCalls,
@@ -65,9 +78,19 @@ internal static class BudgetLedger
             RemainingOutputTokens = Subtract(envelope.OutputTokens, consumedOutput),
             RemainingReasoningTokens = Subtract(envelope.ReasoningTokens, consumedReasoning),
             RemainingTotalTokens = Subtract(envelope.TotalTokens, consumedTotal),
+            RemainingCost = remainingCost,
             ConsumedModelCalls = consumedModelCalls,
-            ConsumedHttpRequests = consumedHttpRequests
+            ConsumedHttpRequests = consumedHttpRequests,
+            DispatchedHttpRequests = dispatchedHttpRequests,
+            RemainingHttpDispatches = envelope.HttpRequests - dispatchedHttpRequests
         };
+    }
+
+    private static decimal Money(JsonElement units)
+    {
+        if (units.TryGetProperty("maximumCost", out var cost) && cost.ValueKind == JsonValueKind.String)
+            return decimal.Parse(cost.GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+        return 0m;
     }
 
     private static long Nullable(JsonElement element) => element.ValueKind == JsonValueKind.Null ? 0 : element.GetInt64();
@@ -80,7 +103,16 @@ internal static class BudgetLedger
         : Exceeded(state.RemainingOutputTokens, units.OutputTokens) is { } output ? output
         : Exceeded(state.RemainingReasoningTokens, units.ReasoningTokens) is { } reasoning ? reasoning
         : Exceeded(state.RemainingTotalTokens, units.TotalTokens) is { } total ? total
+        : CostExceeded(state.RemainingCost, units.MaximumCost, units.Currency) is { } cost ? cost
         : null;
+
+    private static string? CostExceeded(string? remainingCost, string? unitsCost, string? currency)
+    {
+        if (unitsCost is null || remainingCost is null) return null;
+        var remaining = decimal.Parse(remainingCost, System.Globalization.CultureInfo.InvariantCulture);
+        var units = decimal.Parse(unitsCost, System.Globalization.CultureInfo.InvariantCulture);
+        return units > remaining ? "budget-cost-envelope-insufficient" : null;
+    }
 
     private static string? Exceeded(long? remaining, long? units) =>
         units is not null && remaining is not null && remaining < units ? "budget-token-envelope-insufficient" : null;
@@ -90,7 +122,18 @@ internal static class BudgetLedger
         request.Budget.InputTokens is null ? null : ReservedInput(request),
         request.Budget.OutputTokens is null ? null : ReservedOutput(request),
         request.Budget.ReasoningTokens is null ? null : ReservedReasoning(request),
-        request.Budget.TotalTokens is null ? null : ReservedTotal(request));
+        request.Budget.TotalTokens is null ? null : ReservedTotal(request),
+        request.Budget.MaximumCost is null ? null : ReservedCost(request),
+        request.Budget.Currency);
+
+    private static string? ReservedCost(CaseExecutionRequest request)
+    {
+        var reservation = request.PlanCaseTokenReservation?.MaximumCost;
+        if (reservation is null) return null;
+        var perDispatch = decimal.Parse(reservation, System.Globalization.CultureInfo.InvariantCulture)
+            / Math.Max(1, request.DispatchCeiling);
+        return perDispatch.ToString("0.#############################", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     // A reservation is the plan's requested per-dispatch reservation when the
     // policy carries a ceiling for that unit; otherwise the unit is not
@@ -130,6 +173,11 @@ internal static class BudgetLedger
             }
             catch (LedgerHeadConflictException) when (attempt < 8)
             {
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException) when (attempt < 8)
+            {
+                // A concurrent writer held the SQLite lock past the busy
+                // timeout; the head will be re-read before the retry.
             }
         }
     }
