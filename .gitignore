@@ -9,6 +9,7 @@ TestResults/
 *.snupkg
 logs/
 /artifacts/live-diagnostics/
+/artifacts/qualification/
 /coverage-local-*/
 coverage-*/
 coverage.*.xml

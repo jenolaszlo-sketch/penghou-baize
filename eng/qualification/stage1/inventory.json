@@ -1,0 +1,62 @@
+{
+  "kind": "qualification-inventory",
+  "schemaVersion": "1.0",
+  "profiles": {
+    "synthetic-tools": { "nativeToolCalling": true }
+  },
+  "entries": [
+    {
+      "id": "fake-alpha",
+      "service": "synthetic-host-alpha",
+      "endpointProfile": "fake-alpha-profile",
+      "accountScopeRef": "synthetic-account-a",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-alpha-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-alpha",
+        "baseUrl": "https://alpha.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" },
+        "requestTimeout": "00:02:00"
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": []
+    },
+    {
+      "id": "fake-beta",
+      "service": "synthetic-host-beta",
+      "endpointProfile": "fake-beta-profile",
+      "accountScopeRef": "synthetic-account-b",
+      "protocol": "ollama-chat",
+      "apiVersion": null,
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-beta-endpoint",
+        "provider": "Ollama",
+        "providerModel": "synthetic/model-beta",
+        "baseUrl": "https://beta.invalid",
+        "profile": "synthetic-tools",
+        "settings": {}
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": []
+    }
+  ]
+}

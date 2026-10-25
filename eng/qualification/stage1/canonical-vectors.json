@@ -1,0 +1,5 @@
+[
+  { "input": { "z": 1.00, "a": [2, 1], "n": null }, "canonical": "{\"a\":[2,1],\"n\":null,\"z\":1}" },
+  { "input": { "sequence": ["b", "a"], "A": false, "a": true }, "canonical": "{\"A\":false,\"a\":true,\"sequence\":[\"b\",\"a\"]}" },
+  { "input": { "value": 0.00001, "text": "BAIZE_OK" }, "canonical": "{\"text\":\"BAIZE_OK\",\"value\":0.00001}" }
+]

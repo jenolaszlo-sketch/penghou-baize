@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/eng/">
+    <Project Path="eng/Penghou.Baize.Qualification/Penghou.Baize.Qualification.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Penghou.Baize/Penghou.Baize.csproj" />
     <Project Path="src/Penghou.Baize.OpenAi/Penghou.Baize.OpenAi.csproj" />

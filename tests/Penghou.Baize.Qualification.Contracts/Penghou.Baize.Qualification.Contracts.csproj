@@ -7,5 +7,6 @@
     <ProjectReference Include="../../src/Penghou.Baize.Tools/Penghou.Baize.Tools.csproj" />
     <InternalsVisibleTo Include="Penghou.Baize.IntegrationTests" />
     <InternalsVisibleTo Include="Penghou.Baize.Qualification.Tests" />
+    <InternalsVisibleTo Include="Penghou.Baize.Qualification" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../tests/Penghou.Baize.Qualification.Contracts/Penghou.Baize.Qualification.Contracts.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.Router/Penghou.Baize.Router.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.OpenAi/Penghou.Baize.OpenAi.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.Claude/Penghou.Baize.Claude.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj" />
+    <ProjectReference Include="../../src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj" />
+    <InternalsVisibleTo Include="Penghou.Baize.Qualification.Tests" />
+  </ItemGroup>
+</Project>
