@@ -60,6 +60,8 @@ internal sealed class Planner(OfflineBoundary boundary)
             var provider = OfflineResolution.Provider(endpoint.Provider);
             var uri = Validation.EndpointUri(endpoint.BaseUrl ?? provider.DefaultBaseUrl, entry.TransportProfile);
             var caps = effective[entry.Id];
+            var transport = TransportProfiles.Describe(entry.TransportProfile, entry.TransportProfileRef);
+            var qualifiedTransport = TransportProfiles.IsQualified(transport);
             var effectiveConfiguration = new
             {
                 endpointId = endpoint.Id,
@@ -74,6 +76,8 @@ internal sealed class Planner(OfflineBoundary boundary)
                 clientRequestTimeout = endpoint.RequestTimeout ?? BaizeHttp.DefaultTimeout,
                 effectiveAttemptCeiling = new[] { endpoint.RequestTimeout ?? BaizeHttp.DefaultTimeout, policy.AttemptTimeout }.Min(),
                 capabilities = Normalize(caps),
+                transportProfileRef = transport.ProfileId,
+                transport,
                 adapter = new
                 {
                     assembly = provider.GetType().Assembly.GetName().Name,
@@ -102,12 +106,20 @@ internal sealed class Planner(OfflineBoundary boundary)
                 var blockers = new SortedSet<string>(StringComparer.Ordinal);
                 if (entry.TransportProfile != "SyntheticFake")
                 {
-                    // Durable admission and the guarded transport exist; what
-                    // remains is explicit operator authorization plus the
-                    // unproven runtime-internal wire bounds (S0-G1/G6).
+                    // Live execution always needs the separate operator switch.
                     blockers.Add("live-execution-requires-explicit-operator-authorization");
-                    blockers.Add("wire-attempt-bound-unproven");
-                    blockers.Add("wire-and-preallocation-byte-bounds-unproven");
+                    if (!qualifiedTransport)
+                    {
+                        blockers.Add("transport-profile-unreviewed");
+                        blockers.Add("wire-attempt-bound-unproven");
+                        blockers.Add("wire-and-preallocation-byte-bounds-unproven");
+                    }
+                    else if (entry.TransportProfile == "LoopbackDevelopment")
+                    {
+                        // The same handler is probed over loopback, but a
+                        // loopback endpoint is never a live qualification target.
+                        blockers.Add("loopback-not-live-eligible");
+                    }
                 }
                 else if (!SyntheticTransports.Implemented(provider.Key.Value))
                 {
@@ -128,17 +140,24 @@ internal sealed class Planner(OfflineBoundary boundary)
                 else blockers.Add("economic-bound-evidence-unverified");
                 var caseBinding = new { subjectId, contracts = observed, policyHash };
                 var caseId = CanonicalJson.Identity(caseBinding);
+                var physicalAttempts = exclusion is not null ? 0
+                    : entry.TransportProfile == "SyntheticFake" ? scenario.MaximumDispatches
+                    : qualifiedTransport ? checked(scenario.MaximumDispatches * transport.PhysicalAttemptUpperBound!.Value)
+                    : (int?)null;
                 cases.Add(new CasePlan(caseId, subjectId, entry.Id, scenario.Id, observed, exclusion is null ? "Applicable" : "Excluded", exclusion,
                     observationExclusion, Enumerable.Range(1, policy.RepeatCount).Select(slot => new TrialSlot(slot,
                         CanonicalJson.Identity(new { caseId, slot }))).ToArray(),
                     exclusion is null ? scenario.MaximumDispatches : 0, exclusion is null ? scenario.MaximumDispatches : 0,
-                    entry.TransportProfile == "SyntheticFake" ? (exclusion is null ? scenario.MaximumDispatches : 0) : null,
+                    physicalAttempts,
                     bounds, "Blocked", blockers.ToArray()));
             }
         }
         Validation.Require(cases.Any(c => c.Applicability == "Applicable"), "all-cases-excluded");
         var active = cases.Where(c => c.Applicability == "Applicable").ToArray();
         var count = checked(active.Sum(c => (long)c.MaximumSemanticInvocationsPerSlot) * policy.RepeatCount);
+        var physicalCount = active.All(c => c.MaximumPhysicalWireAttemptsPerSlot is not null)
+            ? checked(active.Sum(c => (long)c.MaximumPhysicalWireAttemptsPerSlot!.Value) * policy.RepeatCount)
+            : (long?)null;
         var input = Sum(active, c => c.RequestedReservation?.InputTokens, policy.RepeatCount);
         var output = Sum(active, c => c.RequestedReservation?.OutputTokens, policy.RepeatCount);
         var reasoning = Sum(active, c => c.RequestedReservation?.ReasoningTokens, policy.RepeatCount);
@@ -175,7 +194,7 @@ internal sealed class Planner(OfflineBoundary boundary)
                 semanticInvocations = count,
                 neutralHttpCalls = count,
                 terminalBackendSends = count,
-                physicalWireAttempts = active.All(c => c.MaximumPhysicalWireAttemptsPerSlot is not null) ? (long?)count : null,
+                physicalWireAttempts = physicalCount,
                 quantityStatus = "PlannedRequirementsNotObservedOrEnforced",
                 inputTokens = input,
                 outputTokens = output,
@@ -185,11 +204,15 @@ internal sealed class Planner(OfflineBoundary boundary)
                 currency = costKnown ? currencies[0] : null,
                 reservationStatus = "RequestedBoundsRequireEvidenceAndEnforcement"
             },
-            requiredEvidence = new[] { "build-and-contract-binding", "configuration-and-protocol-binding", "durable-reservation-before-credentials",
-                "durable-boundary-specific-dispatch-intent", "usage-completeness-and-bound-sources", "cooperative-cleanup-status" },
+            requiredEvidence = new[] { "build-and-contract-binding", "configuration-and-protocol-binding", "reviewed-transport-profile-and-physical-attempt-bound",
+                "durable-reservation-before-credentials", "durable-boundary-specific-dispatch-intent", "usage-completeness-and-bound-sources",
+                "cooperative-cleanup-status" },
             limitations = new[] { "Planning grants no execution authority or capability claim.", "Declared bounds and references are not verified enforcement.",
                 "Unknown revision stays unknown; aliases do not identify weights.", "OpenAI F1 adapter ordering defect remains separately attributed; it cannot establish unsupportedness.",
-                "Native validity, canonical correlation and provider provenance remain separate observations." }
+                "Native validity, canonical correlation and provider provenance remain separate observations.",
+                "Physical-attempt qualification applies only to the exact reviewed HTTP/1.1 sockets profile recorded per subject; HTTP/2, HTTP/3, proxies, redirects, authentication challenges and custom handler chains remain unsupported.",
+                "Decoded-byte ceilings are not wire-byte or preallocation bounds (S0-G6).",
+                "Provider-side billing semantics remain outside transport qualification; one physical inference attempt is a transport bound, not an exactly-once billing claim." }
         };
         return new FrozenPlan(CanonicalJson.Write(document));
     }

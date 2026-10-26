@@ -23,6 +23,7 @@ internal sealed record ModelEntry
     public required bool MutableAlias { get; init; }
     public required string ConfigurationVisibility { get; init; }
     public required string TransportProfile { get; init; }
+    public string? TransportProfileRef { get; init; }
     public required LlmEndpointOptions Endpoint { get; init; }
     public AdvertisedCapability[] Advertised { get; init; } = [];
     public Exclusion[] Exclusions { get; init; } = [];

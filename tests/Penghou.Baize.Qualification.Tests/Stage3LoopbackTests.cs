@@ -70,7 +70,7 @@ public sealed class Stage3LoopbackTests
                 var lease = new AttemptLease("loopback-attempt", "run", "case", "trial", 1, "loopback-local-alpha",
                     "POST", executor.DestinationOrigin, executor.DestinationBasePath, "LOOPBACK_TEST_SLOT",
                     CancellationToken.None, CancellationToken.None, DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2),
-                    TimeSpan.FromSeconds(30), 1 << 20, 4 << 20);
+                    TimeSpan.FromSeconds(30), 1 << 20, 4 << 20, 1);
                 using var scope = AttemptLeaseScope.Enter(lease);
                 var context = new QualificationContextV3(
                     (request, token) => executor.Stream(request, token),
@@ -157,24 +157,28 @@ public sealed class Stage3PrivacyTests
         }
     }
 
-    // Real-profile eligibility refusal never reads environment credentials.
+    // A real profile without a reviewed transport profile is refused before
+    // any credential or dispatch, even with --allow-live.
     [Fact]
     public async Task EligibilityRefusal_ReadsNoSecrets()
     {
         using var workspace = new Stage3Workspace();
-        (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
-        var previous = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "sentinel-credential-must-not-be-read");
+        (await workspace.PlanAsync("deepseek-native-chat", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
+        var previous = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
+        Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", "sentinel-credential-must-not-be-read");
         try
         {
-            (await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3")).AssertFailed("real-network-not-authorized", 2);
-            var refused = await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3", allowLive: true);
+            (await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3")).AssertFailed("real-network-not-authorized", 2);
+            var refused = await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3", allowLive: true);
             Assert.Equal(2, refused.ExitCode);
+            Assert.Equal("run-refused", refused.Summary.GetProperty("kind").GetString());
+            Assert.Contains("transport-profile-unreviewed", refused.Summary.GetProperty("criticalReasons").EnumerateArray()
+                .Select(reason => reason.GetString()!).ToArray());
             Assert.False(Directory.Exists(workspace.RunDir));
         }
         finally
         {
-            Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", previous);
+            Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", previous);
         }
     }
 

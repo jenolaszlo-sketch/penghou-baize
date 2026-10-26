@@ -109,17 +109,26 @@ public sealed class Stage2AdmissionTests
         var units = BudgetLedger.UnitsFor(tightRequest);
         var raceDirectory = workspace.Out("race");
         Directory.CreateDirectory(raceDirectory);
-        var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(async () =>
+        // Initialize every writer before the race; the race is about the budget
+        // CAS, not concurrent store creation.
+        var ledgers = Enumerable.Range(0, 8)
+            .Select(_ => new EvidenceLedger(Path.Combine(raceDirectory, "evidence.db"), ExecutionFaults.None))
+            .ToArray();
+        try
         {
-            var ledger = new EvidenceLedger(Path.Combine(raceDirectory, "evidence.db"), ExecutionFaults.None);
-            var result = await BudgetLedger.ReserveAsync(ledger, tightRequest, Guid.NewGuid().ToString("N"), units,
-                CancellationToken.None);
-            await ledger.DisposeAsync();
-            return result;
-        })).ToArray();
-        var outcomes = await Task.WhenAll(tasks);
-        Assert.Equal(1, outcomes.Count(outcome => outcome.DenialCode is null));
-        Assert.Equal(7, outcomes.Count(outcome => outcome.DenialCode is not null));
+            foreach (var ledger in ledgers)
+                await ledger.GetHeadAsync(TestContext.Current.CancellationToken);
+            var tasks = ledgers.Select(ledger => Task.Run(async () =>
+                await BudgetLedger.ReserveAsync(ledger, tightRequest, Guid.NewGuid().ToString("N"), units,
+                    CancellationToken.None))).ToArray();
+            var outcomes = await Task.WhenAll(tasks);
+            Assert.Equal(1, outcomes.Count(outcome => outcome.DenialCode is null));
+            Assert.Equal(7, outcomes.Count(outcome => outcome.DenialCode is not null));
+        }
+        finally
+        {
+            foreach (var ledger in ledgers) await ledger.DisposeAsync();
+        }
     }
 
     // A contract registry change fails the binding check before any secret.
@@ -129,9 +138,10 @@ public sealed class Stage2AdmissionTests
         var registry = ContractRegistry.Find("chat.baseline@3");
         var request = new CaseExecutionRequest("run", "plan", "case", "trial", 1, "subject", "fake-alpha",
             "chat.baseline@3", ["chat.baseline@3", "chat.not-a-contract@9"], registry.FixtureId,
-            registry.FixtureHash, registry.AssertionIds.ToArray(), false, true, 1, null,
+            registry.FixtureHash, registry.AssertionIds.ToArray(), false, true, 1, 1, null,
             new SubjectBindingEvidence("service", "account", "profile", "openai-chat-completions", "v1", null, true,
-                "SyntheticFake", "endpoint", "OpenAi", "synthetic/model-alpha", "https://alpha.invalid/v1", null,
+                "SyntheticFake", TransportProfiles.SyntheticProfileId, TransportProfiles.Describe("SyntheticFake", null).Identity,
+                "endpoint", "OpenAi", "synthetic/model-alpha", "https://alpha.invalid/v1", null,
                 new Dictionary<string, string> { ["Dialect"] = "Standard" }, "00:02:00", "00:02:00", true,
                 "openai-chat-completions", "SYNTHETIC_UNUSED_KEY_SLOT"),
             new BudgetEnvelopeEvidence(12, 12, null, null, null, null, null, null),

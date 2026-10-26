@@ -45,6 +45,11 @@ internal sealed record ReportCase(
     string Protocol,
     string? ApiVersion,
     string TransportProfile,
+    string? TransportProfileId,
+    string? TransportProfileIdentity,
+    int? PhysicalAttemptUpperBound,
+    string? TransportChain,
+    string? WireAttemptBound,
     IReadOnlyDictionary<string, string> Settings,
     bool NativeToolCalling,
     string? Outcome,
@@ -169,6 +174,11 @@ internal static class ReportWriter
                 .EnumerateArray().Select(r => r.GetString()!).ToArray() : [];
             var eligibilityLimitations = eligibility is { } limitationElement ? limitationElement.GetProperty("limitations")
                 .EnumerateArray().Select(r => r.GetString()!).ToArray() : [];
+            var transportProfileId = eligibility is { } profileElement ? NullableString(profileElement, "transportProfileId") : null;
+            var transportProfileIdentity = eligibility is { } identityElement ? NullableString(identityElement, "transportProfileIdentity") : null;
+            var physicalAttemptUpperBound = eligibility is { } boundElement ? NullableInt(boundElement, "physicalAttemptUpperBound") : null;
+            var transportChain = eligibility is { } chainElement ? NullableString(chainElement, "transportChain") : null;
+            var wireAttemptBound = eligibility is { } wireElement ? NullableString(wireElement, "wireAttemptBound") : null;
             var failureStage = attempts.Select(a => a.FailureStage).FirstOrDefault(s => s is not null);
             var suggestedClass = attempts.Select(a => a.SuggestedAttributionClass).FirstOrDefault(s => s is not null);
             return new ReportCase(selected.CaseId, selected.ModelId, selected.ScenarioId,
@@ -179,6 +189,7 @@ internal static class ReportWriter
                 resolved.GetProperty("provider").GetString()!, resolved.GetProperty("providerModel").GetString()!,
                 resolved.GetProperty("endpointId").GetString()!, requested.GetProperty("protocol").GetString()!,
                 NullableString(requested, "apiVersion"), requested.GetProperty("transportProfile").GetString()!,
+                transportProfileId, transportProfileIdentity, physicalAttemptUpperBound, transportChain, wireAttemptBound,
                 resolved.GetProperty("settings").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString() ?? "", StringComparer.Ordinal),
                 resolved.GetProperty("capabilities").GetProperty("nativeToolCalling").GetBoolean(),
                 outcome.Outcome.ToString(),

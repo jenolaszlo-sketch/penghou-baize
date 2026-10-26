@@ -31,7 +31,8 @@ internal sealed record AttemptLease(
     DateTimeOffset AbsoluteDeadline,
     TimeSpan IdleTimeout,
     long MaximumRequestBodyBytes,
-    long MaximumResponseBodyBytes);
+    long MaximumResponseBodyBytes,
+    int MaximumPhysicalAttempts);
 
 internal static class AttemptLeaseScope
 {

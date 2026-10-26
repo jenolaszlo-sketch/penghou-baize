@@ -95,6 +95,7 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
             CancellationToken cancellationToken, CancellationToken deadlineToken)
         {
             var entry = environment._inventory.Entries.Single(e => e.Id == request.ModelId);
+            VerifyTransportBinding(entry, request);
             var executor = environment.ExecutorFor(request.ModelId, entry);
             var attemptTimeout = TimeSpan.Parse(request.Deadlines.AttemptTimeout,
                 System.Globalization.CultureInfo.InvariantCulture);
@@ -103,7 +104,8 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
                 request.Subject.SecretSlotReference, cancellationToken, deadlineToken,
                 environment.Time.GetUtcNow() + attemptTimeout,
                 TimeSpan.Parse(request.Deadlines.StreamIdleTimeout, System.Globalization.CultureInfo.InvariantCulture),
-                request.Limits.MaximumRequestBytes, request.Limits.MaximumResponseBytes);
+                request.Limits.MaximumRequestBytes, request.Limits.MaximumResponseBytes,
+                request.MaximumPhysicalAttempts);
             using var scope = AttemptLeaseScope.Enter(lease);
             var context = new QualificationContextV3(
                 (streamRequest, token) => executor.Stream(streamRequest, token),
@@ -116,6 +118,30 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
                 ? await QualificationScenariosV3.RunSingleToolAsync(context, cancellationToken).ConfigureAwait(false)
                 : await QualificationScenariosV3.RunBaselineAsync(context, cancellationToken).ConfigureAwait(false);
         }
+
+        // The frozen subject, inventory entry and compiled profile must agree
+        // before a lease, credential lookup or dispatch exists. Synthetic
+        // execution is exempt from the live bound but not from identity checks.
+        private static void VerifyTransportBinding(ModelEntry entry, CaseExecutionRequest request)
+        {
+            var entryRef = entry.TransportProfileRef ?? TransportProfiles.SyntheticProfileId;
+            if (entry.TransportProfile != request.Subject.TransportProfile
+                || entryRef != request.Subject.TransportProfileRef)
+                throw new ExecutionException("transport-profile-substituted");
+            var current = TransportProfiles.Describe(entry.TransportProfile, entry.TransportProfileRef);
+            if (current.Identity != request.Subject.TransportProfileIdentity)
+                throw new ExecutionException("transport-profile-substituted");
+            if (entry.TransportProfile != "SyntheticFake")
+            {
+                if (!TransportProfiles.IsQualified(current)
+                    || request.MaximumPhysicalAttempts != current.PhysicalAttemptUpperBound)
+                    throw new ExecutionException("transport-profile-unqualified");
+            }
+            else if (request.MaximumPhysicalAttempts < 1)
+            {
+                throw new ExecutionException("physical-attempt-bound-invalid");
+            }
+        }
     }
 
     // The environment is the local accounting authority for HTTP dispatch
@@ -124,6 +150,7 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
     private sealed class AdmissionGate(EvidenceLedger ledger, BudgetEnvelopeEvidence envelope, ExecutionFaults faults)
         : IHttpAdmissionGate
     {
+        private readonly Dictionary<string, int> _admittedByAttempt = new(StringComparer.Ordinal);
         private int _failedResultRecords;
         public int FailedResultRecords => Volatile.Read(ref _failedResultRecords);
 
@@ -141,10 +168,31 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
                 await RecordDeniedAsync(dispatch, "budget-http-requests-exhausted", cancellationToken).ConfigureAwait(false);
                 return new HttpAdmissionDecision(false, "budget-http-requests-exhausted", dispatch.DispatchId);
             }
+            // An unexpected retry above the guard must not exceed the reviewed
+            // physical-attempt bound, even when the global budget has room.
+            int index;
+            lock (_admittedByAttempt)
+            {
+                _admittedByAttempt.TryGetValue(dispatch.AttemptId, out var admitted);
+                if (admitted >= dispatch.MaximumPhysicalAttempts)
+                {
+                    index = -1;
+                }
+                else
+                {
+                    index = admitted + 1;
+                    _admittedByAttempt[dispatch.AttemptId] = index;
+                }
+            }
+            if (index < 0)
+            {
+                await RecordDeniedAsync(dispatch, "physical-attempt-bound-exceeded", cancellationToken).ConfigureAwait(false);
+                return new HttpAdmissionDecision(false, "physical-attempt-bound-exceeded", dispatch.DispatchId);
+            }
             await ledger.AppendAsync(EvidenceLedger.BudgetStream, EvidenceLedger.HttpDispatchAdmitted,
                 new HttpDispatchAdmittedEvidence("1.0", dispatch.AttemptId, dispatch.DispatchId, dispatch.RunId,
                     dispatch.CaseId, dispatch.TrialId, dispatch.TrialSlot, dispatch.ModelId,
-                    dispatch.Destination, dispatch.BoundaryKind),
+                    dispatch.Destination, dispatch.BoundaryKind, index, dispatch.MaximumPhysicalAttempts),
                 idempotencyKey: "http-admitted-" + dispatch.DispatchId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             faults.AfterHttpAdmission?.Invoke(dispatch.DispatchId);

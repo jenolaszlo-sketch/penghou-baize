@@ -160,8 +160,10 @@ internal static class ReportMarkdown
         {
             builder.Append($"## {reportCase.ModelId} — {reportCase.ScenarioId} (trial {reportCase.TrialSlot})\n\n");
             builder.Append($"Outcome: **{reportCase.Outcome ?? "NotRun"}**; complete: {(reportCase.Complete ? "yes" : "no")}\n\n");
-            builder.Append($"Hosting provider `{reportCase.HostingProvider}`, adapter `{reportCase.Provider}`, provider model `{reportCase.ProviderModel}`, endpoint `{reportCase.EndpointId}`, protocol `{reportCase.Protocol}` (`{reportCase.ApiVersion ?? "unversioned"}`), transport `{reportCase.TransportProfile}`, native tools `{(reportCase.NativeToolCalling ? "enabled" : "disabled")}`\n\n");
+            builder.Append($"Hosting provider `{reportCase.HostingProvider}`, adapter `{reportCase.Provider}`, provider model `{reportCase.ProviderModel}`, endpoint `{reportCase.EndpointId}`, protocol `{reportCase.Protocol}` (`{reportCase.ApiVersion ?? "unversioned"}`), transport `{reportCase.TransportProfile}`, profile `{reportCase.TransportProfileId ?? "unrecorded"}` (`{reportCase.TransportProfileIdentity ?? "no-identity"}`), physical-attempt bound `{reportCase.PhysicalAttemptUpperBound?.ToString() ?? "unknown"}`, native tools `{(reportCase.NativeToolCalling ? "enabled" : "disabled")}`\n\n");
             builder.Append($"Contract `{reportCase.ScenarioId}`; observed `{string.Join(", ", reportCase.ObservedContractIds)}`; fixture `{reportCase.FixtureId}` (`{reportCase.FixtureHash}`)\n\n");
+            if (reportCase.TransportChain is not null || reportCase.WireAttemptBound is not null)
+                builder.Append($"Transport chain: `{reportCase.TransportChain ?? "unrecorded"}`; wire-attempt bound: `{reportCase.WireAttemptBound ?? "unknown"}`\n\n");
             if (reportCase.EligibilityState is not null)
             {
                 builder.Append($"Live eligibility: **{reportCase.EligibilityState}**\n");

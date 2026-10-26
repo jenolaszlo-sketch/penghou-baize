@@ -1,9 +1,9 @@
 # BQ-1b controlled execution: staged implementation plan
 
-Date: 2026-10-25 (revised at Stage 3 authorization). Status: **STAGES 0–2
-COMPLETE; STAGE 3 (REAL-TRANSPORT READINESS) COMPLETE WITH RESTRICTIONS —
-READY FOR CONTROLLED LIVE QUALIFICATION. STAGE 4 (LIVE RUNS) NOT AUTHORIZED.**
-Repository: `jenolaszlo-sketch/penghou-baize`.
+Date: 2026-10-26 (revised at Stage 4A). Status: **STAGES 0–3 COMPLETE;
+STAGE 4A (PHYSICAL TRANSPORT QUALIFICATION) COMPLETE WITH RESTRICTIONS — ONE
+HTTP/1.1 PROFILE HAS A REVIEWED PHYSICAL-ATTEMPT BOUND. STAGE 4B (LIVE RUNS)
+NOT AUTHORIZED.** Repository: `jenolaszlo-sketch/penghou-baize`.
 
 This refines the existing [architecture and roadmap](model-qualification-plan.md),
 [twelve decisions](model-qualification-decisions.md),
@@ -278,8 +278,29 @@ after authorization, each stage produces a bounded diff and offline evidence.
 | 1 — Registry and offline planner (complete) | Non-packable CLI shell; typed inventory/policy/resolved-plan; current descriptor registry and explicit Contracts friend assembly. | Two synthetic models resolve independently; unknown/empty selectors and all-excluded plans cannot yield a qualification success. Changed defaults/settings/build/fixtures change identity. Unknown authoritative values fail closed. `inventory validate` and `plan` perform zero secret reads, provider constructions and network calls. |
 | 2 — Durable qualification execution slice (this stage) | Frozen-plan verification and binding; Zhinu workflow per selected case/trial with stable identities; deterministic synthetic fake transport behind the real Baize routed adapter; BQ-1a V3 scenario execution; Siming evidence ledger with idempotent appends; conservative budget accounting; reconciliation; offline JSON/Markdown report; `run`/`resume`/`report` commands. Depends on stage 1 plus pinned Zhinu/Siming. | Frozen plan → Zhinu workflow → Baize synthetic invocation → BQ-1a assertions → Siming evidence → qualification report works end to end with persisted state. Deterministic fault/restart suite covers success, contract failure with preserved negatives, cancellation, restart after a committed step, failure between workflow completion and Siming append, repeated append identity, crash-after-intent re-execution as a distinct attempt, evidence-storage failure producing no green report, budget exhaustion/unknown usage, and multi-case isolation. No real network, credential or paid execution. |
 | 3 — Real-transport readiness (complete with restrictions) | Admission guard at the last application boundary beneath the real Baize neutral transport; attempt lease bridging the legacy adapter path; lease-aware credential resolution; per-dispatch HTTP accounting and denial at cap; request/response byte ceilings; concurrency one held through body disposal; total and idle deadlines; fail-closed live-eligibility assessment and `--allow-live` gate; cost reservations; compatibility attribution (failure stage + suggested class, F1 fixture-bound); loopback integration over the real sockets stack. | Deterministic suite proves the guarded composition, blocked configurations with zero secret reads, dispatch-cap denial, concurrency one, hidden-retry counting/denial, size violations, idle deadlines, lease-gated admission, identity-consistent evidence, recovery without fabricated success, provider-vs-contract distinction, F1 reproduction, and privacy. Real profiles remain live-blocked on `wire-attempt-bound-unproven` (S0-G1); disposition READY WITH RESTRICTIONS. |
-| 4 — Controlled real qualification | Explicitly authorized live runs of an eligible plan through the guarded composition; predeclared dated allowances; per-quirk findings and adapter defects recorded. Depends on stage 3 plus an operator authorization decision and a reviewed wire-attempt-bound acceptance per profile. | Actionable compatibility findings with exact configuration, contract, attempt and evidence identity; F1-style adapter defects stay separately attributed; provider failures never become model capability failures. No automatic promotion or scheduling. |
+| 4A — Physical transport qualification (complete with restrictions) | Runtime/source audit of the actual `SocketsHttpHandler` path; one exact HTTP/1.1 pinned profile; guard protocol pin and request-shape restrictions; physical-attempt bound enforcement per attempt; budget reservation scaled by the bound; deterministic loopback fault matrix; eligibility and evidence binding to the profile identity. | One admitted OpenAI-compatible inference request cannot produce more than one physical HTTP request attempt under `baize-sockets-http11-exact-v1`. HTTP/2/3, proxy, redirect, configured authentication, cookie, decompression and custom-middleware paths remain blocked. Loopback only; no live request. Disposition QUALIFIED WITH RESTRICTIONS. |
+| 4B — Controlled real qualification | Explicitly authorized live runs of an eligible plan through the guarded composition; predeclared dated allowances; per-quirk findings and adapter defects recorded. Depends on Stage 4A, an operator authorization decision, a reviewed provider/model/endpoint, and provider billing semantics. | Actionable compatibility findings with exact configuration, contract, attempt and evidence identity; F1-style adapter defects stay separately attributed; provider failures never become model capability failures. No automatic promotion or scheduling. |
 | 5 — BQ-1b qualification milestone handoff | Exact source/plan/store/test bindings, dispatch audit, residual risks, fake bundle, real-bundle (if authorized), ordinary deterministic/API/dependency checks. | Repeatable offline fault suite and safe partial reports pass. Review the boundary audit independently before any broader live use. No package publication, model catalogue approval, production routing mutation, scheduler or unattended promotion is implied. |
+
+### Stage 4A result
+
+The [transport audit](model-qualification-bq1b-stage4a-transport-audit.md)
+selects one profile, `baize-sockets-http11-exact-v1`, and establishes an upper
+bound of one physical HTTP request attempt per admitted inference invocation.
+The profile pins HTTP/1.1 exact, disables redirects/authentication/cookies/proxy/
+decompression, rejects contentless requests and `Expect: 100-continue`, records
+the runtime and `System.Net.Http` assembly hash, and is enforced at the admission
+gate and in the budget reservation. The [Stage 4A handoff](model-qualification-bq1b-stage4a-handoff.md)
+and [evidence bundle](reviews/bq1b-stage4a-evidence/README.md) bind the exact
+build, probe matrix and remaining restrictions.
+
+Only this profile earns removal of `wire-attempt-bound-unproven`. Unreviewed
+profiles keep it. Loopback profiles use the same handler but remain `Blocked`
+with `loopback-not-live-eligible`. HTTP/2/3, proxy, redirect, configured
+authentication, cookie, decompression and custom-handler paths remain explicitly
+unsupported. Provider billing semantics and the actual endpoint/provider/model
+selection are Stage 4B facts; transport qualification is not paid-execution
+authorization.
 
 ### Fault injection matrix
 

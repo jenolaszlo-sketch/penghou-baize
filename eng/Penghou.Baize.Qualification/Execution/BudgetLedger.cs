@@ -117,37 +117,41 @@ internal static class BudgetLedger
     private static string? Exceeded(long? remaining, long? units) =>
         units is not null && remaining is not null && remaining < units ? "budget-token-envelope-insufficient" : null;
 
-    public static BudgetUnitsEvidence UnitsFor(CaseExecutionRequest request) => new(
-        1, 1,
-        request.Budget.InputTokens is null ? null : ReservedInput(request),
-        request.Budget.OutputTokens is null ? null : ReservedOutput(request),
-        request.Budget.ReasoningTokens is null ? null : ReservedReasoning(request),
-        request.Budget.TotalTokens is null ? null : ReservedTotal(request),
-        request.Budget.MaximumCost is null ? null : ReservedCost(request),
-        request.Budget.Currency);
+    // The worst-case reservation covers every physical attempt the reviewed
+    // profile permits for one admitted inference request. The outer application
+    // dispatch count alone is not the budget basis.
+    public static BudgetUnitsEvidence UnitsFor(CaseExecutionRequest request)
+    {
+        var physical = Math.Max(1, request.MaximumPhysicalAttempts);
+        return new(1, physical,
+            request.Budget.InputTokens is null ? null : ReservedInput(request, physical),
+            request.Budget.OutputTokens is null ? null : ReservedOutput(request, physical),
+            request.Budget.ReasoningTokens is null ? null : ReservedReasoning(request, physical),
+            request.Budget.TotalTokens is null ? null : ReservedTotal(request, physical),
+            request.Budget.MaximumCost is null ? null : ReservedCost(request, physical),
+            request.Budget.Currency);
+    }
 
-    private static string? ReservedCost(CaseExecutionRequest request)
+    private static string? ReservedCost(CaseExecutionRequest request, int physical)
     {
         var reservation = request.PlanCaseTokenReservation?.MaximumCost;
         if (reservation is null) return null;
-        var perDispatch = decimal.Parse(reservation, System.Globalization.CultureInfo.InvariantCulture)
-            / Math.Max(1, request.DispatchCeiling);
-        return perDispatch.ToString("0.#############################", System.Globalization.CultureInfo.InvariantCulture);
+        var total = decimal.Parse(reservation, System.Globalization.CultureInfo.InvariantCulture) * physical;
+        return total.ToString("0.#############################", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    // A reservation is the plan's requested per-dispatch reservation when the
-    // policy carries a ceiling for that unit; otherwise the unit is not
-    // admitted by budget (recorded as observation only).
-    private static long? ReservedInput(CaseExecutionRequest request) =>
-        PerDispatch(request.PlanCaseTokenReservation?.InputTokens, request.DispatchCeiling);
-    private static long? ReservedOutput(CaseExecutionRequest request) =>
-        PerDispatch(request.PlanCaseTokenReservation?.OutputTokens, request.DispatchCeiling);
-    private static long? ReservedReasoning(CaseExecutionRequest request) =>
-        PerDispatch(request.PlanCaseTokenReservation?.ReasoningTokens, request.DispatchCeiling);
-    private static long? ReservedTotal(CaseExecutionRequest request) =>
-        PerDispatch(request.PlanCaseTokenReservation?.TotalTokens, request.DispatchCeiling);
-    private static long? PerDispatch(long? reservation, int dispatches) =>
-        reservation is null || dispatches <= 0 ? null : Math.Max(0, (reservation.Value + dispatches - 1) / dispatches);
+    // The plan's requested token envelope covers one physical inference
+    // attempt; the accepted bound scales the conservative reservation.
+    private static long? ReservedInput(CaseExecutionRequest request, int physical) =>
+        Scale(request.PlanCaseTokenReservation?.InputTokens, physical);
+    private static long? ReservedOutput(CaseExecutionRequest request, int physical) =>
+        Scale(request.PlanCaseTokenReservation?.OutputTokens, physical);
+    private static long? ReservedReasoning(CaseExecutionRequest request, int physical) =>
+        Scale(request.PlanCaseTokenReservation?.ReasoningTokens, physical);
+    private static long? ReservedTotal(CaseExecutionRequest request, int physical) =>
+        Scale(request.PlanCaseTokenReservation?.TotalTokens, physical);
+    private static long? Scale(long? reservation, int physical) =>
+        reservation is null ? null : checked(reservation.Value * physical);
 
     // Atomically consumes the allowance under optimistic concurrency. The CAS
     // expected-head append guarantees a racing writer cannot double-allocate

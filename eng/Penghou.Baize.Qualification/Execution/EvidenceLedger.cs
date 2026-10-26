@@ -13,6 +13,8 @@ internal sealed class EvidenceLedger : IAsyncDisposable
     public const string RunStream = "run";
     public const string BudgetStream = "budget";
     public const string BoundarySyntheticTransport = "synthetic-terminal-transport";
+    public const string BoundaryLoopbackTransport = "loopback-terminal";
+    public const string BoundaryNetworkTransport = "network-terminal";
 
     public const string RunStarted = "QualificationRunStarted";
     public const string RunFinished = "QualificationRunFinished";

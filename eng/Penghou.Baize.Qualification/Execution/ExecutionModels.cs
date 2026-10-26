@@ -208,7 +208,9 @@ internal sealed record HttpDispatchAdmittedEvidence(
     int TrialSlot,
     string ModelId,
     string Destination,
-    string BoundaryKind);
+    string BoundaryKind,
+    int PhysicalAttemptIndex,
+    int MaximumPhysicalAttempts);
 
 internal sealed record HttpDispatchResultEvidence(
     string SchemaVersion,
@@ -247,6 +249,9 @@ internal sealed record EligibilityAssessmentEvidence(
     string[] CriticalReasons,
     string[] Limitations,
     string TransportChain,
+    string? TransportProfileId,
+    string? TransportProfileIdentity,
+    int? PhysicalAttemptUpperBound,
     string WireAttemptBound,
     string? AllowanceRef,
     string? TokenBoundSource,
@@ -262,6 +267,8 @@ internal sealed record SubjectBindingEvidence(
     string? ModelRevision,
     bool MutableAlias,
     string TransportProfile,
+    string TransportProfileRef,
+    string TransportProfileIdentity,
     string EndpointId,
     string Provider,
     string ProviderModel,
@@ -318,6 +325,7 @@ internal sealed record CaseExecutionRequest(
     bool RequiresNativeTools,
     bool RequiresRouterDiagnostics,
     int DispatchCeiling,
+    int MaximumPhysicalAttempts,
     TokenReservationEvidence? PlanCaseTokenReservation,
     SubjectBindingEvidence Subject,
     BudgetEnvelopeEvidence Budget,

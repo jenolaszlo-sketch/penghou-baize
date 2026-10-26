@@ -97,7 +97,7 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
         await _services.Ledger.AppendAsync(EvidenceLedger.AttemptStream(attemptId), EvidenceLedger.DispatchIntent,
             new DispatchIntentEvidence("1.0", attemptId, request.RunId, request.CaseId, request.TrialId, request.TrialSlot,
                 request.ModelId, request.ScenarioId, string.Join(",", request.ObservedContractIds),
-                request.FixtureId, request.FixtureHash, EvidenceLedger.BoundarySyntheticTransport),
+                request.FixtureId, request.FixtureHash, BoundaryKind(request.Subject.TransportProfile)),
             idempotencyKey: IntentKey(attemptId), cancellationToken: cancellationToken).ConfigureAwait(false);
         _services.Faults.AfterIntentAppend?.Invoke(attemptId);
 
@@ -226,6 +226,13 @@ internal sealed class QualificationWorkflow : IWorkflow<CaseExecutionRequest, Tr
         return new TrialOutcomeRecord(attempt.AttemptId, outcome, attempt.FailedAssertionIds, attempt.FailureCategory,
             attempt.Attribution, complete);
     }
+
+    private static string BoundaryKind(string transportProfile) => transportProfile switch
+    {
+        "SyntheticFake" => EvidenceLedger.BoundarySyntheticTransport,
+        "LoopbackDevelopment" => EvidenceLedger.BoundaryLoopbackTransport,
+        _ => EvidenceLedger.BoundaryNetworkTransport
+    };
 
     public static string ReserveKey(string attemptId) => $"reserve-{attemptId}";
     public static string DeniedKey(string attemptId) => $"denied-{attemptId}";

@@ -19,7 +19,8 @@ internal sealed record HttpDispatchRecord(
     string ModelId,
     string Destination,
     string BoundaryKind,
-    int AdmissionIndex);
+    int AdmissionIndex,
+    int MaximumPhysicalAttempts = 1);
 
 // Consumed by the guarded handler: the environment owns the budget authority
 // and the evidence ledger. The handler is otherwise stateless per request.
@@ -44,13 +45,25 @@ internal sealed class QualificationAdmissionHandler(HttpMessageHandler terminal,
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var lease = AttemptLeaseScope.Active ?? throw new ExecutionException("http-admission-without-attempt-lease");
+        if (lease.MaximumPhysicalAttempts < 1)
+            throw new ExecutionException("physical-attempt-bound-invalid");
         VerifyDestination(request, lease);
-        if (request.Content?.Headers.ContentLength is { } declared && declared > lease.MaximumRequestBodyBytes)
+        // The reviewed bound depends on these exact request properties: an
+        // inference POST with content and without Expect: 100-continue cannot
+        // enter SocketsHttpHandler's connection-failure replay path. Pin the
+        // protocol too; HTTP/2/3 replay paths are explicitly unsupported.
+        if (request.Content is null)
+            throw new ExecutionException("http-admission-requires-body");
+        if (request.Headers.ExpectContinue == true)
+            throw new ExecutionException("http-admission-expect-continue-rejected");
+        request.Version = HttpVersion.Version11;
+        request.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
+        if (request.Content.Headers.ContentLength is { } declared && declared > lease.MaximumRequestBodyBytes)
             throw new InvalidDataException("HTTP request body exceeds the configured qualification byte ceiling.");
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lease.AttemptToken, lease.DeadlineToken);
         var dispatch = new HttpDispatchRecord(lease.AttemptId, Guid.NewGuid().ToString("N"), lease.RunId,
             lease.CaseId, lease.TrialId, lease.TrialSlot, lease.ModelId,
-            request.RequestUri!.AbsoluteUri, boundaryKind, 0);
+            request.RequestUri!.AbsoluteUri, boundaryKind, 0, lease.MaximumPhysicalAttempts);
         await _concurrency.WaitAsync(linked.Token).ConfigureAwait(false);
         var handedOff = false;
         var slotReleased = false;
@@ -171,22 +184,30 @@ internal sealed class QualificationAdmissionHandler(HttpMessageHandler terminal,
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 0)
             {
-                try { await inner.DisposeAsync().ConfigureAwait(false); } finally { inner.Dispose(); }
                 try
                 {
-                    // Best-effort supplement: the authoritative attempt
-                    // evidence is recorded by the workflow; a failure here
-                    // leaves a visible incomplete dispatch record instead of
-                    // corrupting an already-read qualification attempt.
-                    await gate.RecordResultAsync(dispatch, null, _completed ? "complete" : "disposed-incomplete",
-                        _bytes, _completed, CancellationToken.None).ConfigureAwait(false);
+                    try { await inner.DisposeAsync().ConfigureAwait(false); } finally { inner.Dispose(); }
+                    try
+                    {
+                        // Best-effort supplement: the authoritative attempt
+                        // evidence is recorded by the workflow; a failure here
+                        // leaves a visible incomplete dispatch record instead of
+                        // corrupting an already-read qualification attempt.
+                        await gate.RecordResultAsync(dispatch, null, _completed ? "complete" : "disposed-incomplete",
+                            _bytes, _completed, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Counted by the gate; the dispatch record remains visibly
+                        // incomplete rather than failing the qualification read.
+                    }
                 }
-                catch
+                finally
                 {
-                    // Counted by the gate; the dispatch record remains visibly
-                    // incomplete rather than failing the qualification read.
+                    // A faulting body disposal must never hold the concurrency
+                    // slot or leak admission ownership.
+                    release();
                 }
-                finally { release(); }
             }
         }
     }
@@ -380,14 +401,7 @@ internal sealed class RecordingTerminalHandler : HttpMessageHandler
 // never as a proven wire count.
 internal static class PinnedTerminalHandlers
 {
-    public static HttpMessageHandler CreateRealNetworkTerminal() => new SocketsHttpHandler
-    {
-        AllowAutoRedirect = false,
-        UseCookies = false,
-        UseProxy = true,
-        AutomaticDecompression = DecompressionMethods.None,
-        ConnectTimeout = TimeSpan.FromSeconds(30)
-    };
+    public static HttpMessageHandler CreateRealNetworkTerminal() => TransportProfiles.Http11Exact.CreateHandler();
 }
 
 internal sealed class GuardedHttpClientFactory(HttpMessageHandler chainRoot, bool disposeHandler) : IHttpClientFactory, IDisposable
@@ -395,7 +409,9 @@ internal sealed class GuardedHttpClientFactory(HttpMessageHandler chainRoot, boo
     private HttpMessageHandler? _handler = chainRoot;
     public HttpClient CreateClient(string name) => new(Volatile.Read(ref _handler) ?? throw new ObjectDisposedException(nameof(GuardedHttpClientFactory)), disposeHandler: false)
     {
-        Timeout = Timeout.InfiniteTimeSpan
+        Timeout = Timeout.InfiniteTimeSpan,
+        DefaultRequestVersion = HttpVersion.Version11,
+        DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
     };
 
     public void Dispose()

@@ -456,6 +456,12 @@ internal sealed class RunCommand
         var capabilities = resolved.GetProperty("capabilities");
         var endpoint = requested.GetProperty("endpoint");
         var reservation = selected.CaseElement.GetProperty("requestedReservation");
+        var transport = resolved.GetProperty("transport");
+        var physicalElement = selected.CaseElement.GetProperty("maximumPhysicalWireAttemptsPerSlot");
+        if (physicalElement.ValueKind != JsonValueKind.Number)
+            throw new ExecutionException("physical-attempt-bound-unproven");
+        var physicalAttempts = physicalElement.GetInt32();
+        if (physicalAttempts < 1) throw new ExecutionException("physical-attempt-bound-invalid");
         var settings = resolved.GetProperty("settings").EnumerateObject()
             .ToDictionary(p => p.Name, p => p.Value.GetString() ?? "", StringComparer.Ordinal);
         return new CaseExecutionRequest(runId, plan.PlanHash, selected.CaseId, selected.TrialId, selected.TrialSlot,
@@ -464,7 +470,7 @@ internal sealed class RunCommand
             scenario.GetProperty("fixtureId").GetString()!, scenario.GetProperty("fixtureHash").GetString()!,
             scenario.GetProperty("assertionIds").EnumerateArray().Select(a => a.GetString()!).ToArray(),
             scenario.GetProperty("requiresNativeTools").GetBoolean(), true,
-            scenario.GetProperty("maximumDispatches").GetInt32(),
+            scenario.GetProperty("maximumDispatches").GetInt32(), physicalAttempts,
             reservation.ValueKind == JsonValueKind.Object
                 ? new TokenReservationEvidence(NullableLong(reservation, "inputTokens"), NullableLong(reservation, "outputTokens"),
                     NullableLong(reservation, "reasoningTokens"), NullableLong(reservation, "totalTokens"),
@@ -474,7 +480,10 @@ internal sealed class RunCommand
                 requested.GetProperty("accountScopeRef").GetString()!, requested.GetProperty("endpointProfile").GetString()!,
                 requested.GetProperty("protocol").GetString()!, NullableString(requested, "apiVersion"),
                 NullableString(requested, "revision"), requested.GetProperty("mutableAlias").GetBoolean(),
-                requested.GetProperty("transportProfile").GetString()!, resolved.GetProperty("endpointId").GetString()!,
+                requested.GetProperty("transportProfile").GetString()!,
+                NullableString(requested, "transportProfileRef") ?? transport.GetProperty("profileId").GetString()!,
+                transport.GetProperty("identity").GetString()!,
+                resolved.GetProperty("endpointId").GetString()!,
                 resolved.GetProperty("provider").GetString()!, resolved.GetProperty("providerModel").GetString()!,
                 resolved.GetProperty("baseUrl").GetString()!, NullableString(resolved, "profile"), settings,
                 resolved.GetProperty("clientRequestTimeout").GetString()!, resolved.GetProperty("effectiveAttemptCeiling").GetString()!,

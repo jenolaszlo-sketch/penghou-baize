@@ -14,7 +14,7 @@ public sealed class Stage3EligibilityTests
     public async Task RealProfileWithoutAllowLive_RefusedBeforeSecrets()
     {
         using var workspace = new Stage3Workspace();
-        (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
+        (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3", inventory: Stage4Fixtures.Inventory)).AssertCompleted("plan-generated", 0);
         var run = await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3");
         run.AssertFailed("real-network-not-authorized", 2);
         Assert.False(Directory.Exists(workspace.RunDir));
@@ -35,41 +35,45 @@ public sealed class Stage3EligibilityTests
             .Select(reason => reason.GetString()!).ToArray();
         Assert.Contains("allowance-unverified", reasons);
         Assert.Contains("token-reservation-bound-unknown", reasons);
+        Assert.Contains("transport-profile-unreviewed", reasons);
         Assert.Contains("wire-attempt-bound-unproven", reasons);
         Assert.DoesNotContain("cost-reservation-bound-unknown", reasons);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
-    // 2c. A fully bound real profile is refused on exactly one honest gap:
-    // the unproven runtime-internal wire-attempt bound.
+    // 2c. A fully bound real profile with the reviewed transport profile is
+    // transport-eligible. It still needs the explicit operator authorization
+    // for any actual live run; this stage performs none.
     [Fact]
-    public async Task FullyBoundRealProfile_BlockedOnlyByWireBound()
+    public async Task FullyBoundRealProfile_IsTransportEligibleButNotAuthorizedHere()
     {
         using var workspace = new Stage3Workspace();
-        (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
-        var run = await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3", allowLive: true);
-        Assert.Equal(2, run.ExitCode);
-        var reasons = run.Summary.GetProperty("criticalReasons").EnumerateArray()
-            .Select(reason => reason.GetString()!).ToArray();
-        Assert.Equal(["wire-attempt-bound-unproven"], reasons);
-        var limitations = run.Summary.GetProperty("limitations").EnumerateArray()
-            .Select(reason => reason.GetString()!).ToArray();
+        (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3", inventory: Stage4Fixtures.Inventory)).AssertCompleted("plan-generated", 0);
+        var plan = FrozenRunPlan.Load(Path.Combine(workspace.PlanDir, "plan.json"));
+        var assessment = LiveEligibility.Assess(plan, Select(plan), "run");
+        Assert.Equal(LiveEligibility.StateEligible, assessment.State);
+        Assert.Empty(assessment.CriticalReasons);
+        Assert.Equal(1, assessment.PhysicalAttemptUpperBound);
+        Assert.Equal("at-most-1-physical-http-request-attempt-per-admitted-invocation", assessment.WireAttemptBound);
+        var limitations = assessment.Limitations;
         Assert.Contains("protocol-revision-evidence-unverified", limitations);
+        Assert.False(Directory.Exists(workspace.RunDir));
     }
 
-    // 2d. Loopback profiles require the same explicit authorization and stay
-    // blocked on the same honest wire gap.
+    // 2d. Loopback profiles require the same explicit authorization. The
+    // reviewed handler has a proven bound, but a loopback endpoint is never a
+    // live qualification target.
     [Fact]
-    public async Task LoopbackProfile_RequiresAllowLiveAndStaysBlockedOnWireGap()
+    public async Task LoopbackProfile_RequiresAllowLiveAndIsNeverLiveEligible()
     {
         using var workspace = new Stage3Workspace();
-        (await workspace.PlanAsync("loopback-local-alpha", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
+        (await workspace.PlanAsync("loopback-local-alpha", "chat.baseline@3", inventory: Stage4Fixtures.Inventory)).AssertCompleted("plan-generated", 0);
         (await workspace.RunAsync("loopback-local-alpha", "chat.baseline@3")).AssertFailed("real-network-not-authorized", 2);
         var run = await workspace.RunAsync("loopback-local-alpha", "chat.baseline@3", allowLive: true);
         Assert.Equal(2, run.ExitCode);
         var reasons = run.Summary.GetProperty("criticalReasons").EnumerateArray()
             .Select(reason => reason.GetString()!).ToArray();
-        Assert.Equal(["wire-attempt-bound-unproven"], reasons);
+        Assert.Equal(["loopback-not-live-eligible"], reasons);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
@@ -100,7 +104,19 @@ public sealed class Stage3EligibilityTests
             .Select(reason => reason.GetString()!).ToArray();
         Assert.Contains("allowance-unverified", reasons);
         Assert.Contains("token-reservation-bound-unknown", reasons);
+        Assert.Contains("transport-profile-unreviewed", reasons);
         Assert.Contains("wire-attempt-bound-unproven", reasons);
+    }
+
+    private static RunCaseSelection Select(FrozenRunPlan plan)
+    {
+        var caseElement = plan.Cases[0];
+        var subjectId = caseElement.GetProperty("subjectId").GetString()!;
+        var subject = plan.Subjects.Single(s => s.GetProperty("id").GetString() == subjectId);
+        var trial = caseElement.GetProperty("trials")[0];
+        return new RunCaseSelection(caseElement.GetProperty("id").GetString()!, subjectId,
+            caseElement.GetProperty("modelId").GetString()!, caseElement.GetProperty("scenario").GetString()!,
+            caseElement, subject, trial.GetProperty("id").GetString()!, trial.GetProperty("slot").GetInt32());
     }
 }
 

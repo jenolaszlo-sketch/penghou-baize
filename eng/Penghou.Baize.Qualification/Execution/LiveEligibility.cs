@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Penghou.Baize.Qualification.Planning;
 
 namespace Penghou.Baize.Qualification.Execution;
 
@@ -23,10 +24,14 @@ internal static class LiveEligibility
 
         if (transportProfile == "SyntheticFake")
         {
+            var synthetic = TransportProfiles.Describe(transportProfile,
+                requested.TryGetProperty("transportProfileRef", out var syntheticRef)
+                    && syntheticRef.ValueKind == JsonValueKind.String ? syntheticRef.GetString() : null);
             return new EligibilityAssessmentEvidence("1.0", runId, selected.CaseId, selected.TrialId,
                 selected.TrialSlot, selected.ModelId, selected.ScenarioId, StateSyntheticOnly,
                 [], ["Synthetic execution exercises the real adapter composition but establishes no live-provider facts."],
                 "QualificationAdmissionHandler -> RecordingTerminalHandler",
+                synthetic.ProfileId, synthetic.Identity, null,
                 "not-applicable-synthetic", null, null, "not-required-synthetic");
         }
 
@@ -79,23 +84,79 @@ internal static class LiveEligibility
             limitations.Add("no-charge-profile-assumed-allowance-must-be-verified-trial");
         }
 
-        // The last application boundary is guarded, but runtime-internal
-        // replay below a real sockets terminal remains unobservable. Until a
-        // separately reviewed lower-bound decision exists, no real profile
-        // earns a hard wire-attempt guarantee.
-        critical.Add("wire-attempt-bound-unproven");
+        // The transport profile is an exact, reviewed artifact. The plan's
+        // complete recorded descriptor is re-hashed and compared with the
+        // compiled profile and its runtime identity. Unknown, unreviewed or
+        // substituted selections receive no physical-attempt bound. The
+        // selected profile's bound is enforced by the guard and reserved by
+        // the budget before credentials are resolved.
+        var resolved = binding.GetProperty("resolved");
+        TransportProfileSnapshot? recorded = null;
+        if (resolved.TryGetProperty("transport", out var transport) && transport.ValueKind == JsonValueKind.Object)
+        {
+            try { recorded = transport.Deserialize<TransportProfileSnapshot>(CanonicalJson.Options); }
+            catch (JsonException) { }
+        }
+        var requestRef = requested.TryGetProperty("transportProfileRef", out var requestRefElement)
+            && requestRefElement.ValueKind == JsonValueKind.String ? requestRefElement.GetString() : null;
+        var profileId = recorded?.ProfileId;
+        var identity = recorded?.Identity;
+        var bound = recorded?.PhysicalAttemptUpperBound;
 
+        if (recorded is null || recorded.TransportClass != transportProfile)
+        {
+            critical.Add("transport-profile-substituted");
+            critical.Add("wire-attempt-bound-unproven");
+        }
+        else
+        {
+            if (requestRef != recorded.ProfileId)
+            {
+                critical.Add("transport-profile-unreviewed");
+                critical.Add("wire-attempt-bound-unproven");
+            }
+            if (!TransportProfiles.IsCurrent(recorded))
+            {
+                critical.Add("transport-profile-substituted");
+                critical.Add("wire-attempt-bound-unproven");
+            }
+            if (!TransportProfiles.IsQualified(recorded))
+            {
+                critical.Add("transport-profile-unreviewed");
+                critical.Add("wire-attempt-bound-unproven");
+            }
+            if (recorded.ProtocolVersion != TransportProfiles.Http11Exact.ProtocolVersion
+                || recorded.ProtocolVersionPolicy != TransportProfiles.Http11Exact.ProtocolVersionPolicy)
+            {
+                critical.Add("http-protocol-policy-invalid");
+                critical.Add("wire-attempt-bound-unproven");
+            }
+        }
+        if (bound != TransportProfiles.Http11Exact.PhysicalAttemptUpperBound)
+            critical.Add("physical-attempt-bound-invalid");
+        if (transportProfile == "LoopbackDevelopment")
+            critical.Add("loopback-not-live-eligible");
+        if (critical.Count == 0)
+            limitations.Add("wire-and-preallocation-byte-bounds-unproven");
+        limitations.Add("provider-billing-semantics-not-established-by-transport-qualification");
+
+        var bounded = recorded is not null
+            && TransportProfiles.IsQualified(recorded)
+            && TransportProfiles.IsCurrent(recorded)
+            && bound == TransportProfiles.Http11Exact.PhysicalAttemptUpperBound
+            && !critical.Contains("wire-attempt-bound-unproven", StringComparer.Ordinal);
         var chain = transportProfile == "LoopbackDevelopment"
-            ? "QualificationAdmissionHandler -> SocketsHttpHandler(loopback)"
-            : "QualificationAdmissionHandler -> SocketsHttpHandler(network)";
-        var wire = transportProfile == "LoopbackDevelopment"
-            ? "unknown-multiplicity-loopback" : "unknown-multiplicity-network";
+            ? "QualificationAdmissionHandler -> SocketsHttpHandler(loopback, HTTP/1.1 exact, pinned)"
+            : "QualificationAdmissionHandler -> SocketsHttpHandler(network, HTTP/1.1 exact, pinned)";
+        var wire = bounded
+            ? "at-most-1-physical-http-request-attempt-per-admitted-invocation"
+            : "unknown-multiplicity";
         return new EligibilityAssessmentEvidence("1.0", runId, selected.CaseId, selected.TrialId,
             selected.TrialSlot, selected.ModelId, selected.ScenarioId,
             critical.Count == 0 ? StateEligible : StateBlocked,
             critical.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
             limitations.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
-            chain, wire, allowanceRef,
+            chain, profileId, identity, bound, wire, allowanceRef,
             reservation.ValueKind == JsonValueKind.Object ? NullableString(reservation, "sourceRef") : null,
             policyCost is null ? "unknown" : boundCost is null ? "unknown" : "bounded");
     }

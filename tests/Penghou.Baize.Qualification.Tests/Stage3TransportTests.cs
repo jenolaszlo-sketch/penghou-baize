@@ -30,7 +30,7 @@ public sealed class Stage3TransportTests
         return new AttemptLease(attemptId, runId, caseId, trialId, 1, modelId, "POST",
             executor.DestinationOrigin, executor.DestinationBasePath, secretSlot,
             CancellationToken.None, CancellationToken.None, DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2),
-            TimeSpan.FromSeconds(30), 1 << 20, 4 << 20);
+            TimeSpan.FromSeconds(30), 1 << 20, 4 << 20, 1);
     }
 
     private static async Task<QualificationResultV3> RunScenarioAsync(CaseExecutor executor, string attemptId,

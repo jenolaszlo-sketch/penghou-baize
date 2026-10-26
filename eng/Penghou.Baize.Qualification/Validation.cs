@@ -35,9 +35,12 @@ internal static partial class Validation
             Reference(entry!.Id); Reference(entry.Service); Reference(entry.EndpointProfile); Reference(entry.AccountScopeRef);
             OptionalReference(entry.ApiVersion); OptionalReference(entry.Revision);
             OptionalReference(entry.EconomicsRef); OptionalReference(entry.AllowanceRef);
+            OptionalReference(entry.TransportProfileRef);
             Require(ids.Add(entry.Id), "duplicate-model");
             Require(entry.ConfigurationVisibility == "PublicConfiguration", "private-configuration-not-supported");
             Require(entry.TransportProfile is "SyntheticFake" or "ReviewedNetwork" or "LoopbackDevelopment", "unknown-transport-profile");
+            Require(entry.TransportProfile != "SyntheticFake" || entry.TransportProfileRef is null
+                or TransportProfiles.SyntheticProfileId, "invalid-synthetic-transport-profile-ref");
             Require(entry.Endpoint is not null && entry.Advertised is not null && entry.Exclusions is not null && entry.Bounds is not null, "null-configuration");
             var endpoint = entry.Endpoint!;
             Reference(endpoint.Id);
@@ -59,7 +62,7 @@ internal static partial class Validation
             var uri = EndpointUri(endpoint.BaseUrl ?? provider.DefaultBaseUrl, entry.TransportProfile);
             // One profile is one destination/account/service binding, not an alias
             // for two hosts. Distinct model IDs within it remain legal.
-            var binding = CanonicalJson.Identity(new { entry.Service, entry.AccountScopeRef, uri = uri.AbsoluteUri, entry.Protocol, entry.ApiVersion, entry.TransportProfile });
+            var binding = CanonicalJson.Identity(new { entry.Service, entry.AccountScopeRef, uri = uri.AbsoluteUri, entry.Protocol, entry.ApiVersion, entry.TransportProfile, transportProfileRef = entry.TransportProfileRef ?? "missing" });
             Require(!profiles.TryGetValue(entry.EndpointProfile, out var prior) || prior == binding, "conflicting-endpoint-profile");
             profiles[entry.EndpointProfile] = binding;
             Settings(endpoint, provider.Key.Value);

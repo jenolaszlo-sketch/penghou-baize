@@ -1,0 +1,315 @@
+{
+  "kind": "qualification-inventory",
+  "schemaVersion": "1.0",
+  "profiles": {},
+  "entries": [
+    {
+      "id": "fake-alpha",
+      "service": "synthetic-host-alpha",
+      "endpointProfile": "fake-alpha-profile",
+      "accountScopeRef": "synthetic-account-a",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-alpha-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-alpha",
+        "baseUrl": "https://alpha.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" },
+        { "contract": "tools.single@3", "inputTokens": 48, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 560, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-wrong",
+      "service": "synthetic-host-wrong",
+      "endpointProfile": "fake-wrong-profile",
+      "accountScopeRef": "synthetic-account-wrong",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-wrong-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-wrong",
+        "baseUrl": "https://wrong.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-coterminal",
+      "service": "synthetic-host-coterminal",
+      "endpointProfile": "fake-coterminal-profile",
+      "accountScopeRef": "synthetic-account-coterminal",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-coterminal-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-coterminal",
+        "baseUrl": "https://coterminal.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "tools.single@3", "inputTokens": 48, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 560, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-slow-chunk",
+      "service": "synthetic-host-slow-chunk",
+      "endpointProfile": "fake-slow-chunk-profile",
+      "accountScopeRef": "synthetic-account-slow-chunk",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-slow-chunk-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-slow-chunk",
+        "baseUrl": "https://slow-chunk.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-large-body",
+      "service": "synthetic-host-large-body",
+      "endpointProfile": "fake-large-body-profile",
+      "accountScopeRef": "synthetic-account-large-body",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-large-body-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-large-body",
+        "baseUrl": "https://large-body.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-unavailable",
+      "service": "synthetic-host-unavailable",
+      "endpointProfile": "fake-unavailable-profile",
+      "accountScopeRef": "synthetic-account-unavailable",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-unavailable-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-unavailable",
+        "baseUrl": "https://unavailable.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "fake-toolbad",
+      "service": "synthetic-host-toolbad",
+      "endpointProfile": "fake-toolbad-profile",
+      "accountScopeRef": "synthetic-account-toolbad",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "SyntheticFake",
+      "endpoint": {
+        "id": "fake-toolbad-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-toolbad",
+        "baseUrl": "https://toolbad.invalid/v1",
+        "apiKeySecretName": "SYNTHETIC_UNUSED_KEY_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": [
+        { "contract": "tools.single@3", "inputTokens": 48, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 560, "maximumCost": null, "currency": null, "sourceRef": "synthetic-deterministic-envelope" }
+      ]
+    },
+    {
+      "id": "openrouter-llama31-8b",
+      "service": "openrouter-hosted",
+      "endpointProfile": "openrouter-evaluation",
+      "accountScopeRef": "operator-evaluation-account",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "ReviewedNetwork",
+      "transportProfileRef": "baize-sockets-http11-exact-v1",
+      "endpoint": {
+        "id": "openrouter-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "meta-llama/llama-3.1-8b-instruct",
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKeySecretName": "OPENROUTER_API_KEY",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": "openrouter-pricing-review-1",
+      "allowanceRef": "operator-evaluation-allowance",
+      "allowanceVerified": true,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 256, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 768, "maximumCost": "0.0004", "currency": "USD", "sourceRef": "openrouter-pricing-review-1" },
+        { "contract": "tools.single@3", "inputTokens": 384, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 896, "maximumCost": "0.0005", "currency": "USD", "sourceRef": "openrouter-pricing-review-1" }
+      ]
+    },
+    {
+      "id": "deepseek-native-chat",
+      "service": "deepseek-native",
+      "endpointProfile": "deepseek-evaluation",
+      "accountScopeRef": "operator-evaluation-account",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "ReviewedNetwork",
+      "endpoint": {
+        "id": "deepseek-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "deepseek-chat",
+        "baseUrl": "https://api.deepseek.com",
+        "apiKeySecretName": "DEEPSEEK_API_KEY",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": []
+    },
+    {
+      "id": "gemini-native-flash",
+      "service": "gemini-native",
+      "endpointProfile": "gemini-evaluation",
+      "accountScopeRef": "operator-evaluation-account",
+      "protocol": "gemini-generate-content",
+      "apiVersion": "v1beta",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "ReviewedNetwork",
+      "endpoint": {
+        "id": "gemini-endpoint",
+        "provider": "Gemini",
+        "providerModel": "gemini-3.6-flash",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "apiKeySecretName": "GEMINI_API_KEY",
+        "settings": {}
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": null,
+      "allowanceVerified": false,
+      "bounds": []
+    },
+    {
+      "id": "loopback-local-alpha",
+      "service": "loopback-test-host",
+      "endpointProfile": "loopback-alpha-profile",
+      "accountScopeRef": "operator-loopback-account",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "LoopbackDevelopment",
+      "transportProfileRef": "baize-sockets-http11-exact-v1",
+      "endpoint": {
+        "id": "loopback-alpha-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "synthetic/model-alpha",
+        "baseUrl": "http://127.0.0.1:51234/v1",
+        "apiKeySecretName": "LOOPBACK_TEST_SLOT",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": null,
+      "allowanceRef": "operator-loopback-allowance",
+      "allowanceVerified": true,
+      "bounds": [
+        { "contract": "chat.baseline@3", "inputTokens": 32, "outputTokens": 512, "reasoningTokens": 0, "totalTokens": 544, "maximumCost": null, "currency": null, "sourceRef": "loopback-deterministic-envelope" }
+      ]
+    }
+  ]
+}
