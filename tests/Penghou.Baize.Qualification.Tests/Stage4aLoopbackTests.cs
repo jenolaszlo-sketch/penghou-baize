@@ -159,7 +159,7 @@ public sealed class Stage4aLoopbackTests
     }
 
     [Fact]
-    public async Task StaleKeepAliveConnection_RecoversWithoutReplay()
+    public async Task TwoSeparatelyAdmittedInvocations_ReconnectAfterKeepAliveClose()
     {
         await using var harness = Stage4LoopbackHarness.Create(LoopbackMode.KeepAliveThenCloseOnceThenBaseline);
         await harness.RunSemanticAsync("attempt-first");

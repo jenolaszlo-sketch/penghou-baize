@@ -10,6 +10,7 @@ namespace Penghou.Baize.Qualification.Planning;
 internal static class CanonicalJson
 {
     public const string Version = "canonical-json@1";
+    public const string EvidenceDigestVersion = "canonical-evidence-json@1";
     // Plain (non-scientific) decimal notation with trailing zeros removed. "G29"
     // is unsuitable: it renders 1e-5 magnitudes as "1E-05".
     private const string DecimalFormat = "0.#############################";
@@ -86,6 +87,20 @@ internal static class CanonicalJson
     public static string Decimal(decimal value) => value.ToString(DecimalFormat, CultureInfo.InvariantCulture);
     public static string Hash(byte[] bytes) => "sha256:" + Convert.ToHexStringLower(SHA256.HashData(bytes));
     public static string Identity(object value) => Hash(Write(value));
+    public static string EvidenceIdentity(string json)
+    {
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 48 });
+        Unique(document.RootElement);
+        return Hash(WriteElement(document.RootElement));
+    }
+
+    public static byte[] CanonicalizeEvidence(string json)
+    {
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 48 });
+        Unique(document.RootElement);
+        return WriteElement(document.RootElement);
+    }
+
     public static string Money(string value)
     {
         if (!decimal.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var amount) || amount <= 0)

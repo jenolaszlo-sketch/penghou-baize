@@ -37,7 +37,8 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
     }
 
     public static async Task<ExecutionEnvironment> CreateAsync(string runDirectory, ExecutionFaults faults,
-        Inventory inventory, BudgetEnvelopeEvidence envelope, CancellationToken cancellationToken)
+        Inventory inventory, BudgetEnvelopeEvidence envelope, CancellationToken cancellationToken,
+        Action? beforeHttpDispatch = null)
     {
         var time = TimeProvider.System;
         var ledger = new EvidenceLedger(Path.Combine(runDirectory, "evidence.db"), faults);
@@ -47,7 +48,7 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
             TimeProvider = time
         });
         await store.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        var gate = new AdmissionGate(ledger, envelope, faults);
+        var gate = new AdmissionGate(ledger, envelope, faults, beforeHttpDispatch);
         var invoker = new InvokerSlot();
         var workflow = new QualificationWorkflow(new WorkflowServices(ledger, invoker, faults, time));
         var registry = new WorkflowRegistry().Register<CaseExecutionRequest, TrialOutcomeRecord>(
@@ -147,7 +148,8 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
     // The environment is the local accounting authority for HTTP dispatch
     // admission: remaining allowance comes from the Siming budget stream and
     // every admitted or denied dispatch is recorded as evidence.
-    private sealed class AdmissionGate(EvidenceLedger ledger, BudgetEnvelopeEvidence envelope, ExecutionFaults faults)
+    private sealed class AdmissionGate(EvidenceLedger ledger, BudgetEnvelopeEvidence envelope, ExecutionFaults faults,
+        Action? beforeHttpDispatch)
         : IHttpAdmissionGate
     {
         private readonly Dictionary<string, int> _admittedByAttempt = new(StringComparer.Ordinal);
@@ -196,6 +198,7 @@ internal sealed class ExecutionEnvironment : IAsyncDisposable
                 idempotencyKey: "http-admitted-" + dispatch.DispatchId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             faults.AfterHttpAdmission?.Invoke(dispatch.DispatchId);
+            beforeHttpDispatch?.Invoke();
             return new HttpAdmissionDecision(true, null, dispatch.DispatchId);
         }
 

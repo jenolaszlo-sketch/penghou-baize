@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Penghou.Baize.Qualification.Planning;
 
@@ -21,6 +22,10 @@ internal sealed record LiveAuthorizationCase(
 internal sealed record LiveAuthorizationDocument(
     string Kind,
     string SchemaVersion,
+    string AuthorizationId,
+    string ConsumptionAuthorityId,
+    string ProposalDigest,
+    string Signature,
     string AuthorizationRef,
     string OperatorRef,
     DateTimeOffset IssuedUtc,
@@ -53,7 +58,8 @@ internal sealed record ValidatedLiveAuthorization(
 internal static class LiveAuthorizations
 {
     public const string Kind = "qualification-live-authorization";
-    public const string SchemaVersion = "1.0";
+    public const string SchemaVersion = "2.0";
+    public static readonly TimeSpan MaximumValidity = TimeSpan.FromMinutes(10);
 
     public static LiveAuthorizationDocument Read(string path)
     {
@@ -69,6 +75,13 @@ internal static class LiveAuthorizations
         {
             var document = CanonicalJson.Read<LiveAuthorizationDocument>(System.Text.Encoding.UTF8.GetString(bytes));
             if (document.Kind != Kind || document.SchemaVersion != SchemaVersion)
+                throw new ExecutionException("live-authorization-invalid");
+            if (!Guid.TryParseExact(document.AuthorizationId, "N", out var authorizationId)
+                || authorizationId.ToString("N") != document.AuthorizationId
+                || !Guid.TryParseExact(document.ConsumptionAuthorityId, "N", out var authorityId)
+                || authorityId.ToString("N") != document.ConsumptionAuthorityId)
+                throw new ExecutionException("live-authorization-invalid");
+            if (!Sha256Reference(document.ProposalDigest))
                 throw new ExecutionException("live-authorization-invalid");
             if (!Reference(document.AuthorizationRef) || !Reference(document.OperatorRef)
                 || !Reference(document.CredentialRef) || string.IsNullOrWhiteSpace(document.ArtifactDestination))
@@ -88,14 +101,14 @@ internal static class LiveAuthorizations
     public static ValidatedLiveAuthorization Validate(FrozenRunPlan plan, LiveAuthorizationDocument authorization,
         string runDirectory, DateTimeOffset now, RunCaseSelection[]? expectedSelection = null)
     {
+        LiveAuthorizationAuthentication.Verify(authorization);
+        ValidateValidity(authorization, now);
         var source = plan.Document.GetProperty("source");
         if (authorization.PlanHash != plan.PlanHash
             || authorization.ContractRegistryHash != plan.ContractRegistryHash
             || authorization.InventoryHash != source.GetProperty("inventoryHash").GetString()
             || authorization.PolicyHash != source.GetProperty("policyHash").GetString())
             throw new ExecutionException("live-authorization-plan-mismatch");
-        if (now < authorization.IssuedUtc) throw new ExecutionException("live-authorization-not-yet-valid");
-        if (now >= authorization.ExpiresUtc) throw new ExecutionException("live-authorization-expired");
         if (!PathEquals(authorization.ArtifactDestination, runDirectory))
             throw new ExecutionException("live-authorization-output-mismatch");
 
@@ -107,6 +120,19 @@ internal static class LiveAuthorizations
         ValidateBudget(plan, authorization, selection);
         var hash = CanonicalJson.Identity(authorization);
         return new ValidatedLiveAuthorization(authorization, hash, selection, authorization.Budget);
+    }
+
+    public static void ValidateValidity(LiveAuthorizationDocument authorization, DateTimeOffset now)
+    {
+        if (authorization.IssuedUtc.Offset != TimeSpan.Zero || authorization.ExpiresUtc.Offset != TimeSpan.Zero
+            || authorization.ExpiresUtc <= authorization.IssuedUtc)
+            throw new ExecutionException("live-authorization-time-invalid");
+        if (authorization.ExpiresUtc - authorization.IssuedUtc > MaximumValidity)
+            throw new ExecutionException("live-authorization-validity-too-long");
+        if (authorization.IssuedUtc > now.ToUniversalTime())
+            throw new ExecutionException("live-authorization-not-yet-valid");
+        if (now.ToUniversalTime() >= authorization.ExpiresUtc)
+            throw new ExecutionException("live-authorization-expired");
     }
 
     private static RunCaseSelection[] Select(FrozenRunPlan plan, LiveAuthorizationDocument authorization)
@@ -274,8 +300,63 @@ internal static class LiveAuthorizations
         && char.IsAsciiLetterOrDigit(value[0])
         && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or ':' or '-');
 
+    private static bool Sha256Reference(string value) => !string.IsNullOrEmpty(value) && value.Length == 71
+        && value.StartsWith("sha256:", StringComparison.Ordinal)
+        && value.AsSpan(7).IndexOfAnyExcept("0123456789abcdef") < 0;
+
     private static long? NullableLong(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetInt64() : null;
     private static string? NullableString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+}
+
+internal static class LiveAuthorizationAuthentication
+{
+    public const string VerificationKeyEnvironmentVariable = "BAIZE_LIVE_AUTHORIZATION_PUBLIC_KEY";
+
+    public static LiveAuthorizationDocument Sign(LiveAuthorizationDocument document, ECDsa signingKey)
+    {
+        if (signingKey.KeySize != 256)
+            throw new ArgumentException("Authorization signatures require ECDSA P-256.", nameof(signingKey));
+        var unsigned = document with { Signature = string.Empty };
+        var signature = signingKey.SignData(CanonicalJson.Write(unsigned), HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        return unsigned with { Signature = Convert.ToBase64String(signature) };
+    }
+
+    public static void Verify(LiveAuthorizationDocument document)
+    {
+        byte[] publicKey;
+        try
+        {
+            var configured = Environment.GetEnvironmentVariable(VerificationKeyEnvironmentVariable);
+            if (string.IsNullOrWhiteSpace(configured)) throw new ExecutionException("live-authorization-key-unavailable");
+            publicKey = Convert.FromBase64String(configured);
+        }
+        catch (FormatException)
+        {
+            throw new ExecutionException("live-authorization-key-unavailable");
+        }
+
+        using var verifier = ECDsa.Create();
+        try
+        {
+            verifier.ImportSubjectPublicKeyInfo(publicKey, out var bytesRead);
+            if (bytesRead != publicKey.Length || verifier.KeySize != 256)
+                throw new ExecutionException("live-authorization-key-unavailable");
+            var unsigned = document with { Signature = string.Empty };
+            byte[] actual;
+            try { actual = Convert.FromBase64String(document.Signature); }
+            catch (Exception exception) when (exception is FormatException or ArgumentNullException)
+            { throw new ExecutionException("live-authorization-signature-invalid"); }
+            if (actual.Length != 64 || !verifier.VerifyData(CanonicalJson.Write(unsigned), actual,
+                    HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+                throw new ExecutionException("live-authorization-signature-invalid");
+        }
+        catch (ExecutionException) { throw; }
+        catch (CryptographicException)
+        {
+            throw new ExecutionException("live-authorization-key-unavailable");
+        }
+    }
 }

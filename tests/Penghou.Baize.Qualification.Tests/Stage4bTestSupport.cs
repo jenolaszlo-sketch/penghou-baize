@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Penghou.Baize.Qualification.Execution;
 using Penghou.Baize.Qualification.Planning;
@@ -7,6 +8,10 @@ namespace Penghou.Baize.Qualification.Tests;
 
 internal static class Stage4bAuthorizations
 {
+    public const string TestAuthorityId = "11111111111111111111111111111111";
+    private static readonly byte[] TestPrivateKey = CreateTestPrivateKey();
+    private static readonly string TestPublicKey = CreateTestPublicKey();
+
     public static LiveAuthorizationDocument Create(FrozenRunPlan plan, RunCaseSelection[] selection, string artifactDestination,
         string authorizationRef = "stage4b-test-authorization-1", string operatorRef = "stage4b-test-operator")
     {
@@ -32,13 +37,18 @@ internal static class Stage4bAuthorizations
         var budget = BudgetFor(selection);
         var settings = resolved.GetProperty("settings").EnumerateObject()
             .ToDictionary(p => p.Name, p => p.Value.GetString() ?? "", StringComparer.Ordinal);
-        return new LiveAuthorizationDocument(
+        var now = DateTimeOffset.UtcNow;
+        var document = new LiveAuthorizationDocument(
             LiveAuthorizations.Kind,
             LiveAuthorizations.SchemaVersion,
+            Guid.NewGuid().ToString("N"),
+            TestAuthorityId,
+            CanonicalJson.Identity(new { kind = "qualification-live-run-proposal-test", planHash = plan.PlanHash }),
+            string.Empty,
             authorizationRef,
             operatorRef,
-            DateTimeOffset.UtcNow - TimeSpan.FromMinutes(5),
-            DateTimeOffset.UtcNow + TimeSpan.FromHours(1),
+            now - TimeSpan.FromMinutes(1),
+            now + TimeSpan.FromMinutes(5),
             plan.PlanHash,
             plan.ContractRegistryHash,
             plan.Document.GetProperty("source").GetProperty("inventoryHash").GetString()!,
@@ -58,12 +68,35 @@ internal static class Stage4bAuthorizations
             settings,
             cases,
             budget);
+        return Sign(document);
     }
 
     public static string Write(Stage3Workspace workspace, LiveAuthorizationDocument document, string name = "authorization.json")
     {
+        document = Sign(document);
         var path = workspace.WriteInput(name, System.Text.Encoding.UTF8.GetString(CanonicalJson.Write(document)));
         return path;
+    }
+
+    public static LiveAuthorizationDocument Sign(LiveAuthorizationDocument document)
+    {
+        Environment.SetEnvironmentVariable(LiveAuthorizationAuthentication.VerificationKeyEnvironmentVariable, TestPublicKey);
+        using var signingKey = ECDsa.Create();
+        signingKey.ImportPkcs8PrivateKey(TestPrivateKey, out _);
+        return LiveAuthorizationAuthentication.Sign(document, signingKey);
+    }
+
+    private static byte[] CreateTestPrivateKey()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        return key.ExportPkcs8PrivateKey();
+    }
+
+    private static string CreateTestPublicKey()
+    {
+        using var key = ECDsa.Create();
+        key.ImportPkcs8PrivateKey(TestPrivateKey, out _);
+        return Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
     }
 
     public static RunCaseSelection[] Select(FrozenRunPlan plan, int caseIndex = 0, int trialIndex = 0)

@@ -121,26 +121,42 @@ internal sealed class RunCommand
             var validated = LoadValidatedLive(options);
             var plan = validated.Plan;
             var runDirectory = validated.RunDirectory;
+            var authorization = validated.Authorization;
+            CredentialReadiness.Require(new EnvironmentCredentialReadinessProvider(), authorization.Document.CredentialRef);
+            var registry = AuthorizationConsumptionRegistry.OpenConfigured(authorization.Document.ConsumptionAuthorityId);
+            var runId = Guid.NewGuid().ToString("N");
+            var claim = registry.Claim(authorization.Document, authorization.AuthorizationHash, plan.PlanHash,
+                authorization.Document.TransportProfileIdentity, runId, DateTimeOffset.UtcNow);
+            Action verifyBeforeDispatch = () =>
+            {
+                LiveAuthorizations.ValidateValidity(authorization.Document, DateTimeOffset.UtcNow);
+                BuildBinding.VerifyDeploymentClosure(plan.Document.GetProperty("source").GetProperty("build"));
+                CredentialReadiness.Require(new EnvironmentCredentialReadinessProvider(), authorization.Document.CredentialRef);
+            };
+            // Post-claim checks can fail, but the durable claim is deliberately
+            // never released. The last copy check runs at HTTP admission too.
+            verifyBeforeDispatch();
             if (Directory.Exists(runDirectory) || File.Exists(runDirectory))
                 throw new ExecutionException("run-output-already-exists");
             Directory.CreateDirectory(runDirectory);
             Directory.CreateDirectory(Path.Combine(runDirectory, "reports"));
-            var runId = Guid.NewGuid().ToString("N");
             var manifestCases = validated.Authorization.Selection.Select(s => new ManifestCaseBinding(
                 s.CaseId, s.TrialId, s.TrialSlot, s.ModelId, s.ScenarioId, s.SubjectId,
                 QualificationWorkflow.StableRunId(plan.PlanHash, s.CaseId, s.TrialId).ToString("N"))).ToArray();
             var manifest = RunManifest.Create(plan, runId, manifestCases,
-                validated.Authorization.Document.AuthorizationRef, validated.Authorization.AuthorizationHash,
-                liveAuthorized: true);
+                authorization.Document.AuthorizationRef, authorization.AuthorizationHash,
+                liveAuthorized: true, liveAuthorizationId: authorization.Document.AuthorizationId);
             File.WriteAllBytes(Path.Combine(runDirectory, "plan.json"), plan.PlanBytes);
             var identityFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(plan.PlanFile))!, "identity.json");
             File.Copy(identityFile, Path.Combine(runDirectory, "identity.json"));
             File.WriteAllBytes(Path.Combine(runDirectory, "live-authorization.json"),
-                CanonicalJson.Write(validated.Authorization.Document));
+                CanonicalJson.Write(authorization.Document));
             RunManifest.Write(runDirectory, manifest);
-            return await ExecuteCasesAsync(plan, manifest, validated.Authorization.Selection, runDirectory,
-                validated.Authorization.Budget, validated.Authorization.Document,
-                cancellationToken, resume: false).ConfigureAwait(false);
+            var result = await ExecuteCasesAsync(plan, manifest, authorization.Selection, runDirectory,
+                authorization.Budget, authorization.Document, cancellationToken, resume: false,
+                beforeHttpDispatch: verifyBeforeDispatch).ConfigureAwait(false);
+            registry.RecordTerminalOutcome(claim, result);
+            return result;
         }
         catch (LiveEligibilityException exception) { return FailEligibility(exception); }
         catch (PlanningException exception) { return Fail(exception.Code, 2); }
@@ -163,18 +179,21 @@ internal sealed class RunCommand
     {
         try
         {
-            var options = ParseOptions(args, new[] { "--plan", "--out" }, optional: "--authorization");
+            var options = ParseOptions(args, new[] { "--plan", "--out" }, optional: "--authorization",
+                additionalOptional: ["--evidence-out"]);
             RequireAuthorizationOption(options);
             var validated = LoadValidatedLive(options);
             var auth = validated.Authorization;
-            _output.WriteLine(Encoding.UTF8.GetString(CanonicalJson.Write(new
+            var response = new
             {
                 kind = "live-authorization-validated",
                 schemaVersion = "1.0",
                 commandCompleted = true,
                 qualificationPerformed = false,
                 executionAuthorized = false,
+                evidenceCanonicalization = CanonicalJson.EvidenceDigestVersion,
                 planHash = validated.Plan.PlanHash,
+                authorizationId = auth.Document.AuthorizationId,
                 authorizationRef = auth.Document.AuthorizationRef,
                 authorizationHash = auth.AuthorizationHash,
                 transportProfileId = auth.Document.TransportProfileId,
@@ -203,7 +222,11 @@ internal sealed class RunCommand
                     scenarioId = s.ScenarioId,
                     observedContractIds = ObservedContracts(s.CaseElement)
                 }).ToArray()
-            })));
+            };
+            var json = Encoding.UTF8.GetString(CanonicalJson.Write(response));
+            if (options.TryGetValue("--evidence-out", out var evidencePath))
+                EvidenceJsonFile.WriteCanonical(evidencePath, json);
+            _output.WriteLine(json);
             return 0;
         }
         catch (LiveEligibilityException exception) { return FailEligibility(exception); }
@@ -263,32 +286,22 @@ internal sealed class RunCommand
             var plan = FrozenRunPlan.Load(planFile);
             if (plan.PlanHash != manifest.PlanHash) throw new ExecutionException("manifest-plan-mismatch");
             var selection = SelectCases(plan, new Dictionary<string, string>(StringComparer.Ordinal), manifest);
-            BudgetEnvelopeEvidence budget;
-            LiveAuthorizationDocument? authorization = null;
             if (manifest.LiveAuthorized)
             {
-                if (manifest.LiveAuthorizationRef is null || manifest.LiveAuthorizationHash is null)
-                    throw new ExecutionException("run-manifest-invalid");
-                if (!options.TryGetValue("--authorization", out var authorizationPath))
-                    throw new ExecutionException("live-resume-requires-authorization");
-                authorization = LiveAuthorizations.Read(authorizationPath);
-                var validated = LiveAuthorizations.Validate(plan, authorization, runDirectory, DateTimeOffset.UtcNow,
-                    selection);
-                if (validated.AuthorizationHash != manifest.LiveAuthorizationHash
-                    || validated.Document.AuthorizationRef != manifest.LiveAuthorizationRef)
-                    throw new ExecutionException("live-authorization-manifest-mismatch");
-                EnsureEligible(plan, selection, manifest.RunId);
-                budget = validated.Budget;
+                // The original live authorization has already been claimed.
+                // Resume may not create another provider dispatch; require a
+                // fresh owner-approved authorization and a new run instead.
+                throw new ExecutionException("live-resume-dispatch-forbidden");
             }
             else
             {
                 if (options.ContainsKey("--authorization"))
                     throw new ExecutionException("authorization-not-applicable");
-                if (manifest.LiveAuthorizationRef is not null || manifest.LiveAuthorizationHash is not null)
+                if (manifest.LiveAuthorizationRef is not null || manifest.LiveAuthorizationHash is not null
+                    || manifest.LiveAuthorizationId is not null)
                     throw new ExecutionException("run-manifest-invalid");
-                budget = BuildBudget(plan);
             }
-            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, budget, authorization,
+            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, BuildBudget(plan), null,
                 cancellationToken, resume: true).ConfigureAwait(false);
         }
         catch (PlanningException exception) { return Fail(exception.Code, 2); }
@@ -308,10 +321,10 @@ internal sealed class RunCommand
     }
 
     private Dictionary<string, string> ParseOptions(string[] args, string[] required, string? optional,
-        string[]? bareFlags = null)
+        string[]? bareFlags = null, string[]? additionalOptional = null)
     {
         var allowed = required.Concat(optional is null ? [] : new[] { optional })
-            .Concat(bareFlags ?? []).ToArray();
+            .Concat(additionalOptional ?? []).Concat(bareFlags ?? []).ToArray();
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
         for (var i = 0; i < args.Length; i++)
         {
@@ -375,11 +388,12 @@ internal sealed class RunCommand
 
     private async Task<int> ExecuteCasesAsync(FrozenRunPlan plan, RunManifestRecord manifest,
         RunCaseSelection[] selection, string runDirectory, BudgetEnvelopeEvidence budgetEnvelope,
-        LiveAuthorizationDocument? authorization, CancellationToken cancellationToken, bool resume)
+        LiveAuthorizationDocument? authorization, CancellationToken cancellationToken, bool resume,
+        Action? beforeHttpDispatch = null)
     {
         var planInventory = plan.Inventory;
         var environment = await ExecutionEnvironment.CreateAsync(runDirectory, _faults,
-            DeserializeInventory(planInventory), budgetEnvelope, cancellationToken).ConfigureAwait(false);
+            DeserializeInventory(planInventory), budgetEnvelope, cancellationToken, beforeHttpDispatch).ConfigureAwait(false);
         await using (environment)
         {
             var outcomes = new List<CaseOutcome>();
@@ -397,7 +411,7 @@ internal sealed class RunCommand
                         source.GetProperty("inventoryHash").GetString()!, source.GetProperty("policyHash").GetString()!,
                         manifest.SourceRevision, manifest.Framework, manifest.ZhinuComponent, manifest.SimingComponent,
                         manifest.CreatedUtc, manifest.LiveAuthorizationRef, manifest.LiveAuthorizationHash,
-                        selectionSummary),
+                        selectionSummary, manifest.LiveAuthorizationId),
                     idempotencyKey: "run-started", cancellationToken: cancellationToken).ConfigureAwait(false);
                 _faults.AfterRunStartedAppend?.Invoke();
                 // The eligibility assessment is evidence, never authorization.

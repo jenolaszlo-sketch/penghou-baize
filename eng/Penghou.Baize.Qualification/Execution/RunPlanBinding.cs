@@ -89,5 +89,10 @@ internal sealed class FrozenRunPlan
                 || recordedAssembly.GetProperty("contentHash").GetString() != currentAssembly.GetProperty("contentHash").GetString())
                 throw new ExecutionException("build-closure-changed");
         }
+        if (!recorded.TryGetProperty("deploymentClosure", out var recordedClosure)
+            || !current.TryGetProperty("deploymentClosure", out var currentClosure)
+            || !string.Equals(CanonicalJson.Hash(CanonicalJson.WriteElement(recordedClosure)),
+                CanonicalJson.Hash(CanonicalJson.WriteElement(currentClosure)), StringComparison.Ordinal))
+            throw new ExecutionException("deployment-closure-changed");
     }
 }

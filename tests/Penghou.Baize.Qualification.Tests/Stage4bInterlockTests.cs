@@ -87,6 +87,24 @@ public sealed class Stage4bInterlockTests
     }
 
     [Fact]
+    public async Task LegacyReusableAuthorizationSchema_IsRejected()
+    {
+        using var workspace = new Stage3Workspace();
+        var planFile = await PlanCandidateAsync(workspace);
+        var plan = FrozenRunPlan.Load(planFile);
+        var runDirectory = workspace.Out("legacy-live-run");
+        var authorization = Stage4bAuthorizations.Create(plan, Stage4bAuthorizations.Select(plan), runDirectory)
+            with { SchemaVersion = "1.0", Signature = string.Empty };
+        var authorizationFile = Stage4bAuthorizations.Write(workspace, authorization);
+
+        var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(),
+            "validate-live", "--plan", planFile, "--authorization", authorizationFile, "--out", runDirectory);
+
+        result.AssertFailed("live-authorization-invalid", 2);
+        Assert.False(Directory.Exists(runDirectory));
+    }
+
+    [Fact]
     public async Task ValidateLive_AcceptsExactProposedCohortOffline()
     {
         using var workspace = new Stage3Workspace();
@@ -96,16 +114,20 @@ public sealed class Stage4bInterlockTests
         var runDirectory = workspace.Out("live-run");
         var authorization = Stage4bAuthorizations.Create(plan, selection, runDirectory);
         var authorizationFile = Stage4bAuthorizations.Write(workspace, authorization);
+        var evidenceFile = workspace.Out("nested/validate-live-output.json");
         var previous = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
         Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "sentinel-stage4b-must-not-be-read");
         try
         {
             var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(),
-                "validate-live", "--plan", planFile, "--authorization", authorizationFile, "--out", runDirectory);
+                "validate-live", "--plan", planFile, "--authorization", authorizationFile, "--out", runDirectory,
+                "--evidence-out", evidenceFile);
             result.AssertCompleted("live-authorization-validated", 0);
             Assert.False(result.Summary.GetProperty("qualificationPerformed").GetBoolean());
             Assert.False(result.Summary.GetProperty("executionAuthorized").GetBoolean());
             Assert.Equal(plan.PlanHash, result.Summary.GetProperty("planHash").GetString());
+            Assert.Equal(CanonicalJson.EvidenceDigestVersion,
+                result.Summary.GetProperty("evidenceCanonicalization").GetString());
             Assert.Equal(TransportProfiles.Http11ExactId, result.Summary.GetProperty("transportProfileId").GetString());
             Assert.Equal("at-most-1-physical-http-request-attempt-per-admitted-invocation",
                 LiveEligibility.Assess(plan, selection[0], "run").WireAttemptBound);
@@ -115,6 +137,10 @@ public sealed class Stage4bInterlockTests
             Assert.Equal("0.0004", result.Summary.GetProperty("maximumCost").GetString());
             Assert.Equal("USD", result.Summary.GetProperty("currency").GetString());
             Assert.Equal(runDirectory, result.Summary.GetProperty("artifactDestination").GetString());
+            var evidenceBytes = File.ReadAllBytes(evidenceFile);
+            Assert.False(evidenceBytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }));
+            Assert.Equal(CanonicalJson.EvidenceIdentity(result.StandardOutput.Trim()),
+                CanonicalJson.EvidenceIdentity(System.Text.Encoding.UTF8.GetString(evidenceBytes)));
             Assert.DoesNotContain("sentinel-stage4b-must-not-be-read", result.StandardOutput);
             Assert.DoesNotContain("sentinel-stage4b-must-not-be-read", result.StandardError);
             Assert.False(Directory.Exists(runDirectory));
@@ -122,6 +148,37 @@ public sealed class Stage4bInterlockTests
         finally
         {
             Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", previous);
+        }
+    }
+
+    [Fact]
+    public async Task RunLiveMissingCredential_FailsBeforeConsumptionStoreOrDispatch()
+    {
+        using var workspace = new Stage3Workspace();
+        var planFile = await PlanCandidateAsync(workspace);
+        var plan = FrozenRunPlan.Load(planFile);
+        var runDirectory = workspace.Out("credential-not-ready-run");
+        var authorization = Stage4bAuthorizations.Create(plan, Stage4bAuthorizations.Select(plan), runDirectory);
+        var authorizationFile = Stage4bAuthorizations.Write(workspace, authorization);
+        var registryPath = workspace.Out("must-not-be-created-registry.db");
+        var previousCredential = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+        var previousRegistry = Environment.GetEnvironmentVariable(AuthorizationConsumptionRegistry.PathEnvironmentVariable);
+        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
+        Environment.SetEnvironmentVariable(AuthorizationConsumptionRegistry.PathEnvironmentVariable, registryPath);
+        try
+        {
+            var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(),
+                "run-live", "--plan", planFile, "--authorization", authorizationFile, "--out", runDirectory);
+            result.AssertFailed("live-credential-not-ready", 2);
+            Assert.False(File.Exists(registryPath));
+            Assert.False(Directory.Exists(runDirectory));
+            Assert.DoesNotContain("OPENROUTER_API_KEY", result.StandardOutput);
+            Assert.DoesNotContain("OPENROUTER_API_KEY", result.StandardError);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", previousCredential);
+            Environment.SetEnvironmentVariable(AuthorizationConsumptionRegistry.PathEnvironmentVariable, previousRegistry);
         }
     }
 
@@ -296,7 +353,32 @@ public sealed class Stage4bInterlockTests
         var authorization = Stage4bAuthorizations.Create(plan, selection, runDirectory);
         CreateLiveRunDirectory(workspace, plan, selection, runDirectory, authorization);
         var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(), "resume", "--run", runDirectory);
-        result.AssertFailed("live-resume-requires-authorization", 2);
+        result.AssertFailed("live-resume-dispatch-forbidden", 2);
+        Assert.False(File.Exists(Path.Combine(runDirectory, "evidence.db")));
+    }
+
+    [Fact]
+    public async Task ResumeLiveWithConsumedAuthorization_RefusesAnyNewDispatch()
+    {
+        using var workspace = new Stage3Workspace();
+        var planFile = await PlanCandidateAsync(workspace);
+        var plan = FrozenRunPlan.Load(planFile);
+        var selection = Stage4bAuthorizations.Select(plan);
+        var runDirectory = workspace.Out("live-run");
+        var authorization = Stage4bAuthorizations.Create(plan, selection, runDirectory);
+        CreateLiveRunDirectory(workspace, plan, selection, runDirectory, authorization);
+        var authorizationFile = Stage4bAuthorizations.Write(workspace, authorization);
+        var registryPath = workspace.Out("resume-authorization-registry.db");
+        var authorityId = AuthorizationConsumptionRegistry.Provision(registryPath,
+            authorization.ConsumptionAuthorityId);
+        var registry = AuthorizationConsumptionRegistry.OpenAt(registryPath, authorityId);
+        var consumedAuthorization = LiveAuthorizations.Read(authorizationFile);
+        registry.Claim(consumedAuthorization, CanonicalJson.Identity(consumedAuthorization), plan.PlanHash,
+            consumedAuthorization.TransportProfileIdentity, "execution-before-resume", DateTimeOffset.UtcNow);
+
+        var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(),
+            "resume", "--run", runDirectory, "--authorization", authorizationFile);
+        result.AssertFailed("live-resume-dispatch-forbidden", 2);
         Assert.False(File.Exists(Path.Combine(runDirectory, "evidence.db")));
     }
 
@@ -339,6 +421,7 @@ public sealed class Stage4bInterlockTests
         var cases = selection.Select(s => new ManifestCaseBinding(s.CaseId, s.TrialId, s.TrialSlot, s.ModelId,
             s.ScenarioId, s.SubjectId, QualificationWorkflow.StableRunId(plan.PlanHash, s.CaseId, s.TrialId).ToString("N"))).ToArray();
         RunManifest.Write(runDirectory, RunManifest.Create(plan, "run", cases,
-            authorization.AuthorizationRef, CanonicalJson.Identity(authorization), liveAuthorized: true));
+            authorization.AuthorizationRef, CanonicalJson.Identity(authorization), liveAuthorized: true,
+            liveAuthorizationId: authorization.AuthorizationId));
     }
 }

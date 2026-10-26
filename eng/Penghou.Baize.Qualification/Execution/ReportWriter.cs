@@ -27,6 +27,9 @@ internal sealed record ReportAttempt(
     EvidenceReference[] Evidence);
 
 internal sealed record EvidenceReference(long Sequence, string EventType, string Hash);
+internal sealed record ExecutionBoundaryDisclosure(int AuthorizationClaimCount, long BaizeDispatchCount,
+    long ClientTransportAttemptCount, bool ClientTransportAttemptCountComplete, long ObservedHttpResponseCount,
+    string[] ConfiguredProviderModels, string? ProviderReportedModelOrRoute, string ProviderExecutionCount);
 
 internal sealed record ReportCase(
     string CaseId,
@@ -68,6 +71,7 @@ internal sealed record ReportCase(
 
 internal sealed record ReportRun(
     string RunId,
+    string EvidenceCanonicalization,
     string PlanHash,
     string ContractRegistryHash,
     string InventoryHash,
@@ -89,6 +93,8 @@ internal sealed record ReportRun(
     bool LiveAuthorized,
     string? LiveAuthorizationRef,
     string? LiveAuthorizationHash,
+    string? LiveAuthorizationId,
+    ExecutionBoundaryDisclosure ExecutionBoundary,
     ReportCase[] Cases);
 
 internal static class ReportWriter
@@ -205,13 +211,31 @@ internal static class ReportWriter
             ? NullableString(runStarted, "liveAuthorizationRef") : null;
         var liveAuthorizationHash = snapshot.RunStarted is { } runStartedHash
             ? NullableString(runStartedHash, "liveAuthorizationHash") : null;
-        return new ReportRun(runId, plan.PlanHash, plan.ContractRegistryHash,
+        var liveAuthorizationId = snapshot.RunStarted is { } runStartedId
+            ? NullableString(runStartedId, "liveAuthorizationId") : null;
+        var admittedDispatchIds = snapshot.DispatchAdmissions;
+        var clientDispatchIds = snapshot.DispatchResults.Values.SelectMany(values => values)
+            .Select(value => value.DispatchId).ToHashSet(StringComparer.Ordinal);
+        var observedResponseIds = snapshot.DispatchResults.Values.SelectMany(values => values)
+            .Where(value => value.StatusCode is not null).Select(value => value.DispatchId)
+            .ToHashSet(StringComparer.Ordinal);
+        var boundary = new ExecutionBoundaryDisclosure(
+            liveAuthorizationId is null ? 0 : 1,
+            admittedDispatchIds.Count,
+            clientDispatchIds.Count,
+            clientDispatchIds.SetEquals(admittedDispatchIds),
+            observedResponseIds.Count,
+            caseReports.Select(c => c.ProviderModel).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+            null,
+            "unknown");
+        return new ReportRun(runId, CanonicalJson.EvidenceDigestVersion, plan.PlanHash, plan.ContractRegistryHash,
             source.GetProperty("inventoryHash").GetString()!, source.GetProperty("policyHash").GetString()!,
             plan.SourceRevision, plan.Framework, verification.IsValid, checkpointCaptured && verification.IsValid,
             summary.Complete && verification.IsValid, summary.Passed, summary.Failed, summary.Blocked,
             summary.Cancelled, summary.Inconclusive, summary.NotRun, budget.ConsumedModelCalls,
             budget.ConsumedHttpRequests, UnresolvedLiability(snapshot),
-            liveAuthorizationRef is not null, liveAuthorizationRef, liveAuthorizationHash, caseReports);
+            liveAuthorizationRef is not null, liveAuthorizationRef, liveAuthorizationHash, liveAuthorizationId,
+            boundary, caseReports);
     }
 
     private static string? UnresolvedLiability(EvidenceSnapshot snapshot)
@@ -249,7 +273,7 @@ internal static class ReportWriter
         var usageCompleteness = settle.ValueKind == JsonValueKind.Object && settle.TryGetProperty("usage", out var usage)
             && usage.ValueKind == JsonValueKind.Object ? NullableString(usage, "completeness") : null;
         var dispatches = snapshot.DispatchResults.TryGetValue(attemptId, out var dispatchList) ? dispatchList : [];
-        var lastStatus = dispatches.LastOrDefault()?.StatusCode;
+        var lastStatus = dispatches.LastOrDefault(value => value.StatusCode is not null)?.StatusCode;
         return new ReportAttempt(attemptId, outcome,
             finished.ValueKind == JsonValueKind.Object && finished.GetProperty("modelInvoked").GetBoolean(),
             denied.ValueKind == JsonValueKind.Object ? denied.GetProperty("reasonCode").GetString() : null,
@@ -257,7 +281,7 @@ internal static class ReportWriter
             finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "attribution") : null,
             finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "failureStage") : null,
             finished.ValueKind == JsonValueKind.Object ? NullableString(finished, "suggestedAttributionClass") : null,
-            dispatches.Count, lastStatus,
+            dispatches.Select(value => value.DispatchId).Distinct(StringComparer.Ordinal).Count(), lastStatus,
             usageCompleteness,
             settle.ValueKind == JsonValueKind.Object ? settle.GetProperty("settlement").GetString() : null,
             snapshot.Interrupted.ContainsKey(attemptId), snapshot.Released.ContainsKey(attemptId), failed, references);
@@ -320,6 +344,8 @@ internal static class ReportWriter
                     dispatchResult.GetProperty("bytesRead").GetInt64(),
                     dispatchResult.GetProperty("completed").GetBoolean()));
             }
+            else if (entry.EventType == EvidenceLedger.HttpDispatchAdmitted && TryPayload(entry, out var admitted))
+                snapshot.DispatchAdmissions.Add(admitted.GetProperty("dispatchId").GetString()!);
             else if (entry.EventType == EvidenceLedger.HttpDispatchDenied && TryPayload(entry, out var dispatchDenied))
             {
                 var attemptId = dispatchDenied.GetProperty("attemptId").GetString()!;
@@ -393,6 +419,7 @@ internal static class ReportWriter
         public Dictionary<string, JsonElement> Interrupted { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, JsonElement> Trials { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, List<DispatchResultRecord>> DispatchResults { get; } = new(StringComparer.Ordinal);
+        public HashSet<string> DispatchAdmissions { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, List<string>> DispatchDenied { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, JsonElement> Eligibility { get; } = new(StringComparer.Ordinal);
         public HashSet<string> Attempts { get; } = new(StringComparer.Ordinal);

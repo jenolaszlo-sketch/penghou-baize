@@ -6,6 +6,7 @@
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="BuildConfiguration" Value="$(Configuration)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
     <PackageReference Include="Penghou.Zhinu.Sqlite" Version="0.2.0-preview.4" />
     <PackageReference Include="Penghou.Siming.Sqlite" Version="1.0.0" />
@@ -18,5 +19,6 @@
     <ProjectReference Include="../../src/Penghou.Baize.Gemini/Penghou.Baize.Gemini.csproj" />
     <ProjectReference Include="../../src/Penghou.Baize.Ollama/Penghou.Baize.Ollama.csproj" />
     <InternalsVisibleTo Include="Penghou.Baize.Qualification.Tests" />
+    <InternalsVisibleTo Include="Penghou.Baize.Qualification.AuthorizationRegistryProbe" />
   </ItemGroup>
 </Project>

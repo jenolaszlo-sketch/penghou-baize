@@ -63,7 +63,8 @@ internal sealed record RunStartedEvidence(
     string CreatedUtc,
     string? LiveAuthorizationRef,
     string? LiveAuthorizationHash,
-    SelectedCaseEvidence[] SelectedCases);
+    SelectedCaseEvidence[] SelectedCases,
+    string? LiveAuthorizationId = null);
 
 internal sealed record BudgetUnitsEvidence(
     long ModelCalls,

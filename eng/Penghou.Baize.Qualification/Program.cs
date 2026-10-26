@@ -37,6 +37,8 @@ internal static class QualificationCli
                 return await RunCommand.ResumeAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
             if (args.Length > 0 && args[0] == "report")
                 return await ReportCommand.ExecuteAsync(args[1..], output, error, cancellationToken).ConfigureAwait(false);
+            if (args.Length > 0 && args[0] == "authorization-registry")
+                return AuthorizationConsumptionRegistryCommand.Execute(args[1..], output, error);
             return ExecuteOffline(args, output, error, boundary);
         }
         catch (SimulatedProcessCrashException)
