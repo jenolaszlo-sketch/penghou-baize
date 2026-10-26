@@ -159,6 +159,17 @@ public sealed class Stage4aLoopbackTests
     }
 
     [Fact]
+    public async Task StaleKeepAliveConnection_RecoversWithoutReplay()
+    {
+        await using var harness = Stage4LoopbackHarness.Create(LoopbackMode.KeepAliveThenCloseOnceThenBaseline);
+        await harness.RunSemanticAsync("attempt-first");
+        await harness.RunSemanticAsync("attempt-second");
+        Assert.Equal(2, harness.Gate.Admissions);
+        Assert.Equal(2, harness.Server.CompleteRequests);
+        Assert.Equal(2, harness.Server.ConnectionCount);
+    }
+
+    [Fact]
     public async Task AuthenticationChallenge_IsNotRetried()
     {
         await using var harness = Stage4LoopbackHarness.Create(LoopbackMode.Unauthorized);

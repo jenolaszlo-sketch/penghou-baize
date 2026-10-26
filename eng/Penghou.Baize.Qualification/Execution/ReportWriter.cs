@@ -86,6 +86,9 @@ internal sealed record ReportRun(
     long ConsumedModelCalls,
     long ConsumedHttpRequests,
     string? UnresolvedLiability,
+    bool LiveAuthorized,
+    string? LiveAuthorizationRef,
+    string? LiveAuthorizationHash,
     ReportCase[] Cases);
 
 internal static class ReportWriter
@@ -198,12 +201,17 @@ internal static class ReportWriter
                 outcome.Complete, limitations.ToArray(), attempts);
         }).ToArray();
         var summary = Summarize(outcomes);
+        var liveAuthorizationRef = snapshot.RunStarted is { } runStarted
+            ? NullableString(runStarted, "liveAuthorizationRef") : null;
+        var liveAuthorizationHash = snapshot.RunStarted is { } runStartedHash
+            ? NullableString(runStartedHash, "liveAuthorizationHash") : null;
         return new ReportRun(runId, plan.PlanHash, plan.ContractRegistryHash,
             source.GetProperty("inventoryHash").GetString()!, source.GetProperty("policyHash").GetString()!,
             plan.SourceRevision, plan.Framework, verification.IsValid, checkpointCaptured && verification.IsValid,
             summary.Complete && verification.IsValid, summary.Passed, summary.Failed, summary.Blocked,
             summary.Cancelled, summary.Inconclusive, summary.NotRun, budget.ConsumedModelCalls,
-            budget.ConsumedHttpRequests, UnresolvedLiability(snapshot), caseReports);
+            budget.ConsumedHttpRequests, UnresolvedLiability(snapshot),
+            liveAuthorizationRef is not null, liveAuthorizationRef, liveAuthorizationHash, caseReports);
     }
 
     private static string? UnresolvedLiability(EvidenceSnapshot snapshot)

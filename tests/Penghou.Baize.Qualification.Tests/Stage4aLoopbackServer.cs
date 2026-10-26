@@ -21,7 +21,8 @@ internal enum LoopbackMode
     Redirect,
     Unauthorized,
     ServiceUnavailableThenBaseline,
-    CloseAfterBodyOnceThenBaseline
+    CloseAfterBodyOnceThenBaseline,
+    KeepAliveThenCloseOnceThenBaseline
 }
 
 internal sealed record ServerRequest(
@@ -131,6 +132,11 @@ internal sealed class ScriptedLoopbackServer : IAsyncDisposable
                 {
                     return;
                 }
+                catch (InvalidOperationException)
+                {
+                    // StopListening may race the accept loop in fault probes.
+                    return;
+                }
                 catch (SocketException)
                 {
                     return;
@@ -176,6 +182,11 @@ internal sealed class ScriptedLoopbackServer : IAsyncDisposable
                     {
                         case LoopbackMode.CloseAfterBody:
                         case LoopbackMode.CloseAfterBodyOnceThenBaseline when request.Ordinal == 1:
+                            return;
+                        case LoopbackMode.KeepAliveThenCloseOnceThenBaseline when request.Ordinal == 1:
+                            await WriteHeadersAsync(stream, "200 OK", BaselineBody.Length, keepAlive: true);
+                            await stream.WriteAsync(BaselineBody, _shutdown.Token);
+                            await stream.FlushAsync(_shutdown.Token);
                             return;
                         case LoopbackMode.HoldAfterBody:
                             await HoldAsync();

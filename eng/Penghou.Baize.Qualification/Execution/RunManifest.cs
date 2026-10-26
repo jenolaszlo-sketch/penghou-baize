@@ -16,7 +16,10 @@ internal sealed record RunManifestRecord(
     string Framework,
     string ZhinuComponent,
     string SimingComponent,
-    ManifestCaseBinding[] Cases);
+    ManifestCaseBinding[] Cases,
+    string? LiveAuthorizationRef = null,
+    string? LiveAuthorizationHash = null,
+    bool LiveAuthorized = false);
 
 internal sealed record ManifestCaseBinding(
     string CaseId,
@@ -31,11 +34,13 @@ internal static class RunManifest
 {
     public const string FileName = "manifest.json";
 
-    public static RunManifestRecord Create(FrozenRunPlan plan, string runId, ManifestCaseBinding[] cases) => new(
+    public static RunManifestRecord Create(FrozenRunPlan plan, string runId, ManifestCaseBinding[] cases,
+        string? liveAuthorizationRef = null, string? liveAuthorizationHash = null, bool liveAuthorized = false) => new(
         "1.0", runId, DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
         plan.PlanHash, plan.ContractRegistryHash, plan.SourceRevision, plan.Framework,
         "Penghou.Zhinu 0.2.0-preview.4 + Penghou.Zhinu.Sqlite 0.2.0-preview.4",
-        "Penghou.Siming 1.0.0 + Penghou.Siming.Sqlite 1.0.0", cases);
+        "Penghou.Siming 1.0.0 + Penghou.Siming.Sqlite 1.0.0", cases,
+        liveAuthorizationRef, liveAuthorizationHash, liveAuthorized);
 
     public static void Write(string runDirectory, RunManifestRecord manifest)
     {

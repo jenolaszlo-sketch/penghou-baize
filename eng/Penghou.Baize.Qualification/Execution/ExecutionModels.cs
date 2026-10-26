@@ -61,6 +61,8 @@ internal sealed record RunStartedEvidence(
     string ZhinuComponent,
     string SimingComponent,
     string CreatedUtc,
+    string? LiveAuthorizationRef,
+    string? LiveAuthorizationHash,
     SelectedCaseEvidence[] SelectedCases);
 
 internal sealed record BudgetUnitsEvidence(

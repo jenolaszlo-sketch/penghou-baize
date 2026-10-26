@@ -28,6 +28,20 @@ internal sealed class RunCommand
         return await run.ExecuteRunAsync(args, cancellationToken).ConfigureAwait(false);
     }
 
+    public static async Task<int> RunLiveAsync(string[] args, TextWriter output, TextWriter error, ExecutionFaults faults,
+        CancellationToken cancellationToken)
+    {
+        var run = new RunCommand(output, error, faults);
+        return await run.ExecuteRunLiveAsync(args, cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task<int> ValidateLiveAsync(string[] args, TextWriter output, TextWriter error,
+        ExecutionFaults faults, CancellationToken cancellationToken)
+    {
+        var run = new RunCommand(output, error, faults);
+        return await run.ExecuteValidateLiveAsync(args, cancellationToken).ConfigureAwait(false);
+    }
+
     public static async Task<int> ResumeAsync(string[] args, TextWriter output, TextWriter error, ExecutionFaults faults,
         CancellationToken cancellationToken)
     {
@@ -52,18 +66,18 @@ internal sealed class RunCommand
         {
             var options = ParseOptions(args, new[] { "--plan", "--out", "--models", "--contracts" }, optional: "--trial",
                 bareFlags: ["--allow-live"]);
-            var allowLive = options.ContainsKey("--allow-live");
             var plan = FrozenRunPlan.Load(options["--plan"]);
             var selection = SelectCases(plan, options);
+            // --allow-live is retained only as a parsed compatibility flag. It
+            // can never turn this offline command into a live run. External
+            // execution requires the separate run-live command, an exact
+            // operator authorization and the live eligibility gate.
             foreach (var selected in selection)
             {
                 var transportProfile = selected.SubjectElement.GetProperty("binding").GetProperty("requested")
                     .GetProperty("transportProfile").GetString();
-                if (transportProfile == "SyntheticFake") continue;
-                if (!allowLive) throw new ExecutionException("real-network-not-authorized");
-                var assessment = LiveEligibility.Assess(plan, selected, Guid.Empty.ToString("N"));
-                if (assessment.State != LiveEligibility.StateEligible)
-                    throw new LiveEligibilityException(assessment.CriticalReasons, assessment.Limitations);
+                if (transportProfile != "SyntheticFake")
+                    throw new ExecutionException("live-execution-requires-run-live-command");
             }
             var runDirectory = Path.GetFullPath(options["--out"]);
             if (Directory.Exists(runDirectory) || File.Exists(runDirectory))
@@ -78,8 +92,8 @@ internal sealed class RunCommand
             var identityFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(plan.PlanFile))!, "identity.json");
             File.Copy(identityFile, Path.Combine(runDirectory, "identity.json"));
             RunManifest.Write(runDirectory, manifest);
-            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, cancellationToken,
-                resume: false).ConfigureAwait(false);
+            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, BuildBudget(plan), null,
+                cancellationToken, resume: false).ConfigureAwait(false);
         }
         catch (LiveEligibilityException exception) { return FailEligibility(exception); }
         catch (PlanningException exception) { return Fail(exception.Code, 2); }
@@ -98,11 +112,150 @@ internal sealed class RunCommand
         }
     }
 
+    private async Task<int> ExecuteRunLiveAsync(string[] args, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var options = ParseOptions(args, new[] { "--plan", "--out" }, optional: "--authorization");
+            RequireAuthorizationOption(options);
+            var validated = LoadValidatedLive(options);
+            var plan = validated.Plan;
+            var runDirectory = validated.RunDirectory;
+            if (Directory.Exists(runDirectory) || File.Exists(runDirectory))
+                throw new ExecutionException("run-output-already-exists");
+            Directory.CreateDirectory(runDirectory);
+            Directory.CreateDirectory(Path.Combine(runDirectory, "reports"));
+            var runId = Guid.NewGuid().ToString("N");
+            var manifestCases = validated.Authorization.Selection.Select(s => new ManifestCaseBinding(
+                s.CaseId, s.TrialId, s.TrialSlot, s.ModelId, s.ScenarioId, s.SubjectId,
+                QualificationWorkflow.StableRunId(plan.PlanHash, s.CaseId, s.TrialId).ToString("N"))).ToArray();
+            var manifest = RunManifest.Create(plan, runId, manifestCases,
+                validated.Authorization.Document.AuthorizationRef, validated.Authorization.AuthorizationHash,
+                liveAuthorized: true);
+            File.WriteAllBytes(Path.Combine(runDirectory, "plan.json"), plan.PlanBytes);
+            var identityFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(plan.PlanFile))!, "identity.json");
+            File.Copy(identityFile, Path.Combine(runDirectory, "identity.json"));
+            File.WriteAllBytes(Path.Combine(runDirectory, "live-authorization.json"),
+                CanonicalJson.Write(validated.Authorization.Document));
+            RunManifest.Write(runDirectory, manifest);
+            return await ExecuteCasesAsync(plan, manifest, validated.Authorization.Selection, runDirectory,
+                validated.Authorization.Budget, validated.Authorization.Document,
+                cancellationToken, resume: false).ConfigureAwait(false);
+        }
+        catch (LiveEligibilityException exception) { return FailEligibility(exception); }
+        catch (PlanningException exception) { return Fail(exception.Code, 2); }
+        catch (ExecutionException exception) { return Fail(exception.Code, 2); }
+        catch (SimulatedProcessCrashException) { throw; }
+        catch (OperationCanceledException) { return Fail("operator-cancellation", 130); }
+        catch (Exception exception) when (exception is JsonException or FormatException or ArgumentException
+            or OverflowException or FileNotFoundException or DirectoryNotFoundException)
+        { return Fail("invalid-authoritative-input", 2); }
+        catch (Exception exception)
+        {
+            if (Environment.GetEnvironmentVariable("BAIZE_QUALIFICATION_DEBUG") == "1")
+                _error.WriteLine(exception.ToString());
+            _error.WriteLine("diagnostic:" + exception.GetType().Name);
+            return Fail("evidence-or-internal-failure", 5);
+        }
+    }
+
+    private async Task<int> ExecuteValidateLiveAsync(string[] args, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var options = ParseOptions(args, new[] { "--plan", "--out" }, optional: "--authorization");
+            RequireAuthorizationOption(options);
+            var validated = LoadValidatedLive(options);
+            var auth = validated.Authorization;
+            _output.WriteLine(Encoding.UTF8.GetString(CanonicalJson.Write(new
+            {
+                kind = "live-authorization-validated",
+                schemaVersion = "1.0",
+                commandCompleted = true,
+                qualificationPerformed = false,
+                executionAuthorized = false,
+                planHash = validated.Plan.PlanHash,
+                authorizationRef = auth.Document.AuthorizationRef,
+                authorizationHash = auth.AuthorizationHash,
+                transportProfileId = auth.Document.TransportProfileId,
+                transportProfileIdentity = auth.Document.TransportProfileIdentity,
+                provider = auth.Document.Provider,
+                endpointId = auth.Document.EndpointId,
+                endpointBaseUrl = auth.Document.EndpointBaseUrl,
+                providerModel = auth.Document.ProviderModel,
+                protocol = auth.Document.Protocol,
+                apiVersion = auth.Document.ApiVersion,
+                artifactDestination = validated.RunDirectory,
+                maximumModelCalls = auth.Budget.ModelCalls,
+                maximumHttpRequests = auth.Budget.HttpRequests,
+                maximumInputTokens = auth.Budget.InputTokens,
+                maximumOutputTokens = auth.Budget.OutputTokens,
+                maximumReasoningTokens = auth.Budget.ReasoningTokens,
+                maximumTotalTokens = auth.Budget.TotalTokens,
+                maximumCost = auth.Budget.MaximumCost,
+                currency = auth.Budget.Currency,
+                cases = auth.Selection.Select(s => new
+                {
+                    caseId = s.CaseId,
+                    trialId = s.TrialId,
+                    trialSlot = s.TrialSlot,
+                    modelId = s.ModelId,
+                    scenarioId = s.ScenarioId,
+                    observedContractIds = ObservedContracts(s.CaseElement)
+                }).ToArray()
+            })));
+            return 0;
+        }
+        catch (LiveEligibilityException exception) { return FailEligibility(exception); }
+        catch (PlanningException exception) { return Fail(exception.Code, 2); }
+        catch (ExecutionException exception) { return Fail(exception.Code, 2); }
+        catch (OperationCanceledException) { return Fail("operator-cancellation", 130); }
+        catch (Exception exception) when (exception is JsonException or FormatException or ArgumentException
+            or OverflowException or FileNotFoundException or DirectoryNotFoundException)
+        { return Fail("invalid-authoritative-input", 2); }
+        catch (Exception exception)
+        {
+            if (Environment.GetEnvironmentVariable("BAIZE_QUALIFICATION_DEBUG") == "1")
+                _error.WriteLine(exception.ToString());
+            _error.WriteLine("diagnostic:" + exception.GetType().Name);
+            return Fail("evidence-or-internal-failure", 5);
+        }
+    }
+
+    private static void RequireAuthorizationOption(Dictionary<string, string> options)
+    {
+        if (!options.ContainsKey("--authorization"))
+            throw new ExecutionException("live-authorization-required");
+    }
+
+    private (FrozenRunPlan Plan, ValidatedLiveAuthorization Authorization, string RunDirectory) LoadValidatedLive(
+        Dictionary<string, string> options)
+    {
+        var plan = FrozenRunPlan.Load(options["--plan"]);
+        var runDirectory = Path.GetFullPath(options["--out"]);
+        var authorization = LiveAuthorizations.Read(options["--authorization"]);
+        var validated = LiveAuthorizations.Validate(plan, authorization, runDirectory, DateTimeOffset.UtcNow);
+        EnsureEligible(plan, validated.Selection, Guid.Empty.ToString("N"));
+        if (Directory.Exists(runDirectory) || File.Exists(runDirectory))
+            throw new ExecutionException("run-output-already-exists");
+        return (plan, validated, runDirectory);
+    }
+
+    private static void EnsureEligible(FrozenRunPlan plan, RunCaseSelection[] selection, string runId)
+    {
+        foreach (var selected in selection)
+        {
+            var assessment = LiveEligibility.Assess(plan, selected, runId);
+            if (assessment.State != LiveEligibility.StateEligible)
+                throw new LiveEligibilityException(assessment.CriticalReasons, assessment.Limitations);
+        }
+    }
+
     private async Task<int> ExecuteResumeAsync(string[] args, CancellationToken cancellationToken)
     {
         try
         {
-            var options = ParseOptions(args, new[] { "--run" }, optional: null);
+            var options = ParseOptions(args, new[] { "--run" }, optional: "--authorization");
             var runDirectory = Path.GetFullPath(options["--run"]);
             if (!Directory.Exists(runDirectory)) throw new ExecutionException("run-directory-missing");
             var manifest = RunManifest.Read(runDirectory);
@@ -110,8 +263,33 @@ internal sealed class RunCommand
             var plan = FrozenRunPlan.Load(planFile);
             if (plan.PlanHash != manifest.PlanHash) throw new ExecutionException("manifest-plan-mismatch");
             var selection = SelectCases(plan, new Dictionary<string, string>(StringComparer.Ordinal), manifest);
-            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, cancellationToken,
-                resume: true).ConfigureAwait(false);
+            BudgetEnvelopeEvidence budget;
+            LiveAuthorizationDocument? authorization = null;
+            if (manifest.LiveAuthorized)
+            {
+                if (manifest.LiveAuthorizationRef is null || manifest.LiveAuthorizationHash is null)
+                    throw new ExecutionException("run-manifest-invalid");
+                if (!options.TryGetValue("--authorization", out var authorizationPath))
+                    throw new ExecutionException("live-resume-requires-authorization");
+                authorization = LiveAuthorizations.Read(authorizationPath);
+                var validated = LiveAuthorizations.Validate(plan, authorization, runDirectory, DateTimeOffset.UtcNow,
+                    selection);
+                if (validated.AuthorizationHash != manifest.LiveAuthorizationHash
+                    || validated.Document.AuthorizationRef != manifest.LiveAuthorizationRef)
+                    throw new ExecutionException("live-authorization-manifest-mismatch");
+                EnsureEligible(plan, selection, manifest.RunId);
+                budget = validated.Budget;
+            }
+            else
+            {
+                if (options.ContainsKey("--authorization"))
+                    throw new ExecutionException("authorization-not-applicable");
+                if (manifest.LiveAuthorizationRef is not null || manifest.LiveAuthorizationHash is not null)
+                    throw new ExecutionException("run-manifest-invalid");
+                budget = BuildBudget(plan);
+            }
+            return await ExecuteCasesAsync(plan, manifest, selection, runDirectory, budget, authorization,
+                cancellationToken, resume: true).ConfigureAwait(false);
         }
         catch (PlanningException exception) { return Fail(exception.Code, 2); }
         catch (ExecutionException exception) { return Fail(exception.Code, 2); }
@@ -196,11 +374,12 @@ internal sealed class RunCommand
         int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var trial) ? trial : -1;
 
     private async Task<int> ExecuteCasesAsync(FrozenRunPlan plan, RunManifestRecord manifest,
-        RunCaseSelection[] selection, string runDirectory, CancellationToken cancellationToken, bool resume)
+        RunCaseSelection[] selection, string runDirectory, BudgetEnvelopeEvidence budgetEnvelope,
+        LiveAuthorizationDocument? authorization, CancellationToken cancellationToken, bool resume)
     {
         var planInventory = plan.Inventory;
         var environment = await ExecutionEnvironment.CreateAsync(runDirectory, _faults,
-            DeserializeInventory(planInventory), BuildBudget(plan), cancellationToken).ConfigureAwait(false);
+            DeserializeInventory(planInventory), budgetEnvelope, cancellationToken).ConfigureAwait(false);
         await using (environment)
         {
             var outcomes = new List<CaseOutcome>();
@@ -217,7 +396,8 @@ internal sealed class RunCommand
                     new RunStartedEvidence("1.0", manifest.RunId, manifest.PlanHash, manifest.ContractRegistryHash,
                         source.GetProperty("inventoryHash").GetString()!, source.GetProperty("policyHash").GetString()!,
                         manifest.SourceRevision, manifest.Framework, manifest.ZhinuComponent, manifest.SimingComponent,
-                        manifest.CreatedUtc, selectionSummary),
+                        manifest.CreatedUtc, manifest.LiveAuthorizationRef, manifest.LiveAuthorizationHash,
+                        selectionSummary),
                     idempotencyKey: "run-started", cancellationToken: cancellationToken).ConfigureAwait(false);
                 _faults.AfterRunStartedAppend?.Invoke();
                 // The eligibility assessment is evidence, never authorization.
@@ -234,7 +414,7 @@ internal sealed class RunCommand
                     cancellationToken, _faults.Interrupt?.Token ?? CancellationToken.None);
                 foreach (var selected in selection)
                 {
-                    var request = BuildRequest(plan, selected, manifest.RunId);
+                    var request = BuildRequest(plan, selected, manifest.RunId, budgetEnvelope);
                     var stableId = QualificationWorkflow.StableRunId(plan.PlanHash, selected.CaseId, selected.TrialId);
                     var deadline = DateTimeOffset.UtcNow + TimeSpan.Parse(plan.Policy.GetProperty("maximumDuration").GetString()!,
                         System.Globalization.CultureInfo.InvariantCulture);
@@ -362,7 +542,7 @@ internal sealed class RunCommand
                 catch (OperationCanceledException) { }
             }
 
-            var budget = await BudgetLedger.ComputeAsync(environment.Ledger, BuildBudget(plan), CancellationToken.None).ConfigureAwait(false);
+            var budget = await BudgetLedger.ComputeAsync(environment.Ledger, budgetEnvelope, CancellationToken.None).ConfigureAwait(false);
             if (!cancelled)
             {
                 var summary = Summarize(outcomes);
@@ -392,7 +572,10 @@ internal sealed class RunCommand
                 planHash = manifest.PlanHash,
                 commandCompleted = exitCode is 0 or 3 or 4,
                 qualificationPerformed = true,
-                executionAuthorized = true,
+                executionAuthorized = authorization is not null,
+                liveAuthorized = authorization is not null,
+                liveAuthorizationRef = authorization?.AuthorizationRef,
+                liveAuthorizationHash = manifest.LiveAuthorizationHash,
                 ledgerVerified = verification.IsValid,
                 checkpointCaptured = checkpoint,
                 outcome = exitCode switch
@@ -445,7 +628,8 @@ internal sealed class RunCommand
     private static string? NullableString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
-    internal static CaseExecutionRequest BuildRequest(FrozenRunPlan plan, RunCaseSelection selected, string runId)
+    internal static CaseExecutionRequest BuildRequest(FrozenRunPlan plan, RunCaseSelection selected, string runId,
+        BudgetEnvelopeEvidence? budget = null)
     {
         var policy = plan.Policy;
         var scenario = selected.CaseElement.GetProperty("observations").EnumerateArray()
@@ -489,7 +673,7 @@ internal sealed class RunCommand
                 resolved.GetProperty("clientRequestTimeout").GetString()!, resolved.GetProperty("effectiveAttemptCeiling").GetString()!,
                 capabilities.GetProperty("nativeToolCalling").GetBoolean(), requested.GetProperty("protocol").GetString()!,
                 endpoint.GetProperty("apiKeySecretName").GetString()!),
-            BuildBudget(plan),
+            budget ?? BuildBudget(plan),
             new DeadlinesEvidence(policy.GetProperty("attemptTimeout").GetString()!,
                 policy.GetProperty("maximumDuration").GetString()!, policy.GetProperty("streamIdleTimeout").GetString()!),
             new LimitsEvidence(policy.GetProperty("maximumRequestBytes").GetInt64(),

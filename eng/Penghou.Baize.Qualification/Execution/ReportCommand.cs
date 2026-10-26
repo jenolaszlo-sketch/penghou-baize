@@ -156,6 +156,7 @@ internal static class ReportMarkdown
         builder.Append($"Ledger verified: **{(report.LedgerVerified ? "yes" : "no")}**; checkpoint verified: **{(report.CheckpointVerified ? "yes" : "no")}**; complete: **{(report.Complete ? "yes" : "no")}**\n\n");
         builder.Append($"Passed {report.Passed}, Failed {report.Failed}, Blocked {report.Blocked}, Cancelled {report.Cancelled}, Inconclusive {report.Inconclusive}, NotRun {report.NotRun}\n\n");
         builder.Append($"Budget consumed: {report.ConsumedModelCalls} model call(s), {report.ConsumedHttpRequests} HTTP request(s). Unresolved liability: {report.UnresolvedLiability ?? "none"}\n\n");
+        builder.Append($"Live authorized: **{(report.LiveAuthorized ? "yes" : "no")}**; authorization `{report.LiveAuthorizationRef ?? "none"}` (`{report.LiveAuthorizationHash ?? "no-hash"}`)\n\n");
         foreach (var reportCase in report.Cases)
         {
             builder.Append($"## {reportCase.ModelId} — {reportCase.ScenarioId} (trial {reportCase.TrialSlot})\n\n");

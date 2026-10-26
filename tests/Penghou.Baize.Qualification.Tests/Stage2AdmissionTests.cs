@@ -17,7 +17,7 @@ public sealed class Stage2AdmissionTests
         (await workspace.PlanAsync("fake-alpha", "chat.baseline@3", inventory: inventory))
             .AssertCompleted("plan-generated", 0);
         var run = await workspace.RunAsync("fake-alpha", "chat.baseline@3");
-        run.AssertFailed("real-network-not-authorized", 2);
+        run.AssertFailed("live-execution-requires-run-live-command", 2);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 

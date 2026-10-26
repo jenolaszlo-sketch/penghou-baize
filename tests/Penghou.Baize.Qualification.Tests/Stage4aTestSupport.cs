@@ -19,6 +19,22 @@ internal static class Stage4Fixtures
     }
 }
 
+internal static class Stage4bFixtures
+{
+    public static string Inventory => Read("inventory.json");
+    public static string Policy => Read("policy.json");
+
+    public static string Read(string fileName)
+    {
+        var assembly = typeof(Stage4bFixtures).Assembly;
+        var resource = assembly.GetManifestResourceNames()
+            .Single(name => name.EndsWith("Stage4bFixtures." + fileName, StringComparison.Ordinal));
+        using var stream = assembly.GetManifestResourceStream(resource)!;
+        using var reader = new StreamReader(stream, new System.Text.UTF8Encoding(false));
+        return reader.ReadToEnd();
+    }
+}
+
 internal sealed class Stage4Gate : IHttpAdmissionGate
 {
     private readonly List<(string Phase, int? StatusCode, long BytesRead, bool Completed)> _results = [];

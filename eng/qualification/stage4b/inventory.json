@@ -1,0 +1,45 @@
+{
+  "kind": "qualification-inventory",
+  "schemaVersion": "1.0",
+  "profiles": {},
+  "entries": [
+    {
+      "id": "openrouter-llama31-8b-smoke",
+      "service": "openrouter-hosted",
+      "endpointProfile": "openrouter-stage4b-smoke",
+      "accountScopeRef": "operator-evaluation-account",
+      "protocol": "openai-chat-completions",
+      "apiVersion": "v1",
+      "revision": null,
+      "mutableAlias": true,
+      "configurationVisibility": "PublicConfiguration",
+      "transportProfile": "ReviewedNetwork",
+      "transportProfileRef": "baize-sockets-http11-exact-v1",
+      "endpoint": {
+        "id": "openrouter-stage4b-endpoint",
+        "provider": "OpenAi",
+        "providerModel": "meta-llama/llama-3.1-8b-instruct",
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKeySecretName": "OPENROUTER_API_KEY",
+        "settings": { "Dialect": "Standard" }
+      },
+      "advertised": [],
+      "exclusions": [],
+      "economicsRef": "openrouter-pricing-review-1",
+      "allowanceRef": "operator-stage4b-smoke-allowance-1",
+      "allowanceVerified": true,
+      "bounds": [
+        {
+          "contract": "chat.baseline@3",
+          "inputTokens": 256,
+          "outputTokens": 512,
+          "reasoningTokens": 0,
+          "totalTokens": 768,
+          "maximumCost": "0.0004",
+          "currency": "USD",
+          "sourceRef": "openrouter-pricing-review-1"
+        }
+      ]
+    }
+  ]
+}

@@ -29,6 +29,10 @@ internal static class QualificationCli
         {
             if (args.Length > 0 && args[0] == "run")
                 return await RunCommand.RunAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
+            if (args.Length > 0 && args[0] == "run-live")
+                return await RunCommand.RunLiveAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
+            if (args.Length > 0 && args[0] == "validate-live")
+                return await RunCommand.ValidateLiveAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
             if (args.Length > 0 && args[0] == "resume")
                 return await RunCommand.ResumeAsync(args[1..], output, error, faults, cancellationToken).ConfigureAwait(false);
             if (args.Length > 0 && args[0] == "report")

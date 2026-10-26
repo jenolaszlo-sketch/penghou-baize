@@ -8,36 +8,37 @@ namespace Penghou.Baize.Qualification.Tests;
 // explicit operator action.
 public sealed class Stage3EligibilityTests
 {
-    // 2a. A real-network profile without --allow-live is refused before any
-    // credential resolution or dispatch.
+    // 2a. A real-network profile is refused by the offline run command even if
+    // the legacy --allow-live flag is accidentally supplied. It never reads a
+    // credential or enters the live eligibility path.
     [Fact]
-    public async Task RealProfileWithoutAllowLive_RefusedBeforeSecrets()
+    public async Task RealProfileThroughOfflineRun_RefusedBeforeSecrets()
     {
         using var workspace = new Stage3Workspace();
         (await workspace.PlanAsync("openrouter-llama31-8b", "chat.baseline@3", inventory: Stage4Fixtures.Inventory)).AssertCompleted("plan-generated", 0);
-        var run = await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3");
-        run.AssertFailed("real-network-not-authorized", 2);
+        (await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3"))
+            .AssertFailed("live-execution-requires-run-live-command", 2);
+        (await workspace.RunAsync("openrouter-llama31-8b", "chat.baseline@3", allowLive: true))
+            .AssertFailed("live-execution-requires-run-live-command", 2);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
-    // 2b. With --allow-live, an ineligible real profile is refused with its
-    // evidence-bound reasons; no run directory or secret access exists.
+    // 2b. An ineligible real profile still reports its evidence-bound reasons
+    // in the offline assessment; the offline run command does not enter this
+    // path.
     [Fact]
-    public async Task IneligibleRealProfile_RefusedWithReasons()
+    public async Task IneligibleRealProfile_AssessmentReportsReasons()
     {
         using var workspace = new Stage3Workspace();
         (await workspace.PlanAsync("deepseek-native-chat", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
-        var run = await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3", allowLive: true);
-        Assert.Equal(2, run.ExitCode);
-        Assert.Equal("run-refused", run.Summary.GetProperty("kind").GetString());
-        Assert.Equal("live-execution-not-eligible", run.Summary.GetProperty("code").GetString());
-        var reasons = run.Summary.GetProperty("criticalReasons").EnumerateArray()
-            .Select(reason => reason.GetString()!).ToArray();
-        Assert.Contains("allowance-unverified", reasons);
-        Assert.Contains("token-reservation-bound-unknown", reasons);
-        Assert.Contains("transport-profile-unreviewed", reasons);
-        Assert.Contains("wire-attempt-bound-unproven", reasons);
-        Assert.DoesNotContain("cost-reservation-bound-unknown", reasons);
+        var plan = FrozenRunPlan.Load(Path.Combine(workspace.PlanDir, "plan.json"));
+        var assessment = LiveEligibility.Assess(plan, Select(plan), "run");
+        Assert.Equal(LiveEligibility.StateBlocked, assessment.State);
+        Assert.Contains("allowance-unverified", assessment.CriticalReasons);
+        Assert.Contains("token-reservation-bound-unknown", assessment.CriticalReasons);
+        Assert.Contains("transport-profile-unreviewed", assessment.CriticalReasons);
+        Assert.Contains("wire-attempt-bound-unproven", assessment.CriticalReasons);
+        Assert.DoesNotContain("cost-reservation-bound-unknown", assessment.CriticalReasons);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
@@ -60,20 +61,19 @@ public sealed class Stage3EligibilityTests
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
-    // 2d. Loopback profiles require the same explicit authorization. The
-    // reviewed handler has a proven bound, but a loopback endpoint is never a
-    // live qualification target.
+    // 2d. Loopback profiles are never live qualification targets, and the
+    // offline run command cannot reach them even with --allow-live.
     [Fact]
-    public async Task LoopbackProfile_RequiresAllowLiveAndIsNeverLiveEligible()
+    public async Task LoopbackProfile_OfflineRunRefusedAndAssessmentBlocksLive()
     {
         using var workspace = new Stage3Workspace();
         (await workspace.PlanAsync("loopback-local-alpha", "chat.baseline@3", inventory: Stage4Fixtures.Inventory)).AssertCompleted("plan-generated", 0);
-        (await workspace.RunAsync("loopback-local-alpha", "chat.baseline@3")).AssertFailed("real-network-not-authorized", 2);
-        var run = await workspace.RunAsync("loopback-local-alpha", "chat.baseline@3", allowLive: true);
-        Assert.Equal(2, run.ExitCode);
-        var reasons = run.Summary.GetProperty("criticalReasons").EnumerateArray()
-            .Select(reason => reason.GetString()!).ToArray();
-        Assert.Equal(["loopback-not-live-eligible"], reasons);
+        (await workspace.RunAsync("loopback-local-alpha", "chat.baseline@3", allowLive: true))
+            .AssertFailed("live-execution-requires-run-live-command", 2);
+        var plan = FrozenRunPlan.Load(Path.Combine(workspace.PlanDir, "plan.json"));
+        var assessment = LiveEligibility.Assess(plan, Select(plan), "run");
+        Assert.Equal(LiveEligibility.StateBlocked, assessment.State);
+        Assert.Equal(["loopback-not-live-eligible"], assessment.CriticalReasons);
         Assert.False(Directory.Exists(workspace.RunDir));
     }
 
@@ -94,18 +94,17 @@ public sealed class Stage3EligibilityTests
     // Gemini-native profiles plan and remain blocked for live execution with
     // all missing economics/allowance evidence visible.
     [Fact]
-    public async Task GeminiProfile_PlansAndRefusesWithReasons()
+    public async Task GeminiProfile_PlansAndAssessmentReportsReasons()
     {
         using var workspace = new Stage3Workspace();
         (await workspace.PlanAsync("gemini-native-flash", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
-        var run = await workspace.RunAsync("gemini-native-flash", "chat.baseline@3", allowLive: true);
-        Assert.Equal(2, run.ExitCode);
-        var reasons = run.Summary.GetProperty("criticalReasons").EnumerateArray()
-            .Select(reason => reason.GetString()!).ToArray();
-        Assert.Contains("allowance-unverified", reasons);
-        Assert.Contains("token-reservation-bound-unknown", reasons);
-        Assert.Contains("transport-profile-unreviewed", reasons);
-        Assert.Contains("wire-attempt-bound-unproven", reasons);
+        var plan = FrozenRunPlan.Load(Path.Combine(workspace.PlanDir, "plan.json"));
+        var assessment = LiveEligibility.Assess(plan, Select(plan), "run");
+        Assert.Equal(LiveEligibility.StateBlocked, assessment.State);
+        Assert.Contains("allowance-unverified", assessment.CriticalReasons);
+        Assert.Contains("token-reservation-bound-unknown", assessment.CriticalReasons);
+        Assert.Contains("transport-profile-unreviewed", assessment.CriticalReasons);
+        Assert.Contains("wire-attempt-bound-unproven", assessment.CriticalReasons);
     }
 
     private static RunCaseSelection Select(FrozenRunPlan plan)

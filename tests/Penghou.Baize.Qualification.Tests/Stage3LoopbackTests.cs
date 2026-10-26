@@ -157,10 +157,10 @@ public sealed class Stage3PrivacyTests
         }
     }
 
-    // A real profile without a reviewed transport profile is refused before
-    // any credential or dispatch, even with --allow-live.
+    // A real profile is refused by the offline run command before any credential
+    // resolution or dispatch, even with --allow-live.
     [Fact]
-    public async Task EligibilityRefusal_ReadsNoSecrets()
+    public async Task OfflineRunRefusal_ReadsNoSecrets()
     {
         using var workspace = new Stage3Workspace();
         (await workspace.PlanAsync("deepseek-native-chat", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
@@ -168,12 +168,12 @@ public sealed class Stage3PrivacyTests
         Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", "sentinel-credential-must-not-be-read");
         try
         {
-            (await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3")).AssertFailed("real-network-not-authorized", 2);
+            (await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3"))
+                .AssertFailed("live-execution-requires-run-live-command", 2);
             var refused = await workspace.RunAsync("deepseek-native-chat", "chat.baseline@3", allowLive: true);
             Assert.Equal(2, refused.ExitCode);
-            Assert.Equal("run-refused", refused.Summary.GetProperty("kind").GetString());
-            Assert.Contains("transport-profile-unreviewed", refused.Summary.GetProperty("criticalReasons").EnumerateArray()
-                .Select(reason => reason.GetString()!).ToArray());
+            Assert.Equal("command-failed", refused.Summary.GetProperty("kind").GetString());
+            Assert.Equal("live-execution-requires-run-live-command", refused.Summary.GetProperty("code").GetString());
             Assert.False(Directory.Exists(workspace.RunDir));
         }
         finally
