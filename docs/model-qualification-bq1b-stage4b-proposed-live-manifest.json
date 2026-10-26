@@ -1,0 +1,136 @@
+{
+  "kind": "qualification-live-run-proposal",
+  "schemaVersion": "1.0",
+  "proposalStatus": "pending-operator-authorization",
+  "executionAuthorized": false,
+  "qualificationPerformed": false,
+  "note": "This proposal is not accepted by run-live. The operator must create a separate qualification-live-authorization file with the exact values below, an authorization reference, an operator reference, an issued time and an expiry.",
+  "plan": {
+    "sourceRevision": "0.3.0-preview.7+214a363a7e3ffe60325016ebd986427979687840",
+    "planHash": "sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f",
+    "contractRegistryHash": "sha256:ce2503aca92774ea74878290ee2a9b95d985ba24e8eae66876db5654f1d90db8",
+    "inventoryHash": "sha256:6018f06c531e50560d176d2026297f783b7c61515c5b33ba2844c30cecf8b66a",
+    "policyHash": "sha256:84f052813bca45acd01a6fe1af8456ca3ccc50348813d6e834ad8d8859fc44e9"
+  },
+  "subject": {
+    "subjectId": "sha256:568f0812cc238373959990e0165a10dc090a4883f2dbccc9385165aad54434d5",
+    "modelId": "openrouter-llama31-8b-smoke",
+    "hostingProvider": "OpenRouter",
+    "protocol": "openai-chat-completions",
+    "apiVersion": "v1",
+    "adapterAssembly": "Penghou.Baize.OpenAi",
+    "adapterVersion": "0.3.0.0",
+    "endpointId": "openrouter-stage4b-endpoint",
+    "endpointBaseUrl": "https://openrouter.ai/api/v1",
+    "endpointOrigin": "https://openrouter.ai",
+    "providerModel": "meta-llama/llama-3.1-8b-instruct",
+    "requestedRevision": null,
+    "mutableAlias": true,
+    "settings": {
+      "Dialect": "Standard"
+    },
+    "reasoningConfiguration": "Not enabled; no thinking style or budget is configured.",
+    "capabilitiesClaimed": "None. The run tests observed behaviour through the selected contracts only."
+  },
+  "transport": {
+    "profileId": "baize-sockets-http11-exact-v1",
+    "profileIdentity": "sha256:88486795d1c6630425c34e0e3cf4c60fafda5af185928b8e759257f904930adb",
+    "protocol": "HTTP/1.1 exact",
+    "physicalAttemptUpperBound": 1,
+    "status": "qualified-with-restrictions"
+  },
+  "tests": {
+    "selectedContracts": [
+      "chat.baseline@3",
+      "chat.streaming-integrity@2"
+    ],
+    "nativeTools": "not selected; applicable only after a separate native-tool-capable configuration is reviewed",
+    "cases": [
+      {
+        "caseId": "sha256:63a2827688ad9a3d535cc0803eaf77ec3fedf1e6bc5a635cd17fcb3613afd294",
+        "trialId": "sha256:0c0a60bf217368ecb37e130175b2cd5715b5aec3e0b598cc04b57649ce96a819",
+        "trialSlot": 1,
+        "maxSemanticInvocations": 1,
+        "maxNeutralHttpCalls": 1,
+        "maxPhysicalHttpAttempts": 1
+      }
+    ],
+    "expectedMaximumDispatches": 1,
+    "streamingObservation": "chat.streaming-integrity@2 observes the chat.baseline@3 execution; it does not add a request."
+  },
+  "budget": {
+    "maximumModelCalls": 1,
+    "maximumHttpRequests": 1,
+    "maximumInputTokens": 256,
+    "maximumOutputTokens": 512,
+    "maximumReasoningTokens": 0,
+    "maximumTotalTokens": 768,
+    "maximumCost": "0.0004",
+    "currency": "USD",
+    "pricingSourceRef": "openrouter-pricing-review-1",
+    "allowanceRef": "operator-stage4b-smoke-allowance-1",
+    "maximumEstimatedLiability": "0.0004 USD",
+    "operatorActionRequired": "Confirm the current provider price, account allowance and currency before issuing the authorization."
+  },
+  "credentialRef": "OPENROUTER_API_KEY",
+  "artifactDestination": "artifacts/qualification/stage4b-openrouter-llama31-8b-smoke",
+  "retainedRestrictions": [
+    "One smoke invocation only; a pass does not qualify the model beyond the selected contracts.",
+    "No native tool calling, JSON Schema, reasoning-mode or multi-turn contracts in this cohort.",
+    "Mutable model alias and unknown revision remain explicit.",
+    "HTTP/2, HTTP/3, proxy, redirect, configured authentication and custom-handler paths remain unsupported.",
+    "Provider billing semantics and complete token accounting remain separate dependencies.",
+    "No automatic retry or expansion to another model/endpoint is authorized."
+  ],
+  "authorizationTemplate": {
+    "kind": "qualification-live-authorization",
+    "schemaVersion": "1.0",
+    "authorizationRef": "REPLACE-WITH-OPERATOR-AUTHORIZATION-REF",
+    "operatorRef": "REPLACE-WITH-OPERATOR-REF",
+    "issuedUtc": "REPLACE-WITH-ISSUED-UTC",
+    "expiresUtc": "REPLACE-WITH-EXPIRY-UTC",
+    "planHash": "sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f",
+    "contractRegistryHash": "sha256:ce2503aca92774ea74878290ee2a9b95d985ba24e8eae66876db5654f1d90db8",
+    "inventoryHash": "sha256:6018f06c531e50560d176d2026297f783b7c61515c5b33ba2844c30cecf8b66a",
+    "policyHash": "sha256:84f052813bca45acd01a6fe1af8456ca3ccc50348813d6e834ad8d8859fc44e9",
+    "transportProfileId": "baize-sockets-http11-exact-v1",
+    "transportProfileIdentity": "sha256:88486795d1c6630425c34e0e3cf4c60fafda5af185928b8e759257f904930adb",
+    "provider": "OpenAi",
+    "endpointId": "openrouter-stage4b-endpoint",
+    "endpointBaseUrl": "https://openrouter.ai/api/v1",
+    "endpointOrigin": "https://openrouter.ai",
+    "providerModel": "meta-llama/llama-3.1-8b-instruct",
+    "protocol": "openai-chat-completions",
+    "apiVersion": "v1",
+    "credentialRef": "OPENROUTER_API_KEY",
+    "artifactDestination": "artifacts/qualification/stage4b-openrouter-llama31-8b-smoke",
+    "settings": {
+      "Dialect": "Standard"
+    },
+    "cases": [
+      {
+        "caseId": "sha256:63a2827688ad9a3d535cc0803eaf77ec3fedf1e6bc5a635cd17fcb3613afd294",
+        "trialId": "sha256:0c0a60bf217368ecb37e130175b2cd5715b5aec3e0b598cc04b57649ce96a819",
+        "trialSlot": 1,
+        "modelId": "openrouter-llama31-8b-smoke",
+        "scenarioId": "chat.baseline@3",
+        "observedContractIds": [
+          "chat.baseline@3",
+          "chat.streaming-integrity@2"
+        ],
+        "maximumSemanticInvocations": 1,
+        "maximumPhysicalAttempts": 1
+      }
+    ],
+    "budget": {
+      "modelCalls": 1,
+      "httpRequests": 1,
+      "inputTokens": 256,
+      "outputTokens": 512,
+      "reasoningTokens": 0,
+      "totalTokens": 768,
+      "maximumCost": "0.0004",
+      "currency": "USD"
+    }
+  }
+}
