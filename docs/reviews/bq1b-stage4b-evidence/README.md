@@ -91,9 +91,12 @@ dotnet $cli validate-live --plan artifacts\qualification\stage4b-preparation\pla
 
 `validate-live` exited 0 with `kind=live-authorization-validated`,
 `executionAuthorized=false`, `qualificationPerformed=false`, and created no run
-directory. The authorization used in this offline validation is a test-only
-artifact in the ignored `artifacts/` directory; it is not the proposed operator
-authorization.
+directory. The test-only authorization used for this offline validation was
+generated for this one command and removed immediately afterwards so no usable
+authorization remains in the worktree; only its canonical hash
+(`sha256:1f50cb40...`) and the validation output are retained. It is not the
+proposed operator authorization. The command above is therefore historical
+reproduction evidence, not a runnable authorization recipe.
 
 | Binding | Value |
 | --- | --- |
@@ -118,8 +121,8 @@ authorization.
 The committed
 [`model-qualification-bq1b-stage4b-proposed-live-manifest.json`](../../model-qualification-bq1b-stage4b-proposed-live-manifest.json)
 is a `qualification-live-run-proposal`, not an authorization. Its SHA-256 is
-`f6d4fbc1049c34e823d4e246b63c4ef22bd6b05419ee4f47f9f6b9a2b79a3c1d` at the
-implementation commit. It contains the exact plan hashes, case/trial ids,
+`f6d4fbc1049c34e823d4e246b63c4ef22bd6b05419ee4f47f9f6b9a2b79a3c1d` in this
+worktree. It contains the exact plan hashes, case/trial ids,
 transport identity, endpoint/model/settings, budget, maximum liability, retained
 restrictions and an authorization template with pending operator fields.
 
@@ -129,11 +132,15 @@ restrictions and an authorization template with pending operator fields.
 | --- | --- |
 | `plan-candidate/plan.json` | `d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f` |
 | `plan-candidate/identity.json` | `6cf3e5c0c244d4858b9bb129c5737e78cf9e581d534739681bc4f90ad326a98f` |
-| `test-authorization.json` | `3d6fb1e097c0948caad2ad82a933643e0fde86949e17b01a150cdf25e3fca85c` |
 | `validate-live-output.json` | `03460d9cdc16b30867c962261dd71956cbe3124c57e4edc53519e9b93c4246c1` |
+| `proposal-check-validation.json` | `50528f696b158cb4d25fabb9e3acec1401aef1eb3419e8d875742c5b87209482` |
 
-The test authorization and validation output are ignored artifacts, not
-operator authorization.
+The test authorization was deleted after validation; the validation output is
+an ignored artifact, not an operator authorization. In a second offline check,
+the committed proposal's nested authorization template was extracted, given
+test references and timestamps, and accepted by `validate-live` with
+authorization hash `sha256:234c648dc100ff5cf46a7b6eab4f1be77f8d0963163f4ff4e7d945f01ceafdb8`;
+that temporary authorization was also deleted.
 
 ## Deterministic suite
 

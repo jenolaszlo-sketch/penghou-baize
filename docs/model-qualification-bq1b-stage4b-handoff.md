@@ -121,7 +121,8 @@ until the operator replaces the placeholders and confirms the external facts.
 - `validate-live` accepted the exact candidate with authorization hash
   `sha256:1f50cb40fae38a5b5321ea5181f91cff1ab97404b625925c4363cfd802680dc6`,
   plan hash `sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f`,
-  and did not create the run directory.
+  and did not create the run directory. The test-only authorization was deleted
+  after validation; no usable authorization remains in the worktree.
 - Authorization denial tests cover missing, mismatched plan/endpoint/profile/
   selection/budget/output/expiry, synthetic and loopback profiles, and live
   resume without authorization.
