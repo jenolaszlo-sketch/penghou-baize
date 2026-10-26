@@ -1,0 +1,112 @@
+{
+  "kind": "qualification-preflight-evidence",
+  "schemaVersion": "1.0",
+  "observedUtc": "2026-10-26T03:37:12Z",
+  "acceptedBaseline": {
+    "branch": "implementation/baize-bq1b-stage4b",
+    "commit": "acc539738512f6c79900e0eecf36c8ca63fb5095",
+    "tree": "788bd4a1734deef0b853fb6254bea1aba0ae422a",
+    "parent": "edbe6bb708e18a05cda7163b8fcd6d31f03d56de",
+    "worktree": "C:/Users/Laszlos/source/repos/Penghou.Baize.stage4b",
+    "worktreeClean": true,
+    "ancestry": ["f9ffa02adec676af73a0220761e64f84fdc94826", "214a363a7e3ffe60325016ebd986427979687840", "edbe6bb708e18a05cda7163b8fcd6d31f03d56de", "acc539738512f6c79900e0eecf36c8ca63fb5095"],
+    "productionSourceDiff": "empty",
+    "changedFileClasses": ["documentation", "eng/Penghou.Baize.Qualification", "tests/Penghou.Baize.Qualification.Tests", "eng/qualification/stage4b"]
+  },
+  "liveBranch": {
+    "branch": "implementation/baize-bq1b-stage4b-live",
+    "worktree": "C:/Users/Laszlos/source/repos/Penghou.Baize.stage4b-live",
+    "baseCommit": "acc539738512f6c79900e0eecf36c8ca63fb5095",
+    "finalCommit": "see branch HEAD"
+  },
+  "ownerDecision": "STAGE 4B PREPARATION ACCEPTED WITH QUALIFICATIONS",
+  "gates": {
+    "A": "PASS",
+    "B": "BLOCKED",
+    "C": "PASS",
+    "D": "BLOCKED",
+    "E": "PASS"
+  },
+  "gateNotes": {
+    "A": "Accepted worktree clean; manifest matches the approved candidate; production source diff empty. The exact proposed plan is bound to the accepted implementation build 214a363; a fresh rebuild at the docs-only commit acc5397 changes the informational source revision and therefore the plan hash, so the live run must use the accepted 214a363 build and plan.",
+    "B": "Pricing and model availability pass. Account allowance is not confirmed because the provider credential is unavailable. Conservative maximum inference charge 0.000203264 USD is below the 0.0004 USD ceiling.",
+    "C": "Offline interlock tests pass; validate-live accepted the exact proposal with the accepted 214a363 build/plan and created no run directory.",
+    "D": "OPENROUTER_API_KEY is absent from the approved process environment. No credential value was read or printed.",
+    "E": "Stage 4A profile identity and restrictions are unchanged; stale keep-alive probe passes; physical-attempt bound remains 1."
+  },
+  "blockingReasons": [
+    "account-allowance-unconfirmed",
+    "openrouter-api-key-absent"
+  ],
+  "pricing": {
+    "modelAvailable": true,
+    "provider": "OpenRouter",
+    "providerModel": "meta-llama/llama-3.1-8b-instruct",
+    "maximumInputPerToken": "0.00000022",
+    "maximumOutputPerToken": "0.000000287",
+    "maximumCacheReadPerToken": "0.00000022",
+    "inputTokens": 256,
+    "outputTokens": 512,
+    "reasoningTokens": 0,
+    "calculatedInputCharge": "0.00005632",
+    "calculatedOutputCharge": "0.000146944",
+    "calculatedMaximumInferenceCharge": "0.000203264",
+    "authorizedLiabilityCeiling": "0.0004",
+    "headroom": "0.000196736",
+    "perRequestOrMinimumCharge": "none observed",
+    "reasoningCharge": "none observed",
+    "allowanceConfirmed": false,
+    "pricingPass": true
+  },
+  "manifest": {
+    "proposalPath": "docs/model-qualification-bq1b-stage4b-proposed-live-manifest.json",
+    "proposalSha256": "f6d4fbc1049c34e823d4e246b63c4ef22bd6b05419ee4f47f9f6b9a2b79a3c1d",
+    "planHash": "sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f",
+    "transportProfileId": "baize-sockets-http11-exact-v1",
+    "transportProfileIdentity": "sha256:88486795d1c6630425c34e0e3cf4c60fafda5af185928b8e759257f904930adb",
+    "physicalAttemptUpperBound": 1,
+    "cases": [
+      "sha256:63a2827688ad9a3d535cc0803eaf77ec3fedf1e6bc5a635cd17fcb3613afd294"
+    ],
+    "trialIds": [
+      "sha256:0c0a60bf217368ecb37e130175b2cd5715b5aec3e0b598cc04b57649ce96a819"
+    ],
+    "contracts": ["chat.baseline@3", "chat.streaming-integrity@2"]
+  },
+  "validation": {
+    "command": "validate-live --plan <accepted plan> --authorization <test-only> --out <preflight run-not-created>",
+    "exitCode": 0,
+    "kind": "live-authorization-validated",
+    "executionAuthorized": false,
+    "qualificationPerformed": false,
+    "createdRunDirectory": false,
+    "outputPath": "docs/reviews/bq1b-stage4b-live-preflight/validate-live-output.json",
+    "outputSha256": "df1cfb19171ca90e9ec68a9061cfbbe92fbb83d817360425869a6c22f269ee2e",
+    "testAuthorizationRetained": false
+  },
+  "authorization": {
+    "issued": false,
+    "consumed": false,
+    "reason": "pre-execution gates blocked and explicit operator approval of the exact final manifest is pending"
+  },
+  "liveExecution": {
+    "performed": false,
+    "physicalAttempts": 0,
+    "providerRequests": 0,
+    "terminalResult": "not-run"
+  },
+  "financial": {
+    "reservedLiability": "0",
+    "reportedProviderUsage": "none",
+    "calculatedObservedCharge": "0",
+    "maximumAuthorizedLiability": "0.0004",
+    "budgetState": "not-started",
+    "note": "The zero observed charge is the absence of a run, not evidence that a future run is free."
+  },
+  "workloads": {
+    "chat.baseline@3": "not-run-live",
+    "chat.streaming-integrity@2": "not-run-live"
+  },
+  "disposition": "BLOCKED BEFORE LIVE EXECUTION",
+  "nextAction": "Make OPENROUTER_API_KEY available through the approved environment mechanism, confirm account allowance, then explicitly approve the exact manifest. Do not dispatch until a new authorization is issued."
+}

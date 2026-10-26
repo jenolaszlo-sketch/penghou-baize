@@ -1,0 +1,90 @@
+{
+  "kind": "qualification-pricing-observation",
+  "schemaVersion": "1.0",
+  "provider": "OpenRouter",
+  "providerModel": "meta-llama/llama-3.1-8b-instruct",
+  "observedUtc": "2026-10-26T03:37:12.5874965Z",
+  "sources": [
+    {
+      "url": "https://openrouter.ai/api/v1/models",
+      "role": "model presence and default pricing"
+    },
+    {
+      "url": "https://openrouter.ai/api/v1/models/meta-llama/llama-3.1-8b-instruct/endpoints",
+      "role": "provider endpoint pricing and request limits"
+    },
+    {
+      "url": "https://openrouter.ai/docs/faq",
+      "role": "OpenRouter states no inference markup; credit-purchase fee is separate"
+    }
+  ],
+  "modelAvailable": true,
+  "endpointCount": 5,
+  "endpoints": [
+    {
+      "provider": "DeepInfra",
+      "promptPerToken": "0.00000002",
+      "completionPerToken": "0.00000004",
+      "cacheReadPerToken": null,
+      "perRequestLimits": null,
+      "status": 0,
+      "maxCompletionTokens": 16384,
+      "contextLength": 131072
+    },
+    {
+      "provider": "Novita",
+      "promptPerToken": "0.00000002",
+      "completionPerToken": "0.00000005",
+      "cacheReadPerToken": null,
+      "perRequestLimits": null,
+      "status": 0,
+      "maxCompletionTokens": 14745,
+      "contextLength": 16384
+    },
+    {
+      "provider": "Groq",
+      "promptPerToken": "0.00000005",
+      "completionPerToken": "0.00000008",
+      "cacheReadPerToken": "0.000000025",
+      "perRequestLimits": null,
+      "status": 0,
+      "maxCompletionTokens": 117964,
+      "contextLength": 131072
+    },
+    {
+      "provider": "Cloudflare",
+      "promptPerToken": "0.000000152",
+      "completionPerToken": "0.000000287",
+      "cacheReadPerToken": null,
+      "perRequestLimits": null,
+      "status": 0,
+      "maxCompletionTokens": 28800,
+      "contextLength": 32000
+    },
+    {
+      "provider": "CoreWeave",
+      "promptPerToken": "0.00000022",
+      "completionPerToken": "0.00000022",
+      "cacheReadPerToken": "0.00000022",
+      "perRequestLimits": null,
+      "status": 0,
+      "maxCompletionTokens": 117964,
+      "contextLength": 131072
+    }
+  ],
+  "maximumInputPerToken": "0.00000022",
+  "maximumOutputPerToken": "0.000000287",
+  "maximumCacheReadPerToken": "0.00000022",
+  "inputTokens": 256,
+  "outputTokens": 512,
+  "reasoningTokens": 0,
+  "calculatedInputCharge": "0.00005632",
+  "calculatedOutputCharge": "0.000146944",
+  "calculatedMaximumInferenceCharge": "0.000203264",
+  "authorizedLiabilityCeiling": "0.0004",
+  "headroom": "0.000196736",
+  "perRequestOrMinimumCharge": "none observed in public endpoint metadata",
+  "reasoningCharge": "none observed; this model is not a reasoning model and the approved reasoning budget is 0",
+  "accountAllowance": "not confirmed; credential unavailable",
+  "conclusion": "pricing passes the 0.0004 USD ceiling; account allowance remains unconfirmed"
+}

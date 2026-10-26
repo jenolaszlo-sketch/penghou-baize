@@ -1,9 +1,10 @@
 # BQ-1b controlled execution: staged implementation plan
 
-Date: 2026-10-26 (revised at Stage 4B preparation). Status: **STAGES 0–4A
-COMPLETE. STAGE 4B PREPARATION COMPLETE — ONE CANDIDATE LIVE SMOKE IS READY FOR
-AUTHORIZATION. NO LIVE PROVIDER REQUEST EXECUTED. STAGE 4B LIVE EXECUTION IS
-NOT AUTHORIZED.** Repository: `jenolaszlo-sketch/penghou-baize`.
+Date: 2026-10-26 (revised at Stage 4B owner acceptance). Status: **STAGES 0–4A
+COMPLETE. STAGE 4B PREPARATION ACCEPTED WITH QUALIFICATIONS. PREFLIGHT IS
+BLOCKED BEFORE LIVE EXECUTION: THE PROVIDER CREDENTIAL IS ABSENT AND ACCOUNT
+ALLOWANCE IS UNCONFIRMED. NO LIVE PROVIDER REQUEST EXECUTED. STAGE 4B LIVE
+EXECUTION IS NOT AUTHORIZED.** Repository: `jenolaszlo-sketch/penghou-baize`.
 
 This refines the existing [architecture and roadmap](model-qualification-plan.md),
 [twelve decisions](model-qualification-decisions.md),
@@ -280,6 +281,7 @@ after authorization, each stage produces a bounded diff and offline evidence.
 | 3 — Real-transport readiness (complete with restrictions) | Admission guard at the last application boundary beneath the real Baize neutral transport; attempt lease bridging the legacy adapter path; lease-aware credential resolution; per-dispatch HTTP accounting and denial at cap; request/response byte ceilings; concurrency one held through body disposal; total and idle deadlines; fail-closed live-eligibility assessment and `--allow-live` gate; cost reservations; compatibility attribution (failure stage + suggested class, F1 fixture-bound); loopback integration over the real sockets stack. | Deterministic suite proves the guarded composition, blocked configurations with zero secret reads, dispatch-cap denial, concurrency one, hidden-retry counting/denial, size violations, idle deadlines, lease-gated admission, identity-consistent evidence, recovery without fabricated success, provider-vs-contract distinction, F1 reproduction, and privacy. Real profiles remain live-blocked on `wire-attempt-bound-unproven` (S0-G1); disposition READY WITH RESTRICTIONS. |
 | 4A — Physical transport qualification (complete with restrictions) | Runtime/source audit of the actual `SocketsHttpHandler` path; one exact HTTP/1.1 pinned profile; guard protocol pin and request-shape restrictions; physical-attempt bound enforcement per attempt; budget reservation scaled by the bound; deterministic loopback fault matrix; eligibility and evidence binding to the profile identity. | One admitted OpenAI-compatible inference request cannot produce more than one physical HTTP request attempt under `baize-sockets-http11-exact-v1`. HTTP/2/3, proxy, redirect, configured authentication, cookie, decompression and custom-middleware paths remain blocked. Loopback only; no live request. Disposition QUALIFIED WITH RESTRICTIONS. |
 | 4B-P - Live-run preparation (complete; authorization pending) | Gate A focused transport re-check; fail-closed external-network interlock (`run` synthetic-only, `run-live` plus exact authorization, offline `validate-live`, authorization-bound resume); one reviewed OpenRouter/Llama candidate; proposed manifest and maximum liability; deterministic denial tests. | `--allow-live` alone cannot reach a real provider. Exact plan/profile/endpoint/selection/budget/output authorization mismatches fail before a run directory or credential read. `validate-live` accepts the candidate offline and creates no artifacts. No live request. See the [Stage 4B evidence](reviews/bq1b-stage4b-evidence/README.md) and [proposed manifest](model-qualification-bq1b-stage4b-proposed-live-manifest.json). |
+| 4B-L - Live preflight (blocked before execution) | Owner acceptance of Stage 4B preparation; independent Git/manifest/pricing/interlock/credential/transport gates; exact proposal validation with the accepted implementation build; no authorization issued. | Gate A/C/E pass; Gate B pricing passes but allowance is unconfirmed; Gate D blocks because the provider credential is absent. No live request, no reservation, no provider result. Disposition BLOCKED BEFORE LIVE EXECUTION. |
 | 4B - Controlled real qualification | Explicitly authorized live runs of an eligible plan through the guarded composition; predeclared dated allowances; per-quirk findings and adapter defects recorded. Depends on Stage 4A, an operator authorization decision, a reviewed provider/model/endpoint, and provider billing semantics. | Actionable compatibility findings with exact configuration, contract, attempt and evidence identity; F1-style adapter defects stay separately attributed; provider failures never become model capability failures. No automatic promotion or scheduling. |
 | 5 — BQ-1b qualification milestone handoff | Exact source/plan/store/test bindings, dispatch audit, residual risks, fake bundle, real-bundle (if authorized), ordinary deterministic/API/dependency checks. | Repeatable offline fault suite and safe partial reports pass. Review the boundary audit independently before any broader live use. No package publication, model catalogue approval, production routing mutation, scheduler or unattended promotion is implied. |
 
@@ -320,6 +322,24 @@ which is a proposal, not an authorization. A live run still requires a separate
 `qualification-live-authorization` artifact with exact plan, profile, endpoint,
 case/trial, budget, output and expiry binding; `--allow-live` on `run` is
 synthetic-only. No provider request was made during preparation.
+
+### Stage 4B owner-acceptance and live-preflight status
+
+The owner accepted Stage 4B preparation with qualifications on 2026-10-26. The
+exact accepted baseline is `acc5397`; the accepted implementation build is
+`214a363`. Gate A, C and E pass. Gate B passes on current public pricing
+(conservative maximum **0.000203264 USD** against the 0.0004 USD ceiling) but
+blocks on unconfirmed account allowance. Gate D blocks because
+`OPENROUTER_API_KEY` is absent from the approved process environment. No
+authorization was issued or consumed, no provider request was dispatched and no
+budget was reserved. See the
+[preflight gate report](model-qualification-bq1b-stage4b-preflight-gate-report.md)
+and [preflight evidence](reviews/bq1b-stage4b-live-preflight/README.md).
+
+The exact proposed plan is bound to the accepted implementation build
+`214a363`; a rebuild at the docs-only commit changes the informational source
+revision and therefore the plan hash. The live run, if later authorized, must
+use the accepted `214a363` build and accepted plan.
 
 ### Fault injection matrix
 
