@@ -60,7 +60,8 @@
   },
   "manifest": {
     "proposalPath": "docs/model-qualification-bq1b-stage4b-proposed-live-manifest.json",
-    "proposalSha256": "f6d4fbc1049c34e823d4e246b63c4ef22bd6b05419ee4f47f9f6b9a2b79a3c1d",
+    "proposalCanonicalSha256": "sha256:8cdbef06a86722625e1581e510bb630f3e3f397b870a67a44436dee7ddfc7253",
+    "proposalFileHashNote": "The proposal file byte SHA varies with Git checkout line endings. The canonical sorted-key UTF-8 JSON digest above is stable; the authoritative execution binding is the plan hash.",
     "planHash": "sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f",
     "transportProfileId": "baize-sockets-http11-exact-v1",
     "transportProfileIdentity": "sha256:88486795d1c6630425c34e0e3cf4c60fafda5af185928b8e759257f904930adb",

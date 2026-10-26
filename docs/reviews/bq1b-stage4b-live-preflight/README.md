@@ -87,9 +87,11 @@ authorization was deleted immediately. The output is retained at
 [validate-live-output.json](validate-live-output.json).
 
 The accepted proposal is
-`docs/model-qualification-bq1b-stage4b-proposed-live-manifest.json` with SHA-256
-`f6d4fbc1049c34e823d4e246b63c4ef22bd6b05419ee4f47f9f6b9a2b79a3c1d`.
-The accepted plan hash is
+`docs/model-qualification-bq1b-stage4b-proposed-live-manifest.json`. Its
+canonical sorted-key UTF-8 JSON digest is
+`sha256:8cdbef06a86722625e1581e510bb630f3e3f397b870a67a44436dee7ddfc7253`;
+the raw file-byte SHA varies with Git checkout line endings and is not used as
+the execution binding. The authoritative plan hash is
 `sha256:d0b52fec3c97e26f80a93579c1717c3bbdec97c71bad2ebdbc567da27741f44f`.
 
 ## Transport and workload status
@@ -120,7 +122,7 @@ The accepted plan hash is
 | `docs/model-qualification-bq1b-stage4b-owner-acceptance.md` | `2f2e47e93f4173b815977cd60b8c9756bd5f0872c1d82319006652fa7e94400e` |
 | `docs/model-qualification-bq1b-stage4b-preflight-gate-report.md` | `ec27c09752447dfcd490f3d71c438075eed500b90c84418e17cb7bb489979782` |
 | `pricing-observation.json` | `f68f59391202d06f32f998bf51db94a33aa6a1c0b88b348671ce2437b896328c` |
-| `preflight-evidence.json` | `70d1dfbaf28c7ff7b088d44ee8de1995ea2a6c3b44fc4883b09f6a9354ce381b` |
+| `preflight-evidence.json` | `c553226f8325eecf46b99f79576bca7bf034247392c305c2334c5bfb6d511795` |
 | `validate-live-output.json` | `df1cfb19171ca90e9ec68a9061cfbbe92fbb83d817360425869a6c22f269ee2e` |
 | `docs/model-qualification-bq1b-stage4b-live-preflight-review-handoff.md` | `357e89252e63e37be3f6340c94867482c14fd608d9e1884c1bb4a37b7643c25a` |
 
