@@ -1,0 +1,67 @@
+  Penghou.Baize -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize\bin\Release\net10.0\Penghou.Baize.dll
+  Penghou.Baize.Tools -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Tools\bin\Release\net10.0\Penghou.Baize.Tools.dll
+  Penghou.Baize.Qualification.Contracts -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Qualification.Contracts\bin\Release\net10.0\Penghou.Baize.Qualification.Contracts.dll
+  Penghou.Baize.Router -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Router\bin\Release\net10.0\Penghou.Baize.Router.dll
+  Penghou.Baize.OpenAi -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.OpenAi\bin\Release\net10.0\Penghou.Baize.OpenAi.dll
+  Penghou.Baize.Claude -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Claude\bin\Release\net10.0\Penghou.Baize.Claude.dll
+  Penghou.Baize.Gemini -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Gemini\bin\Release\net10.0\Penghou.Baize.Gemini.dll
+  Penghou.Baize.Ollama -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Ollama\bin\Release\net10.0\Penghou.Baize.Ollama.dll
+  Penghou.Baize.Qualification -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\eng\Penghou.Baize.Qualification\bin\Release\net10.0\Penghou.Baize.Qualification.dll
+  Penghou.Baize -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize\bin\Release\net8.0\Penghou.Baize.dll
+  Penghou.Baize.BestOfN -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\samples\Penghou.Baize.BestOfN\bin\Release\net8.0\Penghou.Baize.BestOfN.dll
+  Penghou.Baize.Ollama -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Ollama\bin\Release\net8.0\Penghou.Baize.Ollama.dll
+  Penghou.Baize.Router -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Router\bin\Release\net8.0\Penghou.Baize.Router.dll
+  Penghou.Baize.QuickStart -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\samples\Penghou.Baize.QuickStart\bin\Release\net8.0\Penghou.Baize.QuickStart.dll
+  Penghou.Baize.Batch -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Batch\bin\Release\net8.0\Penghou.Baize.Batch.dll
+  Penghou.Baize.Batch -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Batch\bin\Release\net10.0\Penghou.Baize.Batch.dll
+  Penghou.Baize.Claude -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Claude\bin\Release\net8.0\Penghou.Baize.Claude.dll
+  Penghou.Baize.Diagnostics -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Diagnostics\bin\Release\net8.0\Penghou.Baize.Diagnostics.dll
+  Penghou.Baize.Diagnostics -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Diagnostics\bin\Release\net10.0\Penghou.Baize.Diagnostics.dll
+  Penghou.Baize.Extensions.AI -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Extensions.AI\bin\Release\net8.0\Penghou.Baize.Extensions.AI.dll
+  Penghou.Baize.Extensions.AI -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Extensions.AI\bin\Release\net10.0\Penghou.Baize.Extensions.AI.dll
+  Penghou.Baize.Fal -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Fal\bin\Release\net8.0\Penghou.Baize.Fal.dll
+  Penghou.Baize.Fal -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Fal\bin\Release\net10.0\Penghou.Baize.Fal.dll
+  Penghou.Baize.Gemini -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Gemini\bin\Release\net8.0\Penghou.Baize.Gemini.dll
+  Penghou.Baize.OpenAi -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.OpenAi\bin\Release\net8.0\Penghou.Baize.OpenAi.dll
+  Penghou.Baize.Runway -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Runway\bin\Release\net8.0\Penghou.Baize.Runway.dll
+  Penghou.Baize.Runway -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Runway\bin\Release\net10.0\Penghou.Baize.Runway.dll
+  Penghou.Baize.Tools -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Tools\bin\Release\net8.0\Penghou.Baize.Tools.dll
+  Penghou.Baize.Tools -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\src\Penghou.Baize.Tools\bin\Release\net9.0\Penghou.Baize.Tools.dll
+  Penghou.Baize.Batch.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Batch.Tests\bin\Release\net8.0\Penghou.Baize.Batch.Tests.dll
+  Penghou.Baize.Batch.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Batch.Tests\bin\Release\net10.0\Penghou.Baize.Batch.Tests.dll
+  Penghou.Baize.Benchmarks -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Benchmarks\bin\Release\net10.0\Penghou.Baize.Benchmarks.dll
+  Penghou.Baize.Client.Claude.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Claude.Tests\bin\Release\net8.0\Penghou.Baize.Client.Claude.Tests.dll
+  Penghou.Baize.Client.Claude.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Claude.Tests\bin\Release\net10.0\Penghou.Baize.Client.Claude.Tests.dll
+  Penghou.Baize.Generation.TestShared -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Generation.TestShared\bin\Debug\net8.0\Penghou.Baize.Generation.TestShared.dll
+  Penghou.Baize.Client.Fal.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Fal.Tests\bin\Release\net8.0\Penghou.Baize.Client.Fal.Tests.dll
+  Penghou.Baize.Generation.TestShared -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Generation.TestShared\bin\Debug\net10.0\Penghou.Baize.Generation.TestShared.dll
+  Penghou.Baize.Client.Fal.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Fal.Tests\bin\Release\net10.0\Penghou.Baize.Client.Fal.Tests.dll
+  Penghou.Baize.Client.Gemini.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Gemini.Tests\bin\Release\net8.0\Penghou.Baize.Client.Gemini.Tests.dll
+  Penghou.Baize.Client.Gemini.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Gemini.Tests\bin\Release\net10.0\Penghou.Baize.Client.Gemini.Tests.dll
+  Penghou.Baize.Client.Ollama.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Ollama.Tests\bin\Release\net8.0\Penghou.Baize.Client.Ollama.Tests.dll
+  Penghou.Baize.Client.Ollama.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Ollama.Tests\bin\Release\net10.0\Penghou.Baize.Client.Ollama.Tests.dll
+  Penghou.Baize.Client.OpenAi.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.OpenAi.Tests\bin\Release\net8.0\Penghou.Baize.Client.OpenAi.Tests.dll
+  Penghou.Baize.Client.OpenAi.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.OpenAi.Tests\bin\Release\net10.0\Penghou.Baize.Client.OpenAi.Tests.dll
+  Penghou.Baize.Client.Runway.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Runway.Tests\bin\Release\net8.0\Penghou.Baize.Client.Runway.Tests.dll
+  Penghou.Baize.Client.Runway.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Client.Runway.Tests\bin\Release\net10.0\Penghou.Baize.Client.Runway.Tests.dll
+  Penghou.Baize.Diagnostics.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Diagnostics.Tests\bin\Release\net8.0\Penghou.Baize.Diagnostics.Tests.dll
+  Penghou.Baize.Diagnostics.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Diagnostics.Tests\bin\Release\net10.0\Penghou.Baize.Diagnostics.Tests.dll
+  Penghou.Baize.Extensions.AI.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Extensions.AI.Tests\bin\Release\net8.0\Penghou.Baize.Extensions.AI.Tests.dll
+  Penghou.Baize.Extensions.AI.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Extensions.AI.Tests\bin\Release\net10.0\Penghou.Baize.Extensions.AI.Tests.dll
+  Penghou.Baize.Qualification.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Qualification.Tests\bin\Release\net10.0\Penghou.Baize.Qualification.Tests.dll
+  Penghou.Baize.Qualification.AuthorizationRegistryProbe -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Qualification.AuthorizationRegistryProbe\bin\Release\net10.0\Penghou.Baize.Qualification.AuthorizationRegistryProbe.dll
+  Penghou.Baize.TestProvider -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.TestProvider\bin\Release\net8.0\Penghou.Baize.TestProvider.dll
+  Penghou.Baize.Router.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Router.Tests\bin\Release\net8.0\Penghou.Baize.Router.Tests.dll
+  Penghou.Baize.TestProvider -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.TestProvider\bin\Release\net10.0\Penghou.Baize.TestProvider.dll
+  Penghou.Baize.Router.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Router.Tests\bin\Release\net10.0\Penghou.Baize.Router.Tests.dll
+  Penghou.Baize.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Tests\bin\Release\net8.0\Penghou.Baize.Tests.dll
+  Penghou.Baize.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Tests\bin\Release\net10.0\Penghou.Baize.Tests.dll
+  Penghou.Baize.Tools.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Tools.Tests\bin\Release\net8.0\Penghou.Baize.Tools.Tests.dll
+  Penghou.Baize.Tools.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Tools.Tests\bin\Release\net9.0\Penghou.Baize.Tools.Tests.dll
+  Penghou.Baize.Tools.Tests -> C:\Users\Laszlos\source\repos\Solo\baize-bq1b-stage4b-r1\tests\Penghou.Baize.Tools.Tests\bin\Release\net10.0\Penghou.Baize.Tools.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:11.20

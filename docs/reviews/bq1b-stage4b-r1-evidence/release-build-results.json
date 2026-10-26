@@ -1,0 +1,13 @@
+{
+  "kind": "bq1b-stage4b-r1-release-build-results",
+  "schemaVersion": "1.0",
+  "solution": "Penghou.Baize.slnx",
+  "command": "dotnet build Penghou.Baize.slnx -c Release --no-restore -v minimal -m:1 -p:UseSharedCompilation=false --disable-build-servers",
+  "configuration": "Release",
+  "result": "passed",
+  "warnings": 0,
+  "errors": 0,
+  "duration": "00:00:11.20",
+  "log": "release-build.log",
+  "providerRequests": 0
+}

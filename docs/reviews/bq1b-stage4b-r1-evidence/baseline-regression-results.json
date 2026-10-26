@@ -1,0 +1,11 @@
+{
+  "kind": "bq1b-stage4b-r1-baseline-regression-results",
+  "schemaVersion": "1.0",
+  "revision": "6e99d976a4e521c62b049983281606d04a03a96e",
+  "releaseBuild": { "result": "passed", "warnings": 0, "errors": 0 },
+  "stage4bTests": { "passed": 16, "failed": 0, "skipped": 0 },
+  "qualificationSuite": { "passed": 310, "failed": 0, "skipped": 0 },
+  "providerRequests": 0,
+  "networkUsed": false,
+  "note": "Baseline counts are historical run results captured before implementation; the original accepted review artifacts remain unchanged."
+}

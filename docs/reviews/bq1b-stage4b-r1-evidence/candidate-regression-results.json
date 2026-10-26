@@ -1,0 +1,24 @@
+{
+  "kind": "bq1b-stage4b-r1-candidate-regression-results",
+  "schemaVersion": "1.0",
+  "sourceRevision": "85c1f63f6c785fefe10e311df67a6370ee7e462e",
+  "releaseBuild": { "passed": true, "warnings": 0, "errors": 0 },
+  "qualificationTests": { "passed": 337, "failed": 0, "skipped": 0, "durationSeconds": 38 },
+  "coverage": [
+    "existing Stage 4A exact HTTP/1.1 loopback transport tests",
+    "Stage 4B offline live interlock and manifest validation",
+    "durable authorization claim and subprocess concurrency",
+    "restart, crash-before-dispatch, ambiguous acknowledgement, and storage failures",
+    "live resume rejection",
+    "build and deployment closure identity",
+    "canonical evidence hashing and UTF-8 no-BOM serialization",
+    "credential readiness and isolation",
+    "pricing, token, request, and financial budget bounds",
+    "combined baseline and streaming workload"
+  ],
+  "skippedTests": [],
+  "providerRequests": 0,
+  "realCredentialRead": false,
+  "networkUsed": false,
+  "qualificationLog": "qualification-tests.log"
+}

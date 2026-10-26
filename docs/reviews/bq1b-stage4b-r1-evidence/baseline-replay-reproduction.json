@@ -1,0 +1,17 @@
+{
+  "kind": "bq1b-stage4b-r1-baseline-replay-reproduction",
+  "schemaVersion": "1.0",
+  "repository": "Penghou.Baize",
+  "baselineRevision": "6e99d976a4e521c62b049983281606d04a03a96e",
+  "reviewRevision": "e4f8e132c10f199a1754ae629ea95ceac19c0255",
+  "test": "Stage4bReplayBaselineReproduction.Baseline_StatelessAuthorizationValidationAllowsTwoOfflineDispatchAdmissions",
+  "result": "passed",
+  "observed": {
+    "sameAuthorizationAcceptedTwice": true,
+    "simulatedOfflineDispatchAdmissions": 2,
+    "providerRequests": 0,
+    "networkUsed": false
+  },
+  "evidenceNote": "The temporary baseline-only reproduction test was run against the unmodified baseline, then removed before implementation. The test result and counts were recorded during that run; no reproduction test was retained in the candidate source tree.",
+  "historicalEvidencePreserved": true
+}

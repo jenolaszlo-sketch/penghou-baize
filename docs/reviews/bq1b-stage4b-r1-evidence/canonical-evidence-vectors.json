@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "canonical-evidence-json@1",
+  "vectors": [
+    {
+      "name": "property-order-and-crlf",
+      "inputs": [
+        "{\"z\":2,\"a\":1}",
+        "{\r\n  \"a\": 1,\r\n  \"z\": 2\r\n}"
+      ],
+      "canonicalUtf8": "{\"a\":1,\"z\":2}",
+      "sha256": "sha256:99168216144c7fed5d4c54916cf98d9c66096280c04a499822a99b6658bd177a"
+    },
+    {
+      "name": "decimal-and-array-values",
+      "inputs": [
+        "{\"amount\":1.000,\"items\":[true,null,\"x\"]}",
+        "{\"items\":[true,null,\"x\"],\"amount\":1}"
+      ],
+      "canonicalUtf8": "{\"amount\":1,\"items\":[true,null,\"x\"]}",
+      "sha256": "sha256:efdaa3642435c5d74947bbd5799b043ad765e983597cfb88f6e4fb2f153d3ac6"
+    }
+  ]
+}

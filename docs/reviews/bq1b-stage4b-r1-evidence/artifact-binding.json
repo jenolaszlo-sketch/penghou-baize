@@ -1,0 +1,19 @@
+{
+  "kind": "bq1b-stage4b-r1-artifact-binding",
+  "schemaVersion": "1.0",
+  "sourceRevision": "0.3.0-preview.7+85c1f63f6c785fefe10e311df67a6370ee7e462e",
+  "buildRevision": "85c1f63f6c785fefe10e311df67a6370ee7e462e",
+  "productVersion": "0.3.0-preview.7+85c1f63f6c785fefe10e311df67a6370ee7e462e",
+  "configuration": "Release",
+  "framework": ".NET 10.0.12",
+  "runtimeIdentifier": "win-x64",
+  "runner": {
+    "relativePath": "Penghou.Baize.Qualification.dll",
+    "sizeBytes": 570368,
+    "sha256": "sha256:8ef546b903bac17091dec5765ea58f6efb7afcdf9fa7d3d081de993374206697"
+  },
+  "closureSchemaVersion": "baize-deployment-closure@1",
+  "closureFileCount": 81,
+  "closureManifestDigest": "sha256:5568df5da41137df42ed7391d0562ec93ef28de519dde1ec821b1efe3527990e",
+  "planHash": "sha256:971ea862f91ccb6166e2b36402173d0dce262aa992ad72c9a204e548d43a6451"
+}

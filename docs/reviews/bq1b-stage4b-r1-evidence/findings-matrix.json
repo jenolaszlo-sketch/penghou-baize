@@ -1,0 +1,14 @@
+{
+  "kind": "bq1b-stage4b-r1-findings-matrix",
+  "schemaVersion": "1.0",
+  "findings": [
+    { "id": "F-01", "disposition": "remediated; independent verification required", "evidence": ["authorization-negative-test-matrix.json", "authorization-consumption-design.md", "Stage4bAuthorizationConsumptionTests"], "residual": "SQLite rollback or cloned authority state is not detected." },
+    { "id": "F-02", "disposition": "remediated; candidate closure attested", "evidence": ["artifact-binding.json", "deployment-closure-manifest.json", "candidate-plan/plan.json", "DeploymentClosureTests"], "residual": "System runtime, kernel, and hashing-to-use race are outside the hashed deployment files." },
+    { "id": "F-03", "disposition": "remediated; client/provider boundary disclosed", "evidence": ["candidate-plan/plan.json", "ExecutionBoundaryReportTests", "main handoff"], "residual": "Provider routing, provider retries, billing, and provider-side execution count remain unknown to Baize." },
+    { "id": "F-04", "disposition": "remediated for evidence digest contract", "evidence": ["canonical-evidence-vectors.json", "CanonicalEvidenceTests"], "residual": "Vectors were executed on the Windows candidate host; Linux and macOS runtime execution remains for independent verification." },
+    { "id": "F-05", "disposition": "remediated for generated validate-live JSON evidence", "evidence": ["CanonicalEvidenceTests.EvidenceJsonFileIsValidUtf8WithoutBomAndDeterministicallyCanonical", "qualification-tests.log"], "residual": "Historical evidence is intentionally unchanged." },
+    { "id": "F-06", "disposition": "remediated with signed ten-minute UTC validity", "evidence": ["authorization-negative-test-matrix.json", "Stage4bAuthorizationConsumptionTests.AuthorizationLifetimeIsUtcAndAtMostTenMinutes", "Stage4bAuthorizationConsumptionTests.AuthorizationLifetimeRejectsExpiredFutureNonUtcAndInvalidBoundaries"], "residual": "Runtime wall-clock correctness depends on the host clock." },
+    { "id": "F-07", "disposition": "remediated with pre-claim and pre-dispatch readiness checks", "evidence": ["credential-isolation.json", "Stage4bAuthorizationConsumptionTests.CredentialReadinessRejectsMissingEmptyAndUnavailableWithoutReturningSecret", "Stage4bInterlockTests.RunLiveMissingCredential_FailsBeforeConsumptionStoreOrDispatch"], "residual": "Readiness is not provider credential validation or allowance verification." },
+    { "id": "F-08", "disposition": "remediated by correcting test name and interpretation", "evidence": ["stale-keepalive-interpretation.md", "Stage4aLoopbackTests.TwoSeparatelyAdmittedInvocations_ReconnectAfterKeepAliveClose"], "residual": "The probe demonstrates reconnect after separately admitted attempts; it does not test replay prevention." }
+  ]
+}
