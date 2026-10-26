@@ -10,6 +10,9 @@ final documentation binding.
 Runtime: Windows 10.0.26200, .NET SDK 10.0.401, Microsoft.NETCore.App 10.0.12.
 `System.Net.Http.dll` SHA-256:
 `b98ed0cb80dd54c33fc049f33af5448710752155bbd5cc8cbcd932e01f066801`.
+Runner tool packages: `Penghou.Zhinu.Sqlite 0.2.0-preview.4`,
+`Penghou.Siming.Sqlite 1.0.0`, `Microsoft.Extensions.Configuration.Json 10.0.9`.
+Production packages are unchanged; the production source diff is empty.
 The plan build source revision is
 `0.3.0-preview.7+40a570212e184e2dca51e3dfa1b4af23ad08c3b3`.
 `MSBuildEnableWorkloadResolver=false`, `BAIZE_RUN_LIVE_TESTS=0`, and a

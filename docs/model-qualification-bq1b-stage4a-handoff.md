@@ -22,6 +22,9 @@ dependency. No live model qualification was performed.
 | Transport audit | [model-qualification-bq1b-stage4a-transport-audit.md](model-qualification-bq1b-stage4a-transport-audit.md) |
 | Evidence bundle | [bq1b-stage4a-evidence](reviews/bq1b-stage4a-evidence/README.md) |
 | Plan fixture | `eng/qualification/stage4a/` |
+| Runtime | .NET SDK 10.0.401; Microsoft.NETCore.App 10.0.12; `System.Net.Http.dll` `b98ed0cb...f066801` |
+| Tool packages | `Penghou.Zhinu.Sqlite 0.2.0-preview.4`, `Penghou.Siming.Sqlite 1.0.0`, `Microsoft.Extensions.Configuration.Json 10.0.9` |
+| Production packages | unchanged; `git diff -- src/` empty and the existing 12-package production closure is not modified |
 
 `git diff -- src/` is empty: zero production source changes. The Stage 1–3
 fixtures, accepted contracts, F1 adapter-defect evidence and historical review
