@@ -125,15 +125,17 @@ internal static class LiveEligibility
                 critical.Add("transport-profile-unreviewed");
                 critical.Add("wire-attempt-bound-unproven");
             }
-            if (recorded.ProtocolVersion != TransportProfiles.Http11Exact.ProtocolVersion
-                || recorded.ProtocolVersionPolicy != TransportProfiles.Http11Exact.ProtocolVersionPolicy)
+            if (recorded.ProfileId == TransportProfiles.Http11ExactId
+                && (recorded.ProtocolVersion != TransportProfiles.Http11Exact.ProtocolVersion
+                    || recorded.ProtocolVersionPolicy != TransportProfiles.Http11Exact.ProtocolVersionPolicy))
             {
                 critical.Add("http-protocol-policy-invalid");
                 critical.Add("wire-attempt-bound-unproven");
             }
+            if (recorded.ProfileId == TransportProfiles.Http11ExactId
+                && bound != TransportProfiles.Http11Exact.PhysicalAttemptUpperBound)
+                critical.Add("physical-attempt-bound-invalid");
         }
-        if (bound != TransportProfiles.Http11Exact.PhysicalAttemptUpperBound)
-            critical.Add("physical-attempt-bound-invalid");
         if (transportProfile == "LoopbackDevelopment")
             critical.Add("loopback-not-live-eligible");
         if (critical.Count == 0)
