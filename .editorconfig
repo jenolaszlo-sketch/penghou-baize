@@ -1,0 +1,5 @@
+root = true
+
+# Match the LF checkout rule for this file on Windows.
+[src/Penghou.Baize.Tools/Schema/JsonSchemaGenerator.cs]
+end_of_line = lf

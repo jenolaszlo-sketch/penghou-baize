@@ -94,7 +94,8 @@ public sealed class Stage4bInterlockTests
         var plan = FrozenRunPlan.Load(planFile);
         var runDirectory = workspace.Out("legacy-live-run");
         var authorization = Stage4bAuthorizations.Create(plan, Stage4bAuthorizations.Select(plan), runDirectory)
-            with { SchemaVersion = "1.0", Signature = string.Empty };
+            with
+        { SchemaVersion = "1.0", Signature = string.Empty };
         var authorizationFile = Stage4bAuthorizations.Write(workspace, authorization);
 
         var result = await Stage3Workspace.ExecuteAsync(new ExecutionFaults(),

@@ -302,12 +302,14 @@ public sealed class Stage4bAuthorizationConsumptionTests
             () => LiveAuthorizations.ValidateValidity(future, now)).Code);
 
         var nonUtc = Sign(CreateAuthorization("non-utc", Stage4bAuthorizations.TestAuthorityId,
-            now, now + TimeSpan.FromMinutes(1)) with { IssuedUtc = now.ToOffset(TimeSpan.FromHours(1)) });
+            now, now + TimeSpan.FromMinutes(1)) with
+        { IssuedUtc = now.ToOffset(TimeSpan.FromHours(1)) });
         Assert.Equal("live-authorization-time-invalid", Assert.Throws<ExecutionException>(
             () => LiveAuthorizations.ValidateValidity(nonUtc, now)).Code);
 
         var reversed = Sign(CreateAuthorization("reversed", Stage4bAuthorizations.TestAuthorityId,
-            now, now + TimeSpan.FromMinutes(1)) with { ExpiresUtc = now });
+            now, now + TimeSpan.FromMinutes(1)) with
+        { ExpiresUtc = now });
         Assert.Equal("live-authorization-time-invalid", Assert.Throws<ExecutionException>(
             () => LiveAuthorizations.ValidateValidity(reversed, now)).Code);
     }
