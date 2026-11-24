@@ -12,9 +12,10 @@ public sealed class Stage2CancellationAndEvidenceTests
     {
         using var workspace = new Stage2Workspace();
         (await workspace.PlanAsync("fake-slow", "chat.baseline@3")).AssertCompleted("plan-generated", 0);
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var faults = new ExecutionFaults { AfterIntentAppend = _ => cancellation.Cancel() };
 #pragma warning disable xUnit1051 // The runner's own token is the operator signal under test.
-        var run = await workspace.RunWithCancellationAsync("fake-slow", "chat.baseline@3", cancellation.Token);
+        var run = await workspace.RunWithCancellationAsync("fake-slow", "chat.baseline@3", cancellation.Token, faults);
 #pragma warning restore xUnit1051
         Assert.Equal(130, run.ExitCode);
         Assert.Equal("run-summary", run.Summary.GetProperty("kind").GetString());
