@@ -211,6 +211,9 @@ public sealed class LlmClientBaseTests
     [Fact]
     public async Task StreamAsync_RejectsIncompleteToolCallAfterCleanProviderEnd()
     {
+        using var parentActivity = new Activity(nameof(StreamAsync_RejectsIncompleteToolCallAfterCleanProviderEnd))
+            .SetIdFormat(ActivityIdFormat.W3C)
+            .Start();
         Activity? completed = null;
         using var listener = new ActivityListener
         {
@@ -220,7 +223,7 @@ public sealed class LlmClientBaseTests
                 ActivitySamplingResult.AllData,
             ActivityStopped = activity =>
             {
-                if (activity.OperationName == "llm.stream")
+                if (activity.OperationName == "llm.stream" && activity.ParentSpanId == parentActivity.SpanId)
                     completed = activity;
             }
         };
